@@ -19,7 +19,13 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Global middleware
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+const corsOrigins = config.corsOrigin.split(',').map(o => o.trim());
+app.use(cors({ 
+  origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins, 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
