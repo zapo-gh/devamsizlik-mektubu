@@ -268,7 +268,7 @@ export default function AbsenteeismPage() {
                           📱 OTP & WhatsApp
                         </button>
                         <a
-                          href={`/api/absenteeism/${r.id}/pdf?jwt=${localStorage.getItem('token') || ''}`}
+                          href={`${import.meta.env.VITE_API_URL || '/api'}/absenteeism/${r.id}/pdf?jwt=${localStorage.getItem('token') || ''}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-outline btn-sm"

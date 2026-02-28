@@ -48,8 +48,9 @@ export default function ParentDashboardPage() {
 
   const otpToken = sessionStorage.getItem('parentOtpToken') || '';
   const tokenQuery = otpToken ? `?token=${otpToken}` : '';
-  const pdfUrl = `/api/absenteeism/${data.id}/pdf${tokenQuery}`;
-  const downloadUrl = `/api/absenteeism/${data.id}/pdf/download${tokenQuery}`;
+  const apiBase = import.meta.env.VITE_API_URL || '/api';
+  const pdfUrl = `${apiBase}/absenteeism/${data.id}/pdf${tokenQuery}`;
+  const downloadUrl = `${apiBase}/absenteeism/${data.id}/pdf/download${tokenQuery}`;
 
   return (
     <div className="parent-container">
