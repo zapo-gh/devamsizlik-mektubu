@@ -111,6 +111,7 @@ function normalizePhone(phone: string): string {
 
 /**
  * Preview or import parents from parsed data.
+ * Optimized: bulk DB queries + parallel bcrypt hashing.
  */
 export async function importParents(
   rows: ParsedParentRow[],
@@ -126,7 +127,7 @@ export async function importParents(
     preview: [],
   };
 
-  // Fetch all students for matching
+  // Fetch all students for matching (single query)
   const allStudents = await prisma.student.findMany({
     select: { id: true, schoolNumber: true, fullName: true },
   });
@@ -159,87 +160,116 @@ export async function importParents(
     return result;
   }
 
-  // Import mode: create/link parents for matched students
+  // --- OPTIMIZED IMPORT MODE ---
+  // 1. Collect all unique phone numbers needed
+  const parentEntries: { studentId: string; fullName: string; phone: string; rowNum: string }[] = [];
   for (const row of rows) {
     const student = studentByNumber.get(row.schoolNumber);
     if (!student) continue;
-
-    // Process parent 1
     if (row.parent1Name && row.parent1Phone) {
-      try {
-        await upsertAndLinkParent(student.id, row.parent1Name, row.parent1Phone, result);
-      } catch (err: any) {
-        result.errors.push(`${row.schoolNumber} Veli1: ${err.message}`);
-      }
+      parentEntries.push({ studentId: student.id, fullName: row.parent1Name, phone: row.parent1Phone, rowNum: row.schoolNumber });
     }
-
-    // Process parent 2
     if (row.parent2Name && row.parent2Phone) {
-      try {
-        await upsertAndLinkParent(student.id, row.parent2Name, row.parent2Phone, result);
-      } catch (err: any) {
-        result.errors.push(`${row.schoolNumber} Veli2: ${err.message}`);
-      }
+      parentEntries.push({ studentId: student.id, fullName: row.parent2Name, phone: row.parent2Phone, rowNum: row.schoolNumber });
     }
   }
 
-  return result;
-}
-
-/**
- * Find or create a parent by phone number, then link to the student.
- * If a parent with the same phone exists, update name and link.
- * Otherwise create a new User + Parent.
- */
-async function upsertAndLinkParent(
-  studentId: string,
-  fullName: string,
-  phone: string,
-  result: ParentImportResult
-) {
-  // Check if parent with this phone already exists
-  const existingParent = await prisma.parent.findFirst({
-    where: { phone },
+  // 2. Bulk fetch all existing parents by phone (single query instead of N queries)
+  const uniquePhones = [...new Set(parentEntries.map((e) => e.phone))];
+  const existingParents = await prisma.parent.findMany({
+    where: { phone: { in: uniquePhones } },
     include: { students: { select: { id: true } } },
   });
+  const parentByPhone = new Map(existingParents.map((p) => [p.phone, p]));
 
-  if (existingParent) {
-    // Update name if changed
-    await prisma.parent.update({
-      where: { id: existingParent.id },
-      data: { fullName },
-    });
+  // 3. Separate new vs existing parents
+  const newParentPhones = new Set<string>();
+  const newEntries: typeof parentEntries = [];
+  const existingEntries: typeof parentEntries = [];
 
-    // Link to student if not already linked
-    const alreadyLinked = existingParent.students.some((s) => s.id === studentId);
-    if (!alreadyLinked) {
-      await prisma.parent.update({
-        where: { id: existingParent.id },
-        data: { students: { connect: { id: studentId } } },
-      });
+  for (const entry of parentEntries) {
+    if (parentByPhone.has(entry.phone)) {
+      existingEntries.push(entry);
+    } else {
+      newEntries.push(entry);
+      newParentPhones.add(entry.phone);
     }
-    result.parentsUpdated++;
-  } else {
-    // Create user account for this parent (username = phone)
-    const passwordHash = await bcrypt.hash(phone.slice(-6), 10);
-
-    const user = await prisma.user.create({
-      data: {
-        username: phone,
-        password: passwordHash,
-        role: 'PARENT',
-      },
-    });
-
-    await prisma.parent.create({
-      data: {
-        userId: user.id,
-        fullName,
-        phone,
-        students: { connect: { id: studentId } },
-      },
-    });
-
-    result.parentsCreated++;
   }
+
+  // 4. Pre-hash all passwords in parallel (biggest perf win: ~100ms each → all at once)
+  const phonesNeedingHash = [...newParentPhones];
+  const hashResults = await Promise.all(
+    phonesNeedingHash.map((phone) => bcrypt.hash(phone.slice(-6), 10))
+  );
+  const hashByPhone = new Map(phonesNeedingHash.map((phone, i) => [phone, hashResults[i]]));
+
+  // 5. Process all in a single transaction
+  await prisma.$transaction(async (tx) => {
+    // 5a. Update existing parents + link to students
+    for (const entry of existingEntries) {
+      try {
+        const existing = parentByPhone.get(entry.phone)!;
+        await tx.parent.update({
+          where: { id: existing.id },
+          data: { fullName: entry.fullName },
+        });
+        const alreadyLinked = existing.students.some((s) => s.id === entry.studentId);
+        if (!alreadyLinked) {
+          await tx.parent.update({
+            where: { id: existing.id },
+            data: { students: { connect: { id: entry.studentId } } },
+          });
+          // Update local cache so subsequent entries for same parent know about this link
+          existing.students.push({ id: entry.studentId });
+        }
+        result.parentsUpdated++;
+      } catch (err: any) {
+        result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
+      }
+    }
+
+    // 5b. Create new parents (user + parent + link) — password already hashed
+    const createdParentByPhone = new Map<string, { id: string; students: { id: string }[] }>();
+    for (const entry of newEntries) {
+      try {
+        // If this phone was already created in an earlier iteration, just link
+        const alreadyCreated = createdParentByPhone.get(entry.phone);
+        if (alreadyCreated) {
+          const alreadyLinked = alreadyCreated.students.some((s) => s.id === entry.studentId);
+          if (!alreadyLinked) {
+            await tx.parent.update({
+              where: { id: alreadyCreated.id },
+              data: { students: { connect: { id: entry.studentId } } },
+            });
+            alreadyCreated.students.push({ id: entry.studentId });
+          }
+          result.parentsUpdated++;
+          continue;
+        }
+
+        const passwordHash = hashByPhone.get(entry.phone)!;
+        const user = await tx.user.create({
+          data: {
+            username: entry.phone,
+            password: passwordHash,
+            role: 'PARENT',
+          },
+        });
+        const newParent = await tx.parent.create({
+          data: {
+            userId: user.id,
+            fullName: entry.fullName,
+            phone: entry.phone,
+            students: { connect: { id: entry.studentId } },
+          },
+        });
+        createdParentByPhone.set(entry.phone, { id: newParent.id, students: [{ id: entry.studentId }] });
+        result.parentsCreated++;
+      } catch (err: any) {
+        result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
+      }
+    }
+  });
+
+  return result;
 }
