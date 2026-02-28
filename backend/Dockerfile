@@ -1,6 +1,8 @@
 # Backend Dockerfile
 FROM node:20-alpine AS base
 
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Install dependencies
@@ -13,6 +15,8 @@ RUN npx prisma generate
 
 # Build stage
 FROM node:20-alpine AS builder
+
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -28,6 +32,8 @@ RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS production
+
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
