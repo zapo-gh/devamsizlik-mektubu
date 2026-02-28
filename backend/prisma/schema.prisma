@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PARENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(PARENT)
+  createdAt DateTime @default(now())
+
+  parent Parent?
+}
+
+model Student {
+  id           String        @id @default(uuid())
+  schoolNumber String        @unique
+  fullName     String
+  className    String
+  status       StudentStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+
+  parents      Parent[]      @relation("StudentParents")
+  absenteeisms Absenteeism[]
+}
+
+model Parent {
+  id       String @id @default(uuid())
+  userId   String @unique
+  fullName String
+  phone    String
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students Student[] @relation("StudentParents")
+
+  @@index([phone])
+}
+
+model Absenteeism {
+  id             String   @id @default(uuid())
+  studentId      String
+  warningNumber  Int      @default(1)
+  pdfPath        String
+  createdAt      DateTime @default(now())
+  viewedByParent Boolean  @default(false)
+
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  otpCodes OTP[]
+
+  @@index([studentId])
+}
+
+model OTP {
+  id             String   @id @default(uuid())
+  absenteeismId  String
+  parentPhone    String
+  codeHash       String
+  token          String   @unique @default(uuid())
+  expiresAt      DateTime
+  isUsed         Boolean  @default(false)
+  attemptCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  absenteeism Absenteeism @relation(fields: [absenteeismId], references: [id], onDelete: Cascade)
+
+  @@index([absenteeismId])
+  @@index([parentPhone])
+  @@index([token])
+}
