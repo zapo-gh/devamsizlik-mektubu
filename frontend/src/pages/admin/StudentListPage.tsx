@@ -96,6 +96,10 @@ export default function StudentListPage() {
   // Tab state
   const [activeClass, setActiveClass] = useState<string>('');
 
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Derive sorted class names and grouped data
   const grouped: Record<string, Student[]> = {};
   students.forEach((s) => {
@@ -145,9 +149,54 @@ export default function StudentListPage() {
 
     try {
       await api.delete(`/students/${id}`);
+      setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
       loadStudents();
     } catch (error) {
       console.error('Delete failed:', error);
+    }
+  };
+
+  // Bulk delete
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allIds = filteredStudents.map((s) => s.id);
+    const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Seçili ${selectedIds.size} öğrenciyi silmek istediğinize emin misiniz?`)) return;
+
+    setBulkDeleting(true);
+    try {
+      await api.post('/students/bulk-delete', { ids: Array.from(selectedIds) });
+      setSelectedIds(new Set());
+      loadStudents();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      alert('Toplu silme başarısız oldu.');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -389,16 +438,40 @@ export default function StudentListPage() {
             }}>
               <span>
                 📚 <strong>{effectiveClass}</strong> — {filteredStudents.length} öğrenci
+                {selectedIds.size > 0 && (
+                  <span style={{ marginLeft: 12, color: 'var(--danger)', fontWeight: 600 }}>
+                    ({selectedIds.size} seçili)
+                  </span>
+                )}
               </span>
-              <span style={{ color: 'var(--text-muted)' }}>
-                Toplam: {students.length} öğrenci / {sortedClassNames.length} sınıf
-              </span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {selectedIds.size > 0 && (
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                  >
+                    {bulkDeleting ? '⏳ Siliniyor...' : `🗑️ ${selectedIds.size} Öğrenci Sil`}
+                  </button>
+                )}
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Toplam: {students.length} öğrenci / {sortedClassNames.length} sınıf
+                </span>
+              </div>
             </div>
 
             <div className="table-container">
               <table>
                 <thead>
                   <tr>
+                    <th style={{ width: 40, textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={filteredStudents.length > 0 && filteredStudents.every((s) => selectedIds.has(s.id))}
+                        onChange={toggleSelectAll}
+                        title="Tümünü seç/kaldır"
+                      />
+                    </th>
                     <th>Okul No</th>
                     <th>Ad Soyad</th>
                     <th>Durum</th>
@@ -410,13 +483,20 @@ export default function StudentListPage() {
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                         Bu sınıfta öğrenci bulunamadı.
                       </td>
                     </tr>
                   ) : (
                     filteredStudents.map((s) => (
-                      <tr key={s.id}>
+                      <tr key={s.id} style={selectedIds.has(s.id) ? { background: '#fef2f2' } : undefined}>
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(s.id)}
+                            onChange={() => toggleSelect(s.id)}
+                          />
+                        </td>
                         <td>{s.schoolNumber}</td>
                         <td><strong>{s.fullName}</strong></td>
                         <td>

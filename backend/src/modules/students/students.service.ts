@@ -157,6 +157,18 @@ export class StudentsService {
     return { message: 'Öğrenci başarıyla silindi.' };
   }
 
+  async bulkDelete(ids: string[]) {
+    if (!ids || ids.length === 0) {
+      throw new AppError('Silinecek öğrenci seçilmedi.', 400);
+    }
+
+    const result = await prisma.student.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    return { message: `${result.count} öğrenci başarıyla silindi.`, deletedCount: result.count };
+  }
+
   async assignParent(studentId: string, parentId: string) {
     const student = await prisma.student.findUnique({ where: { id: studentId } });
     if (!student) throw new AppError('Öğrenci bulunamadı.', 404);

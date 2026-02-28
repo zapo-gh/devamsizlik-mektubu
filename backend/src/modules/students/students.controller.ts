@@ -81,6 +81,19 @@ export class StudentsController {
     }
   }
 
+  async bulkDelete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        throw new AppError('Silinecek öğrenci ID listesi gereklidir.', 400);
+      }
+      const result = await studentsService.bulkDelete(ids);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async assignParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { parentId } = req.body;
