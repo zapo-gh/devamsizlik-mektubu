@@ -6,6 +6,8 @@ import LoginPage from './pages/admin/LoginPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import StudentListPage from './pages/admin/StudentListPage';
 import AbsenteeismPage from './pages/admin/AbsenteeismPage';
+import WarningsPage from './pages/admin/WarningsPage';
+import ViolationsPage from './pages/admin/ViolationsPage';
 
 // Parent pages
 import ParentOTPLoginPage from './pages/parent/ParentOTPLoginPage';
@@ -38,6 +40,8 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="students" element={<StudentListPage />} />
           <Route path="absenteeism" element={<AbsenteeismPage />} />
+          <Route path="warnings" element={<WarningsPage />} />
+          <Route path="violations" element={<ViolationsPage />} />
         </Route>
 
         {/* Default redirect */}

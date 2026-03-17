@@ -44,6 +44,12 @@ export default function AdminLayout() {
           <NavLink to="/admin/absenteeism" onClick={closeSidebar}>
             📄 Devamsızlık
           </NavLink>
+          <NavLink to="/admin/warnings" onClick={closeSidebar}>
+            ⚠️ Yazılı Uyarılar
+          </NavLink>
+          <NavLink to="/admin/violations" onClick={closeSidebar}>
+            📷 İhlal Takibi
+          </NavLink>
         </nav>
 
         <div className="sidebar-footer">

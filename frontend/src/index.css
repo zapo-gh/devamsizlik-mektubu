@@ -569,7 +569,8 @@ table tbody tr:hover {
   z-index: 1000;
 }
 
-.modal {
+.modal,
+.modal-content {
   background: var(--surface);
   border-radius: 12px;
   padding: 32px;

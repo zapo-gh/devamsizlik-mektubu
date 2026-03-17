@@ -4,3 +4,6 @@ dist/
 uploads/
 nginx/ssl/
 *.log
+*.traineddata
+*.pdf
+.vscode/

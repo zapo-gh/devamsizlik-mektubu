@@ -9,6 +9,9 @@ import authRoutes from './modules/auth/auth.routes';
 import studentRoutes from './modules/students/students.routes';
 import absenteeismRoutes from './modules/absenteeism/absenteeism.routes';
 import otpRoutes from './modules/otp/otp.routes';
+import warningRoutes from './modules/warnings/warnings.routes';
+import violationRoutes from './modules/violations/violations.routes';
+import settingsRoutes from './modules/settings/settings.routes';
 
 const app = express();
 
@@ -39,6 +42,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/absenteeism', absenteeismRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/warnings', warningRoutes);
+app.use('/api/violations', violationRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);
