@@ -248,21 +248,38 @@ export async function importParents(
         }
 
         const passwordHash = hashByPhone.get(entry.phone)!;
-        const user = await tx.user.create({
-          data: {
-            username: entry.phone,
-            password: passwordHash,
-            role: 'PARENT',
-          },
-        });
-        const newParent = await tx.parent.create({
-          data: {
-            userId: user.id,
-            fullName: entry.fullName,
-            phone: entry.phone,
-            students: { connect: { id: entry.studentId } },
-          },
-        });
+        // Check if a user with this phone already exists (e.g. from a previous import)
+        let user = await tx.user.findUnique({ where: { username: entry.phone } });
+        if (!user) {
+          user = await tx.user.create({
+            data: {
+              username: entry.phone,
+              password: passwordHash,
+              role: 'PARENT',
+            },
+          });
+        }
+        // Check if parent record already exists for this user
+        let existingParent = await tx.parent.findUnique({ where: { userId: user.id } });
+        let newParent;
+        if (existingParent) {
+          newParent = await tx.parent.update({
+            where: { id: existingParent.id },
+            data: {
+              fullName: entry.fullName,
+              students: { connect: { id: entry.studentId } },
+            },
+          });
+        } else {
+          newParent = await tx.parent.create({
+            data: {
+              userId: user.id,
+              fullName: entry.fullName,
+              phone: entry.phone,
+              students: { connect: { id: entry.studentId } },
+            },
+          });
+        }
         createdParentByPhone.set(entry.phone, { id: newParent.id, students: [{ id: entry.studentId }] });
         result.parentsCreated++;
       } catch (err: any) {
