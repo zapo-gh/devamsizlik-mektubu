@@ -17,9 +17,21 @@ interface WarningPdfData {
   principalName?: string;
 }
 
-// Windows system fonts (Turkish character support)
-const FONT_REGULAR = 'C:/Windows/Fonts/times.ttf';
-const FONT_BOLD = 'C:/Windows/Fonts/timesbd.ttf';
+// Font paths: bundled first (works on Linux/Render), Windows fallback
+const BUNDLED_REGULAR = path.join(__dirname, '../../../fonts/times.ttf');
+const BUNDLED_BOLD = path.join(__dirname, '../../../fonts/timesbd.ttf');
+const WIN_REGULAR = 'C:/Windows/Fonts/times.ttf';
+const WIN_BOLD = 'C:/Windows/Fonts/timesbd.ttf';
+
+function resolveFonts(): { regular: string; bold: string; system: boolean } {
+  if (fs.existsSync(BUNDLED_REGULAR) && fs.existsSync(BUNDLED_BOLD)) {
+    return { regular: BUNDLED_REGULAR, bold: BUNDLED_BOLD, system: true };
+  }
+  if (fs.existsSync(WIN_REGULAR) && fs.existsSync(WIN_BOLD)) {
+    return { regular: WIN_REGULAR, bold: WIN_BOLD, system: true };
+  }
+  return { regular: 'Helvetica', bold: 'Helvetica-Bold', system: false };
+}
 
 function fmtDate(date: Date): string {
   const d = new Date(date);
@@ -45,8 +57,6 @@ export async function generateWarningPdf(
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const useSystemFont = fs.existsSync(FONT_REGULAR) && fs.existsSync(FONT_BOLD);
-
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
@@ -57,9 +67,10 @@ export async function generateWarningPdf(
     const stream = fs.createWriteStream(outputPath);
     doc.pipe(stream);
 
-    if (useSystemFont) {
-      doc.registerFont('Normal', FONT_REGULAR);
-      doc.registerFont('Kalin', FONT_BOLD);
+    const fonts = resolveFonts();
+    if (fonts.system) {
+      doc.registerFont('Normal', fonts.regular);
+      doc.registerFont('Kalin', fonts.bold);
     } else {
       doc.registerFont('Normal', 'Helvetica');
       doc.registerFont('Kalin', 'Helvetica-Bold');
