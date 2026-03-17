@@ -203,23 +203,28 @@ export async function importParents(
   );
   const hashByPhone = new Map(phonesNeedingHash.map((phone, i) => [phone, hashResults[i]]));
 
-  // 5. Process all in a single transaction
+  // 5. Pre-fetch existing users by phone (bulk query before transaction to reduce queries inside)
+  const existingUsers = await prisma.user.findMany({
+    where: { username: { in: uniquePhones } },
+    include: { parent: { include: { students: { select: { id: true } } } } },
+  });
+  const userByPhone = new Map(existingUsers.map((u) => [u.username, u]));
+
+  // 6. Process all in a single transaction (with extended timeout for large imports)
   await prisma.$transaction(async (tx) => {
-    // 5a. Update existing parents + link to students
+    // 6a. Update existing parents + link to students
     for (const entry of existingEntries) {
       try {
         const existing = parentByPhone.get(entry.phone)!;
+        const alreadyLinked = existing.students.some((s) => s.id === entry.studentId);
         await tx.parent.update({
           where: { id: existing.id },
-          data: { fullName: entry.fullName },
+          data: {
+            fullName: entry.fullName,
+            ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
+          },
         });
-        const alreadyLinked = existing.students.some((s) => s.id === entry.studentId);
         if (!alreadyLinked) {
-          await tx.parent.update({
-            where: { id: existing.id },
-            data: { students: { connect: { id: entry.studentId } } },
-          });
-          // Update local cache so subsequent entries for same parent know about this link
           existing.students.push({ id: entry.studentId });
         }
         result.parentsUpdated++;
@@ -228,7 +233,7 @@ export async function importParents(
       }
     }
 
-    // 5b. Create new parents (user + parent + link) — password already hashed
+    // 6b. Create new parents (user + parent + link) — password already hashed
     const createdParentByPhone = new Map<string, { id: string; students: { id: string }[] }>();
     for (const entry of newEntries) {
       try {
@@ -248,45 +253,55 @@ export async function importParents(
         }
 
         const passwordHash = hashByPhone.get(entry.phone)!;
-        // Check if a user with this phone already exists (e.g. from a previous import)
-        let user = await tx.user.findUnique({ where: { username: entry.phone } });
-        if (!user) {
-          user = await tx.user.create({
+        // Use pre-fetched user data instead of querying inside the transaction
+        const existingUser = userByPhone.get(entry.phone);
+        let userId: string;
+
+        if (existingUser) {
+          userId = existingUser.id;
+          // If parent record already exists for this user, update it
+          if (existingUser.parent) {
+            const alreadyLinked = existingUser.parent.students.some((s) => s.id === entry.studentId);
+            const newParent = await tx.parent.update({
+              where: { id: existingUser.parent.id },
+              data: {
+                fullName: entry.fullName,
+                ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
+              },
+            });
+            createdParentByPhone.set(entry.phone, {
+              id: newParent.id,
+              students: [...existingUser.parent.students, ...(!alreadyLinked ? [{ id: entry.studentId }] : [])],
+            });
+            result.parentsUpdated++;
+            continue;
+          }
+        } else {
+          const user = await tx.user.create({
             data: {
               username: entry.phone,
               password: passwordHash,
               role: 'PARENT',
             },
           });
+          userId = user.id;
         }
-        // Check if parent record already exists for this user
-        let existingParent = await tx.parent.findUnique({ where: { userId: user.id } });
-        let newParent;
-        if (existingParent) {
-          newParent = await tx.parent.update({
-            where: { id: existingParent.id },
-            data: {
-              fullName: entry.fullName,
-              students: { connect: { id: entry.studentId } },
-            },
-          });
-        } else {
-          newParent = await tx.parent.create({
-            data: {
-              userId: user.id,
-              fullName: entry.fullName,
-              phone: entry.phone,
-              students: { connect: { id: entry.studentId } },
-            },
-          });
-        }
+
+        const newParent = await tx.parent.create({
+          data: {
+            userId,
+            fullName: entry.fullName,
+            phone: entry.phone,
+            students: { connect: { id: entry.studentId } },
+          },
+        });
         createdParentByPhone.set(entry.phone, { id: newParent.id, students: [{ id: entry.studentId }] });
         result.parentsCreated++;
       } catch (err: any) {
         result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
       }
     }
-  });
+  }, { maxWait: 10000, timeout: 120000 });
 
   return result;
 }
