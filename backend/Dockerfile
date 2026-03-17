@@ -50,6 +50,9 @@ COPY --from=base /app/node_modules/.prisma ./node_modules/.prisma
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
+# Copy bundled fonts (Turkish character support)
+COPY fonts ./fonts
+
 # Create uploads directory
 RUN mkdir -p uploads
 

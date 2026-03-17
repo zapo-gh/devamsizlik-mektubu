@@ -17,19 +17,29 @@ interface WarningPdfData {
   principalName?: string;
 }
 
-// Font paths: bundled first (works on Linux/Render), Windows fallback
-const BUNDLED_REGULAR = path.join(__dirname, '../../../fonts/times.ttf');
-const BUNDLED_BOLD = path.join(__dirname, '../../../fonts/timesbd.ttf');
-const WIN_REGULAR = 'C:/Windows/Fonts/times.ttf';
-const WIN_BOLD = 'C:/Windows/Fonts/timesbd.ttf';
-
+// Font resolution: search multiple possible locations
 function resolveFonts(): { regular: string; bold: string; system: boolean } {
-  if (fs.existsSync(BUNDLED_REGULAR) && fs.existsSync(BUNDLED_BOLD)) {
-    return { regular: BUNDLED_REGULAR, bold: BUNDLED_BOLD, system: true };
+  const candidates = [
+    // Relative to compiled dist/modules/warnings/
+    path.resolve(__dirname, '..', '..', '..', 'fonts'),
+    // Relative to CWD (when Render runs from backend/)
+    path.resolve(process.cwd(), 'fonts'),
+    // Relative to CWD (when Render runs from project root)
+    path.resolve(process.cwd(), 'backend', 'fonts'),
+    // Windows system fonts
+    'C:/Windows/Fonts',
+  ];
+
+  for (const dir of candidates) {
+    const regular = path.join(dir, 'times.ttf');
+    const bold = path.join(dir, 'timesbd.ttf');
+    if (fs.existsSync(regular) && fs.existsSync(bold)) {
+      console.log(`[PDF] Using fonts from: ${dir}`);
+      return { regular, bold, system: true };
+    }
   }
-  if (fs.existsSync(WIN_REGULAR) && fs.existsSync(WIN_BOLD)) {
-    return { regular: WIN_REGULAR, bold: WIN_BOLD, system: true };
-  }
+
+  console.warn('[PDF] No Turkish fonts found, falling back to Helvetica');
   return { regular: 'Helvetica', bold: 'Helvetica-Bold', system: false };
 }
 

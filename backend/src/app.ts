@@ -34,7 +34,22 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const fontPaths = [
+    path.resolve(__dirname, '..', 'fonts'),
+    path.resolve(process.cwd(), 'fonts'),
+    path.resolve(process.cwd(), 'backend', 'fonts'),
+  ];
+  const fontStatus = fontPaths.map(p => ({
+    path: p,
+    exists: fs.existsSync(path.join(p, 'times.ttf')),
+  }));
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    cwd: process.cwd(),
+    dirname: __dirname,
+    fontStatus,
+  });
 });
 
 // Routes
