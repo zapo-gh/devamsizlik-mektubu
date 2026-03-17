@@ -210,98 +210,105 @@ export async function importParents(
   });
   const userByPhone = new Map(existingUsers.map((u) => [u.username, u]));
 
-  // 6. Process all in a single transaction (with extended timeout for large imports)
-  await prisma.$transaction(async (tx) => {
-    // 6a. Update existing parents + link to students
-    for (const entry of existingEntries) {
-      try {
-        const existing = parentByPhone.get(entry.phone)!;
-        const alreadyLinked = existing.students.some((s) => s.id === entry.studentId);
-        await tx.parent.update({
-          where: { id: existing.id },
-          data: {
-            fullName: entry.fullName,
-            ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
-          },
-        });
-        if (!alreadyLinked) {
-          existing.students.push({ id: entry.studentId });
-        }
-        result.parentsUpdated++;
-      } catch (err: any) {
-        result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
-      }
-    }
+  // 6. Process in small batches (Render has 30s HTTP timeout, single large tx times out)
+  const BATCH_SIZE = 50;
+  const createdParentByPhone = new Map<string, { id: string; students: { id: string }[] }>();
 
-    // 6b. Create new parents (user + parent + link) — password already hashed
-    const createdParentByPhone = new Map<string, { id: string; students: { id: string }[] }>();
-    for (const entry of newEntries) {
-      try {
-        // If this phone was already created in an earlier iteration, just link
-        const alreadyCreated = createdParentByPhone.get(entry.phone);
-        if (alreadyCreated) {
-          const alreadyLinked = alreadyCreated.students.some((s) => s.id === entry.studentId);
+  // 6a. Update existing parents in batches
+  for (let i = 0; i < existingEntries.length; i += BATCH_SIZE) {
+    const batch = existingEntries.slice(i, i + BATCH_SIZE);
+    await prisma.$transaction(async (tx) => {
+      for (const entry of batch) {
+        try {
+          const existing = parentByPhone.get(entry.phone)!;
+          const alreadyLinked = existing.students.some((s) => s.id === entry.studentId);
+          await tx.parent.update({
+            where: { id: existing.id },
+            data: {
+              fullName: entry.fullName,
+              ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
+            },
+          });
           if (!alreadyLinked) {
-            await tx.parent.update({
-              where: { id: alreadyCreated.id },
-              data: { students: { connect: { id: entry.studentId } } },
-            });
-            alreadyCreated.students.push({ id: entry.studentId });
+            existing.students.push({ id: entry.studentId });
           }
           result.parentsUpdated++;
-          continue;
+        } catch (err: any) {
+          result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
         }
+      }
+    });
+  }
 
-        const passwordHash = hashByPhone.get(entry.phone)!;
-        // Use pre-fetched user data instead of querying inside the transaction
-        const existingUser = userByPhone.get(entry.phone);
-        let userId: string;
-
-        if (existingUser) {
-          userId = existingUser.id;
-          // If parent record already exists for this user, update it
-          if (existingUser.parent) {
-            const alreadyLinked = existingUser.parent.students.some((s) => s.id === entry.studentId);
-            const newParent = await tx.parent.update({
-              where: { id: existingUser.parent.id },
-              data: {
-                fullName: entry.fullName,
-                ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
-              },
-            });
-            createdParentByPhone.set(entry.phone, {
-              id: newParent.id,
-              students: [...existingUser.parent.students, ...(!alreadyLinked ? [{ id: entry.studentId }] : [])],
-            });
+  // 6b. Create new parents in batches
+  for (let i = 0; i < newEntries.length; i += BATCH_SIZE) {
+    const batch = newEntries.slice(i, i + BATCH_SIZE);
+    await prisma.$transaction(async (tx) => {
+      for (const entry of batch) {
+        try {
+          const alreadyCreated = createdParentByPhone.get(entry.phone);
+          if (alreadyCreated) {
+            const alreadyLinked = alreadyCreated.students.some((s) => s.id === entry.studentId);
+            if (!alreadyLinked) {
+              await tx.parent.update({
+                where: { id: alreadyCreated.id },
+                data: { students: { connect: { id: entry.studentId } } },
+              });
+              alreadyCreated.students.push({ id: entry.studentId });
+            }
             result.parentsUpdated++;
             continue;
           }
-        } else {
-          const user = await tx.user.create({
+
+          const passwordHash = hashByPhone.get(entry.phone)!;
+          const existingUser = userByPhone.get(entry.phone);
+          let userId: string;
+
+          if (existingUser) {
+            userId = existingUser.id;
+            if (existingUser.parent) {
+              const alreadyLinked = existingUser.parent.students.some((s) => s.id === entry.studentId);
+              const newParent = await tx.parent.update({
+                where: { id: existingUser.parent.id },
+                data: {
+                  fullName: entry.fullName,
+                  ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
+                },
+              });
+              createdParentByPhone.set(entry.phone, {
+                id: newParent.id,
+                students: [...existingUser.parent.students, ...(!alreadyLinked ? [{ id: entry.studentId }] : [])],
+              });
+              result.parentsUpdated++;
+              continue;
+            }
+          } else {
+            const user = await tx.user.create({
+              data: {
+                username: entry.phone,
+                password: passwordHash,
+                role: 'PARENT',
+              },
+            });
+            userId = user.id;
+          }
+
+          const newParent = await tx.parent.create({
             data: {
-              username: entry.phone,
-              password: passwordHash,
-              role: 'PARENT',
+              userId,
+              fullName: entry.fullName,
+              phone: entry.phone,
+              students: { connect: { id: entry.studentId } },
             },
           });
-          userId = user.id;
+          createdParentByPhone.set(entry.phone, { id: newParent.id, students: [{ id: entry.studentId }] });
+          result.parentsCreated++;
+        } catch (err: any) {
+          result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
         }
-
-        const newParent = await tx.parent.create({
-          data: {
-            userId,
-            fullName: entry.fullName,
-            phone: entry.phone,
-            students: { connect: { id: entry.studentId } },
-          },
-        });
-        createdParentByPhone.set(entry.phone, { id: newParent.id, students: [{ id: entry.studentId }] });
-        result.parentsCreated++;
-      } catch (err: any) {
-        result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
       }
-    }
-  }, { maxWait: 10000, timeout: 120000 });
+    });
+  }
 
   return result;
 }
