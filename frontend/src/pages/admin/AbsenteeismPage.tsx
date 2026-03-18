@@ -287,7 +287,8 @@ export default function AbsenteeismPage() {
                           onClick={async () => {
                             try {
                               const response = await api.get(`/absenteeism/${r.id}/pdf`, { responseType: 'blob' });
-                              const blob = response.data as Blob;
+                              const contentType = response.headers['content-type'] || 'application/pdf';
+                              const blob = new Blob([response.data], { type: contentType });
                               const url = window.URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
