@@ -94,6 +94,19 @@ export class StudentsController {
     }
   }
 
+  async addParent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { fullName, phone } = req.body;
+      if (!fullName || !phone) {
+        throw new AppError('Veli adı ve telefon numarası gereklidir.', 400);
+      }
+      const result = await studentsService.addParentToStudent(req.params.id, { fullName, phone });
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async assignParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { parentId } = req.body;

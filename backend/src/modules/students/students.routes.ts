@@ -34,6 +34,7 @@ router.post('/', studentsController.create);
 router.put('/:id', studentsController.update);
 router.post('/bulk-delete', studentsController.bulkDelete);
 router.delete('/:id', studentsController.delete);
+router.post('/:id/parents', studentsController.addParent);
 router.post('/:id/assign-parent', studentsController.assignParent);
 router.put('/parents/:parentId', studentsController.updateParent);
 router.delete('/:id/parents/:parentId', studentsController.removeParent);

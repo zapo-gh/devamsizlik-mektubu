@@ -83,6 +83,7 @@ export default function StudentListPage() {
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [editForm, setEditForm] = useState({ fullName: '', className: '', status: 'ACTIVE', schoolNumber: '' });
   const [editParents, setEditParents] = useState<{ id: string; fullName: string; phone: string }[]>([]);
+  const [newEditParent, setNewEditParent] = useState<{ fullName: string; phone: string } | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -315,6 +316,7 @@ export default function StudentListPage() {
       schoolNumber: student.schoolNumber,
     });
     setEditParents(student.parents.map((p) => ({ ...p })));
+    setNewEditParent(null);
     setEditError('');
     setShowEditModal(true);
   };
@@ -341,6 +343,14 @@ export default function StudentListPage() {
             phone: p.phone,
           });
         }
+      }
+
+      // Add new parent if filled
+      if (newEditParent && newEditParent.fullName.trim() && newEditParent.phone.trim()) {
+        await api.post(`/students/${editStudent.id}/parents`, {
+          fullName: newEditParent.fullName.trim(),
+          phone: newEditParent.phone.trim(),
+        });
       }
 
       setShowEditModal(false);
@@ -1111,7 +1121,7 @@ export default function StudentListPage() {
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
                 <h3 style={{ fontSize: 15, marginBottom: 12 }}>👨‍👩‍👧 Veli Bilgileri</h3>
 
-                {editParents.length === 0 ? (
+                {editParents.length === 0 && !newEditParent ? (
                   <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Kayıtlı veli bulunmuyor.</p>
                 ) : (
                   editParents.map((p, idx) => (
@@ -1166,6 +1176,61 @@ export default function StudentListPage() {
                       </button>
                     </div>
                   ))
+                )}
+
+                {/* New parent form */}
+                {newEditParent && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'flex-end',
+                      marginBottom: 12,
+                      padding: '12px',
+                      background: '#f0fdf4',
+                      borderRadius: 'var(--radius)',
+                      border: '1px dashed #86efac',
+                    }}
+                  >
+                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label>Yeni Veli Adı</label>
+                      <input
+                        type="text"
+                        placeholder="Ad Soyad"
+                        value={newEditParent.fullName}
+                        onChange={(e) => setNewEditParent({ ...newEditParent, fullName: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label>Telefon</label>
+                      <input
+                        type="text"
+                        placeholder="05XX XXX XX XX"
+                        value={newEditParent.phone}
+                        onChange={(e) => setNewEditParent({ ...newEditParent, phone: e.target.value })}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => setNewEditParent(null)}
+                      title="İptal"
+                      style={{ flexShrink: 0, marginBottom: 2 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {!newEditParent && (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: 8, fontSize: 13 }}
+                    onClick={() => setNewEditParent({ fullName: '', phone: '' })}
+                  >
+                    + Veli Ekle
+                  </button>
                 )}
               </div>
 

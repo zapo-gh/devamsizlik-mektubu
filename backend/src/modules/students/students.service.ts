@@ -194,6 +194,47 @@ export class StudentsService {
     });
   }
 
+  async addParentToStudent(studentId: string, data: { fullName: string; phone: string }) {
+    const student = await prisma.student.findUnique({ where: { id: studentId } });
+    if (!student) throw new AppError('Öğrenci bulunamadı.', 404);
+
+    const phone = data.phone.trim();
+    const username = phone;
+    const passwordRaw = phone.slice(-6);
+    const passwordHash = await bcrypt.hash(passwordRaw, 10);
+
+    return prisma.$transaction(async (tx) => {
+      let user = await tx.user.findUnique({ where: { username } });
+      if (!user) {
+        user = await tx.user.create({
+          data: { username, password: passwordHash, role: 'PARENT' },
+        });
+      }
+
+      let parent = await tx.parent.findUnique({ where: { userId: user.id } });
+      if (!parent) {
+        parent = await tx.parent.create({
+          data: { userId: user.id, fullName: data.fullName.trim(), phone },
+        });
+      } else {
+        parent = await tx.parent.update({
+          where: { id: parent.id },
+          data: { fullName: data.fullName.trim(), phone },
+        });
+      }
+
+      await tx.student.update({
+        where: { id: studentId },
+        data: { parents: { connect: { id: parent.id } } },
+      });
+
+      return tx.student.findUnique({
+        where: { id: studentId },
+        include: { parents: { select: { id: true, fullName: true, phone: true } } },
+      });
+    });
+  }
+
   async removeParentFromStudent(studentId: string, parentId: string) {
     const student = await prisma.student.findUnique({
       where: { id: studentId },
