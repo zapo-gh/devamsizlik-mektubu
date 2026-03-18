@@ -181,7 +181,10 @@ export async function generateWarningPdf(
     doc.font('Normal').fontSize(10).fillColor('#000000');
 
     doc.text(
-      `${dateStr} tarihinde, yukarıda açıklanan şekilde ders/okul düzenini bozacak nitelikte OLUMSUZ davranışlarınız tespit edilmiştir.`,
+      `${data.studentFullName} isimli öğrenci, ` +
+      `aşağıda belirtilen davranışı sebebiyle Millî Eğitim Bakanlığı ` +
+      `Ortaöğretim Kurumları Yönetmeliği'nin 157'nci maddesinin yedinci fıkrasının (a) bendi uyarınca ` +
+      `yazılı olarak uyarılmıştır.`,
       { align: 'justify', lineGap: 2 }
     );
 
@@ -285,9 +288,9 @@ export async function generateWarningPdf(
     doc.moveDown(0.5);
     doc.fillColor('#000000').font('Normal').fontSize(10);
     doc.text(
-      'Bahsi geçen olay şahitler tarafından da onaylanmış olup, davranışlarınız ile okul düzenini olumsuz yönde etkilediğiniz anlaşılmıştır. ' +
-      'Okulda, çalışma saatleri içinde okul kurallarına uymanız gerektiğini bilmenize rağmen, buna aykırı şekilde davranmanız iş bu yazılı uyarının yapılmasını gerektirmiştir. ' +
-      'Benzer davranışlarınızın tekrarı halinde yasal işlem yapılarak ödül ve disiplin kuruluna sevk edileceğinizi hatırlatır, okul kurallarına titizlikle uymanızı ihtar ederiz.',
+      'Bu uyarı, öğrencinin davranışlarını düzeltmesi amacıyla ' +
+      'verilmiş olup, tekrarı hâlinde ilgili yönetmelik hükümleri ' +
+      'doğrultusunda disiplin süreci başlatılacaktır.',
       { align: 'justify', lineGap: 2 }
     );
 
