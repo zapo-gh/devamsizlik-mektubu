@@ -132,11 +132,11 @@ export default function ParentTokenPage() {
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="4 haneli şifre"
+              placeholder="● ● ● ●"
               maxLength={4}
               required
               autoFocus
-              style={{ fontSize: 24, letterSpacing: 10, textAlign: 'center', fontWeight: 700 }}
+              style={{ fontSize: 28, letterSpacing: 12, textAlign: 'center', fontWeight: 600, caretColor: 'var(--primary)' }}
             />
           </div>
 

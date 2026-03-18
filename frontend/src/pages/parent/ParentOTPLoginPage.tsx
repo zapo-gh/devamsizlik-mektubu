@@ -62,10 +62,10 @@ export default function ParentOTPLoginPage() {
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="4 haneli şifre"
+              placeholder="● ● ● ●"
               maxLength={4}
               required
-              style={{ fontSize: 20, letterSpacing: 8, textAlign: 'center' }}
+              style={{ fontSize: 28, letterSpacing: 12, textAlign: 'center', fontWeight: 600, caretColor: 'var(--primary)' }}
             />
           </div>
 

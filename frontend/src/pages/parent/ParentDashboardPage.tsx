@@ -153,9 +153,7 @@ export default function ParentDashboardPage() {
           Dosyayı İndir
         </a>
 
-        <div style={{ marginTop: 12, textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
-          <p style={{ margin: 0 }}>Bu sayfa tek seferlik erişim için oluşturulmuştur.</p>
-        </div>
+
       </div>
     </div>
   );
