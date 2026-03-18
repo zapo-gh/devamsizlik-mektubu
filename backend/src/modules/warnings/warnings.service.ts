@@ -142,6 +142,11 @@ export class WarningsService {
   async servePdf(warningId: string): Promise<string> {
     const record = await prisma.writtenWarning.findUnique({
       where: { id: warningId },
+      include: {
+        student: {
+          select: { fullName: true, className: true, schoolNumber: true },
+        },
+      },
     });
 
     if (!record) {
@@ -149,8 +154,28 @@ export class WarningsService {
     }
 
     const fullPath = path.resolve(record.pdfPath);
+
+    // PDF dosyası diskte yoksa yeniden oluştur (ephemeral filesystem desteği)
     if (!fs.existsSync(fullPath)) {
-      throw new AppError('PDF dosyası bulunamadı.', 404);
+      const behavior = findBehaviorByCode(record.behaviorCode);
+      const dbSettings = await settingsService.get();
+
+      await generateWarningPdf(
+        {
+          studentFullName: record.student.fullName,
+          studentClassName: record.student.className,
+          studentSchoolNumber: record.student.schoolNumber,
+          warningNumber: record.warningNumber,
+          behaviorText: record.behaviorText,
+          behaviorArticle: behavior?.article,
+          description: record.description || undefined,
+          issuedBy: record.issuedBy,
+          issuedAt: record.issuedAt,
+          schoolName: dbSettings.schoolName || '',
+          principalName: dbSettings.principalName || '',
+        },
+        fullPath
+      );
     }
 
     return fullPath;
