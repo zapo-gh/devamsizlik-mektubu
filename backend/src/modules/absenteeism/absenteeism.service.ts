@@ -118,7 +118,8 @@ export class AbsenteeismService {
       config.frontendDomain,
       otpResult.code,
       parentName,
-      otpResult.token
+      otpResult.token,
+      config.otp.expiryMinutes
     );
 
     return {

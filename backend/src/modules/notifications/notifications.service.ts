@@ -16,7 +16,8 @@ export function generateWhatsAppLink(
   domain: string,
   otp: string,
   parentName: string = '',
-  token: string = ''
+  token: string = '',
+  expiryMinutes: number = 1440
 ): string {
   let cleanPhone = parentPhone.replace(/\D/g, '');
   // Türk numaraları için: 0 ile başlıyorsa 90 ile değiştir
@@ -28,7 +29,7 @@ export function generateWhatsAppLink(
     cleanPhone = '90' + cleanPhone;
   }
 
-  const message = generateMessageTemplate(domain, otp, parentName, token);
+  const message = generateMessageTemplate(domain, otp, parentName, token, expiryMinutes);
   const encodedMessage = encodeURIComponent(message);
 
   return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
@@ -37,9 +38,10 @@ export function generateWhatsAppLink(
 /**
  * Veli'ye gönderilecek mesaj şablonu
  */
-export function generateMessageTemplate(domain: string, otp: string, parentName: string = '', token: string = ''): string {
+export function generateMessageTemplate(domain: string, otp: string, parentName: string = '', token: string = '', expiryMinutes: number = 1440): string {
   const greeting = parentName ? `Sayın ${parentName},` : 'Sayın Veli,';
   const link = token ? `${domain}/veli/${token}` : `${domain}/veli-otp`;
+  const expiryText = expiryMinutes >= 1440 ? `${Math.round(expiryMinutes / 1440)} gün` : expiryMinutes >= 60 ? `${Math.round(expiryMinutes / 60)} saat` : `${expiryMinutes} dakika`;
   return `${greeting}
 
 Ogrencinizin devamsizlik bildirimi sisteme yuklenmistir.
@@ -50,5 +52,5 @@ Asagidaki baglantiya tiklayarak devamsizlik mektubunu goruntuleyebilirsiniz:
 
 ${link}
 
-* Sifre 24 saat gecerlidir.`;
+* Sifre ${expiryText} gecerlidir.`;
 }

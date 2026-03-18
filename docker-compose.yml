@@ -36,7 +36,7 @@ services:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@db:5432/devamsizlik_db?schema=public
       JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
       JWT_EXPIRES_IN: 8h
-      OTP_EXPIRY_MINUTES: 10
+      OTP_EXPIRY_MINUTES: 1440
       OTP_MAX_ATTEMPTS: 3
       UPLOAD_DIR: ./uploads
       FRONTEND_DOMAIN: ${FRONTEND_DOMAIN:-https://yourdomain.com}

@@ -161,8 +161,18 @@ export default function AbsenteeismPage() {
       // Rebuild WhatsApp link using current browser origin so link is always correct
       const veliLink = `${window.location.origin}/veli/${data.token}`;
       const parentLabel = selectedParent?.fullName ? `Sayın ${selectedParent.fullName},` : 'Sayın Veli,';
-      const msg = `${parentLabel}\n\nOgrencinizin devamsizlik bildirimi sisteme yuklenmistir.\n\nSifre: ${data.otp.code}\n\nAsagidaki baglantiya tiklayarak devamsizlik mektubunu goruntuleyebilirsiniz:\n\n${veliLink}\n\n* Sifre 24 saat gecerlidir.`;
-      const cleanPhone = parentPhone.replace(/\D/g, '');
+      // Calculate expiry duration from server response
+      const expiresAt = new Date(data.otp.expiresAt);
+      const diffMs = expiresAt.getTime() - Date.now();
+      const diffMins = Math.round(diffMs / 60000);
+      const expiryText = diffMins >= 1440 ? `${Math.round(diffMins / 1440)} gün` : diffMins >= 60 ? `${Math.round(diffMins / 60)} saat` : `${diffMins} dakika`;
+      const msg = `${parentLabel}\n\nOgrencinizin devamsizlik bildirimi sisteme yuklenmistir.\n\nSifre: ${data.otp.code}\n\nAsagidaki baglantiya tiklayarak devamsizlik mektubunu goruntuleyebilirsiniz:\n\n${veliLink}\n\n* Sifre ${expiryText} gecerlidir.`;
+      let cleanPhone = parentPhone.replace(/\D/g, '');
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '90' + cleanPhone.slice(1);
+      } else if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) {
+        cleanPhone = '90' + cleanPhone;
+      }
       data.whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
       setOtpResult(data);
     } catch (err: any) {
@@ -277,8 +287,16 @@ export default function AbsenteeismPage() {
                           onClick={async () => {
                             try {
                               const response = await api.get(`/absenteeism/${r.id}/pdf`, { responseType: 'blob' });
-                              const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-                              window.open(url, '_blank');
+                              const blob = response.data as Blob;
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.target = '_blank';
+                              a.rel = 'noopener';
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              setTimeout(() => window.URL.revokeObjectURL(url), 30000);
                             } catch {
                               alert('PDF görüntüleme başarısız.');
                             }
