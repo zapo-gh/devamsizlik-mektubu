@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 export default function ParentOTPLoginPage() {
-  const [phone, setPhone] = useState('');
+  const [token, setToken] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,11 +15,12 @@ export default function ParentOTPLoginPage() {
     setLoading(true);
 
     try {
-      const res = await api.post('/otp/verify', { phone, code });
+      const res = await api.post('/otp/verify', { token, code });
       const { absenteeism } = res.data.data;
 
       // Store absenteeism data in sessionStorage for the dashboard
       sessionStorage.setItem('parentAbsenteeism', JSON.stringify(absenteeism));
+      sessionStorage.setItem('parentOtpToken', token);
       navigate('/veli-panel');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Doğrulama başarısız. Lütfen tekrar deneyin.');
@@ -41,17 +42,17 @@ export default function ParentOTPLoginPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Telefon Numarası</label>
+            <label>Bağlantı Tokeni</label>
             <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="905551234567"
+              type="text"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="WhatsApp ile gönderilen bağlantıdaki token"
               required
               autoFocus
             />
             <small style={{ color: 'var(--text-muted)' }}>
-              Ülke kodu ile birlikte giriniz
+              Size gönderilen bağlantıdaki tokeni giriniz
             </small>
           </div>
 

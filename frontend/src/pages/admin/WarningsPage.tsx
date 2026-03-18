@@ -153,12 +153,14 @@ export default function WarningsPage() {
     }
   };
 
-  const handleViewPdf = (id: string) => {
-    const token = localStorage.getItem('token');
-    window.open(
-      `${api.defaults.baseURL}/warnings/${id}/pdf?token=${token}`,
-      '_blank'
-    );
+  const handleViewPdf = async (id: string) => {
+    try {
+      const response = await api.get(`/warnings/${id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch {
+      alert('PDF görüntüleme başarısız.');
+    }
   };
 
   const handleDownloadPdf = async (id: string) => {

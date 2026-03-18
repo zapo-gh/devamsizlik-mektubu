@@ -267,14 +267,20 @@ export default function AbsenteeismPage() {
                         >
                           📱 OTP & WhatsApp
                         </button>
-                        <a
-                          href={`${import.meta.env.VITE_API_URL || '/api'}/absenteeism/${r.id}/pdf?jwt=${localStorage.getItem('token') || ''}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
                           className="btn btn-outline btn-sm"
+                          onClick={async () => {
+                            try {
+                              const response = await api.get(`/absenteeism/${r.id}/pdf`, { responseType: 'blob' });
+                              const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                              window.open(url, '_blank');
+                            } catch {
+                              alert('PDF görüntüleme başarısız.');
+                            }
+                          }}
                         >
                           Devamsızlık Mektubu Görüntüle
-                        </a>
+                        </button>
                         <button
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDelete(r.id)}
