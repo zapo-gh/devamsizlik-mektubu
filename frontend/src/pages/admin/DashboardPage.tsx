@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const loadStats = async () => {
     try {
       const [studentsRes, absenteeismRes, statsRes] = await Promise.all([
-        api.get('/students?limit=1'),
+        api.get('/students?limit=1&status=ACTIVE'),
         api.get('/absenteeism?limit=1'),
         api.get('/absenteeism/stats'),
       ]);

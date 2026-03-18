@@ -3,18 +3,20 @@ import { AppError } from '../shared/middleware/errorHandler.middleware';
 import bcrypt from 'bcrypt';
 
 export class StudentsService {
-  async getAll(page = 1, limit = 20, search?: string) {
+  async getAll(page = 1, limit = 20, search?: string, status?: string) {
     const skip = (page - 1) * limit;
 
-    const where = search
-      ? {
-          OR: [
-            { fullName: { contains: search, mode: 'insensitive' as const } },
-            { schoolNumber: { contains: search, mode: 'insensitive' as const } },
-            { className: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {};
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' as const } },
+        { schoolNumber: { contains: search, mode: 'insensitive' as const } },
+        { className: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+    if (status === 'ACTIVE' || status === 'INACTIVE') {
+      where.status = status;
+    }
 
     const [students, total] = await Promise.all([
       prisma.student.findMany({

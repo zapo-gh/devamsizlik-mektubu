@@ -43,6 +43,10 @@ export default function AbsenteeismPage() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<{ total: number; totalPages: number } | null>(null);
+
   // OTP generation
   const [selectedRecordId, setSelectedRecordId] = useState('');
   const [parentPhone, setParentPhone] = useState('');
@@ -53,15 +57,16 @@ export default function AbsenteeismPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [page]);
 
   const loadData = async () => {
     try {
       const [recordsRes, studentsRes] = await Promise.all([
-        api.get('/absenteeism?limit=50'),
+        api.get(`/absenteeism?limit=20&page=${page}`),
         api.get('/students?limit=2000'),
       ]);
       setRecords(recordsRes.data.data.records);
+      setPagination(recordsRes.data.data.pagination);
       setStudents(studentsRes.data.data.students);
     } catch (error) {
       console.error('Load error:', error);
@@ -295,6 +300,29 @@ export default function AbsenteeismPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+            <button
+              className="btn btn-outline btn-sm"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
+              ◀ Önceki
+            </button>
+            <span style={{ padding: '6px 12px', fontSize: 13 }}>
+              Sayfa {page} / {pagination.totalPages} (Toplam: {pagination.total})
+            </span>
+            <button
+              className="btn btn-outline btn-sm"
+              disabled={page >= pagination.totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Sonraki ▶
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Upload Modal */}

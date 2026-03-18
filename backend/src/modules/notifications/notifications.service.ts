@@ -18,7 +18,15 @@ export function generateWhatsAppLink(
   parentName: string = '',
   token: string = ''
 ): string {
-  const cleanPhone = parentPhone.replace(/\D/g, '');
+  let cleanPhone = parentPhone.replace(/\D/g, '');
+  // Türk numaraları için: 0 ile başlıyorsa 90 ile değiştir
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '90' + cleanPhone.slice(1);
+  }
+  // Ülke kodu yoksa ekle
+  if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) {
+    cleanPhone = '90' + cleanPhone;
+  }
 
   const message = generateMessageTemplate(domain, otp, parentName, token);
   const encodedMessage = encodeURIComponent(message);

@@ -27,8 +27,9 @@ export class StudentsController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const search = req.query.search as string | undefined;
+      const status = req.query.status as string | undefined;
 
-      const result = await studentsService.getAll(page, limit, search);
+      const result = await studentsService.getAll(page, limit, search, status);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

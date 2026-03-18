@@ -266,7 +266,13 @@ export class WarningsService {
     const encodedMessage = encodeURIComponent(message);
 
     const links = parents.map((p) => {
-      const cleanPhone = p.phone.replace(/\D/g, '');
+      let cleanPhone = p.phone.replace(/\D/g, '');
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '90' + cleanPhone.slice(1);
+      }
+      if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) {
+        cleanPhone = '90' + cleanPhone;
+      }
       return {
         parentName: p.fullName,
         phone: p.phone,

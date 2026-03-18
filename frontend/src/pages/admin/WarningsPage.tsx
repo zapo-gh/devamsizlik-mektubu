@@ -254,7 +254,7 @@ export default function WarningsPage() {
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
-        <div className="loading-spinner" />
+        <div className="spinner spinner-dark" />
         <p>Yükleniyor...</p>
       </div>
     );
