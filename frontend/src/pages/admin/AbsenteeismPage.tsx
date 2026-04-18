@@ -55,6 +55,13 @@ export default function AbsenteeismPage() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
 
+  // Direct send (no OTP/link)
+  const [showDirectModal, setShowDirectModal] = useState(false);
+  const [directRecord, setDirectRecord] = useState<AbsenteeismRecord | null>(null);
+  const [directParentPhone, setDirectParentPhone] = useState('');
+  const [directRecordParents, setDirectRecordParents] = useState<{ id: string; fullName: string; phone: string }[]>([]);
+  const [directDownloading, setDirectDownloading] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [page]);
@@ -193,6 +200,55 @@ export default function AbsenteeismPage() {
     }
   };
 
+  const openDirectModal = (recordId: string) => {
+    const record = records.find((r) => r.id === recordId);
+    if (!record) return;
+    setDirectRecord(record);
+    const student = students.find((s) => s.id === record.studentId);
+    if (student && student.parents.length > 0) {
+      setDirectRecordParents(student.parents);
+      setDirectParentPhone(student.parents[0].phone);
+    } else {
+      setDirectRecordParents([]);
+      setDirectParentPhone('');
+    }
+    setShowDirectModal(true);
+  };
+
+  const handleDownloadFile = async () => {
+    if (!directRecord) return;
+    setDirectDownloading(true);
+    try {
+      const response = await api.get(`/absenteeism/${directRecord.id}/pdf`, { responseType: 'blob' });
+      const contentType = response.headers['content-type'] || 'image/jpeg';
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg';
+      a.download = `devamsizlik_${directRecord.student.fullName.replace(/\s+/g, '_')}_${directRecord.warningNumber}uyari.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+    } catch {
+      alert('Dosya indirme başarısız.');
+    } finally {
+      setDirectDownloading(false);
+    }
+  };
+
+  const getDirectWhatsAppLink = () => {
+    if (!directRecord || !directParentPhone) return '#';
+    const selectedParent = directRecordParents.find((p) => p.phone === directParentPhone);
+    const parentLabel = selectedParent?.fullName ? `Sayın ${selectedParent.fullName},` : 'Sayın Veli,';
+    const msg = `${parentLabel}\n\nÖğrenciniz ${directRecord.student.fullName}'nın ${directRecord.warningNumber}. devamsızlık bildirimi ektedir.\n\nSaygılarımızla,\nOkul Yönetimi`;
+    let cleanPhone = directParentPhone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) cleanPhone = '90' + cleanPhone.slice(1);
+    else if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) cleanPhone = '90' + cleanPhone;
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('tr-TR', {
       day: '2-digit',
@@ -280,7 +336,14 @@ export default function AbsenteeismPage() {
                           className="btn btn-whatsapp btn-sm"
                           onClick={() => openOtpModal(r.id)}
                         >
-                          📱 OTP & WhatsApp
+                          📱 OTP & Link
+                        </button>
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: '#25d366', color: '#fff', border: 'none', cursor: 'pointer' }}
+                          onClick={() => openDirectModal(r.id)}
+                        >
+                          📎 Direkt Gönder
                         </button>
                         <button
                           className="btn btn-outline btn-sm"
@@ -656,6 +719,122 @@ export default function AbsenteeismPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Direct Send Modal */}
+      {showDirectModal && directRecord && (
+        <div className="modal-overlay" onClick={() => setShowDirectModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>📎 Direkt WhatsApp Gönder</h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+              Belgeyi indirip WhatsApp'ta resim/dosya olarak gönderin. Link veya şifre gerekmez.
+            </p>
+
+            {/* Parent selection */}
+            {directRecordParents.length > 0 ? (
+              <div className="form-group">
+                <label>Veli Seçin</label>
+                {directRecordParents.map((p, idx) => (
+                  <label
+                    key={p.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '10px 14px',
+                      marginBottom: 8,
+                      background: directParentPhone === p.phone ? '#eff6ff' : '#f8fafc',
+                      border: directParentPhone === p.phone ? '2px solid var(--primary)' : '1px solid var(--border)',
+                      borderRadius: 'var(--radius)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="directParentPhone"
+                      value={p.phone}
+                      checked={directParentPhone === p.phone}
+                      onChange={() => setDirectParentPhone(p.phone)}
+                      style={{ accentColor: 'var(--primary)' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>
+                        {idx + 1}. Veli — {p.fullName}
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>📞 {p.phone}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="form-group">
+                <label>Veli Telefon Numarası</label>
+                <div className="alert alert-warning" style={{ marginBottom: 12, fontSize: 13 }}>
+                  ⚠️ Kayıtlı veli bulunamadı. Telefon numarasını manuel girin.
+                </div>
+                <input
+                  type="tel"
+                  value={directParentPhone}
+                  onChange={(e) => setDirectParentPhone(e.target.value)}
+                  placeholder="905551234567"
+                />
+              </div>
+            )}
+
+            {/* Message preview */}
+            <div className="form-group">
+              <label>Gönderilecek Mesaj</label>
+              <div style={{
+                background: '#f0fdf4',
+                border: '1px solid #86efac',
+                borderRadius: 'var(--radius)',
+                padding: '12px 14px',
+                fontSize: 13,
+                whiteSpace: 'pre-wrap',
+                color: '#166534',
+              }}>
+                {(() => {
+                  const p = directRecordParents.find((x) => x.phone === directParentPhone);
+                  const label = p?.fullName ? `Sayın ${p.fullName},` : 'Sayın Veli,';
+                  return `${label}\n\nÖğrenciniz ${directRecord.student.fullName}'nın ${directRecord.warningNumber}. devamsızlık bildirimi ektedir.\n\nSaygılarımızla,\nOkul Yönetimi`;
+                })()}
+              </div>
+              <small style={{ color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                Mesajla birlikte indirdiğiniz dosyayı WhatsApp'ta ekli olarak gönderin.
+              </small>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                className="btn btn-outline"
+                onClick={handleDownloadFile}
+                disabled={directDownloading}
+                style={{ width: '100%' }}
+              >
+                {directDownloading ? <span className="spinner spinner-dark" /> : '📥 Belgeyi İndir'}
+              </button>
+              <a
+                href={getDirectWhatsAppLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-whatsapp"
+                style={{ width: '100%', textAlign: 'center', textDecoration: 'none' }}
+              >
+                📱 WhatsApp'ı Aç
+              </a>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
+                1. Belgeyi indirin → 2. WhatsApp'ı açın → 3. Mesaja dosyayı ekleyip gönderin
+              </p>
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn btn-outline" onClick={() => setShowDirectModal(false)}>
+                Kapat
+              </button>
+            </div>
           </div>
         </div>
       )}
