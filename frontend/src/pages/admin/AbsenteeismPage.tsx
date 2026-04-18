@@ -833,7 +833,7 @@ export default function AbsenteeismPage() {
                 {directDownloading ? <span className="spinner" /> : '📤 Dosyayı WhatsApp ile Gönder'}
               </button>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
-                {typeof navigator !== 'undefined' && navigator.canShare
+                {typeof navigator !== 'undefined' && typeof navigator.canShare === 'function'
                   ? 'Paylaşım ekranı açılır — WhatsApp\'ı seçin, dosya ve mesaj hazır gelir.'
                   : 'Dosya indirilecek. WhatsApp\'ı açıp dosyayı ekleyerek gönderin.'}
               </p>
