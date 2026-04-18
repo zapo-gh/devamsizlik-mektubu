@@ -222,17 +222,33 @@ export default function AbsenteeismPage() {
       const response = await api.get(`/absenteeism/${directRecord.id}/pdf`, { responseType: 'blob' });
       const contentType = response.headers['content-type'] || 'image/jpeg';
       const blob = new Blob([response.data], { type: contentType });
+      const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg';
+      const fileName = `devamsizlik_${directRecord.student.fullName.replace(/\s+/g, '_')}_${directRecord.warningNumber}uyari.${ext}`;
+
+      // Web Share API ile dosya + mesaj birlikte paylaş (mobil/modern tarayıcı)
+      const selectedParent = directRecordParents.find((p) => p.phone === directParentPhone);
+      const parentLabel = selectedParent?.fullName ? `Sayın ${selectedParent.fullName},` : 'Sayın Veli,';
+      const msg = `${parentLabel}\n\nÖğrenciniz ${directRecord.student.fullName}'nın ${directRecord.warningNumber}. devamsızlık bildirimi ektedir.\n\nSaygılarımızla,\nOkul Yönetimi`;
+
+      if (navigator.canShare && navigator.share) {
+        const file = new File([blob], fileName, { type: contentType });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text: msg });
+          return;
+        }
+      }
+
+      // Fallback: dosyayı indir
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg';
-      a.download = `devamsizlik_${directRecord.student.fullName.replace(/\s+/g, '_')}_${directRecord.warningNumber}uyari.${ext}`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => window.URL.revokeObjectURL(url), 30000);
-    } catch {
-      alert('Dosya indirme başarısız.');
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') alert('Dosya paylaşma başarısız.');
     } finally {
       setDirectDownloading(false);
     }
@@ -729,7 +745,7 @@ export default function AbsenteeismPage() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>📎 Direkt WhatsApp Gönder</h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-              Belgeyi indirip WhatsApp'ta resim/dosya olarak gönderin. Link veya şifre gerekmez.
+              Tek butonla dosyayı ve mesajı doğrudan WhatsApp'a gönderir. Link veya şifre gerekmez.
             </p>
 
             {/* Parent selection */}
@@ -809,24 +825,17 @@ export default function AbsenteeismPage() {
             {/* Actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button
-                className="btn btn-outline"
+                className="btn btn-whatsapp"
                 onClick={handleDownloadFile}
                 disabled={directDownloading}
                 style={{ width: '100%' }}
               >
-                {directDownloading ? <span className="spinner spinner-dark" /> : '📥 Belgeyi İndir'}
+                {directDownloading ? <span className="spinner" /> : '📤 Dosyayı WhatsApp ile Gönder'}
               </button>
-              <a
-                href={getDirectWhatsAppLink()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-whatsapp"
-                style={{ width: '100%', textAlign: 'center', textDecoration: 'none' }}
-              >
-                📱 WhatsApp'ı Aç
-              </a>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
-                1. Belgeyi indirin → 2. WhatsApp'ı açın → 3. Mesaja dosyayı ekleyip gönderin
+                {typeof navigator !== 'undefined' && navigator.canShare
+                  ? 'Paylaşım ekranı açılır — WhatsApp\'ı seçin, dosya ve mesaj hazır gelir.'
+                  : 'Dosya indirilecek. WhatsApp\'ı açıp dosyayı ekleyerek gönderin.'}
               </p>
             </div>
 
