@@ -167,11 +167,11 @@ export const WARNING_BEHAVIORS: WarningBehavior[] = [
  */
 export function getSanctionScope(article: string): string {
   if (article.includes('Madde 36')) return 'Devamsızlık Mevzuatı Kapsamı';
-  if (article.includes('/1')) return 'Yazılı Uyarı Kapsamı';
-  if (article.includes('/2')) return 'Kınama Kapsamı';
+  if (article.includes('/4')) return 'Örgün Eğitim Dışına Çıkarma Kapsamı';
   if (article.includes('/3')) return 'Okul Değiştirme Kapsamı';
-  if (article.includes('/4')) return 'Okul Değiştirme Kapsamı';
-  return 'Yazılı Uyarı Kapsamı';
+  if (article.includes('/2')) return 'Okuldan Kısa Süreli Uzaklaştırma Kapsamı';
+  if (article.includes('/1')) return 'Kınama Kapsamı';
+  return 'Kınama Kapsamı';
 }
 
 /**

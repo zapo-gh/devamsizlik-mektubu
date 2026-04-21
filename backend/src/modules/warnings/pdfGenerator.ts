@@ -301,36 +301,49 @@ export async function generateWarningPdf(
     );
 
     // ── ÖĞRENCİ TEBELLÜĞ BEYANI VE İMZA ALANI ──────
+    // Tüm alt bölüm sayfanın altından yukarı doğru tam hesaplı konumlandırılır.
+    // Bu sayede içerik ne kadar uzun olursa olsun 2. sayfaya taşmaz.
     doc.fillColor('#000000');
 
-    // İçeriğin hemen altına, küçük boşlukla yerleştir (sayfanın altına yapışmaz)
-    doc.moveDown(1.2);
-    hr(doc, doc.y, ML, RE, 1);
-    doc.moveDown(0.4);
+    const pageBottomY = doc.page.height - doc.page.margins.bottom;
 
-    // ── 1. KATMAN: BEYAN METNİ + ÖĞRENCİ İMZA KUTUSU ─
-    // Bölüm başlığı
-    doc.font('Kalin').fontSize(10).fillColor('#000000');
-    doc.text('ÖĞRENCİ TEBELLÜĞ BEYANI', ML, doc.y, { width: CW, align: 'center' });
-    doc.moveDown(0.35);
+    // ─ Öğretmen/Müdür Yardımcısı imza bloğu yükseklikleri ─────────────
+    // tSigLineY = tSigY + 42  (imza çizgisi)
+    // imza+tarih:              tSigLineY + 22  = tSigY + 64
+    // principalY = tSigLineY + 62 = tSigY + 104
+    // pLineY = principalY + 54  = tSigY + 158
+    // "Onay/İmza/Mühür":        pLineY + 3 + 8 = tSigY + 169
+    // footer moveDown+text:      ~ tSigY + 192
+    const teacherBlockH = 195; // tSigY → sayfa altı
+    const tSigY = pageBottomY - teacherBlockH;
 
+    // ─ Beyan kutusu yüksekliğini hesapla ────────────────────────────────
     const declText =
       'Okul idaresi, sınıf rehber öğretmeni ve okul rehber öğretmeni tarafından ' +
-      'yukarıda belirtilen davranışım sebebiyle uyarıldım ve hatalı olduğumu anladım. ' +
+      'yukarıda belirtilen davranışım sebebiyle uyardıldım ve hatalı olduğumu anladım. ' +
       'Olumsuz davranışımın tekrarlanması durumunda bana uygulanabilecek yaptırımlar ' +
       'konusunda bilgilendirildim.';
 
     const stuColW = 115;
     const declTextW = CW - stuColW - 30;
-
     doc.font('Normal').fontSize(9);
     const declTextH = doc.heightOfString(declText, { width: declTextW, lineGap: 2 });
     const boxInnerH = Math.max(declTextH + 4, 60);
     const boxH = boxInnerH + 20;
 
-    const boxY = doc.y;
+    // ─ Kesin Y koordinatları (alttan yukarı) ────────────────────────────
+    const boxY    = tSigY - 14 - boxH;  // beyan kutusu üstü (14px boşluk)
+    const titleY  = boxY - 16;           // bölüm başlığı
+    const hrSepY  = titleY - 12;         // ayırıcı çizgi
 
-    // Kutu çerçevesi
+    // HR separator
+    hr(doc, hrSepY, ML, RE, 1);
+
+    // Başlık
+    doc.font('Kalin').fontSize(10).fillColor('#000000');
+    doc.text('ÖĞRENCİ TEBELLÜĞ BEYANI', ML, titleY, { width: CW, align: 'center' });
+
+    // Beyan kutu çerçevesi
     doc.save();
     doc.rect(ML, boxY, CW, boxH).strokeColor('#000000').lineWidth(0.6).stroke();
     doc.restore();
@@ -359,14 +372,6 @@ export async function generateWarningPdf(
     doc.text('İmza', stuX, stuLineY + 3, { width: stuW, align: 'center' });
     doc.fillColor('#555555').font('Normal').fontSize(6.5);
     doc.text('Tarih: ..../..../..........', stuX, stuLineY + 12, { width: stuW, align: 'center' });
-
-    doc.y = boxY + boxH;
-
-    // ── 2. KATMAN: ÖĞRETMEN / DÜZENLEYEN İMZA SÜTUNLARI (sayfanın altına sabitlenmiş) ─
-    // Bloğun toplam yüksekliği: isim+unvan(24) + imza boşluğu(42) + imza+tarih(22) + müdür(40) + footer(20) ≈ 148
-    const bottomBlockH = 148;
-    const pageBottomY = doc.page.height - doc.page.margins.bottom;
-    const tSigY = pageBottomY - bottomBlockH;
 
     const tGap = 8;
     const tColW = (CW - tGap * 2) / 3;
@@ -415,12 +420,12 @@ export async function generateWarningPdf(
     doc.text('Onay / İmza / Mühür', ML, pLineY + 3, { width: CW, align: 'center' });
 
     // ── FOOTER ────────────────────────────────────────
-    // Sayfa taşmaması için mevcut y'den devam et
-    doc.moveDown(1);
+    // Mutlak Y ile satır taşması riski olmadan konumlandır
+    const footerY = pLineY + 20;
     doc.font('Normal').fontSize(6.5).fillColor('#bbbbbb');
     doc.text(
       `Bu belge ${fmtDate(new Date())} tarihinde düzenlenmiştir.`,
-      { width: CW, align: 'center' }
+      ML, footerY, { width: CW, align: 'center' }
     );
 
     doc.end();
