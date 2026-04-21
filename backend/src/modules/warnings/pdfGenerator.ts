@@ -299,14 +299,8 @@ export async function generateWarningPdf(
     // ── ÖĞRENCİ TEBELLÜĞ BEYANI VE İMZA ALANI ──────
     doc.fillColor('#000000');
 
-    // Toplam yükseklik:
-    //   ayırıcı(6) + başlık(16) + beyan kutusu(~78) + boşluk(8)
-    //   + öğretmen imzaları(55) + müdür(42) + footer(18) ≈ 223 → 250 güvenlik payıyla
-    const sigTotalH = 250;
-    const pageBottom = doc.page.height - doc.page.margins.bottom;
-    const sigStart = pageBottom - sigTotalH;
-
-    doc.y = sigStart;
+    // İçeriğin hemen altına, küçük boşlukla yerleştir (sayfanın altına yapışmaz)
+    doc.moveDown(1.2);
     hr(doc, doc.y, ML, RE, 1);
     doc.moveDown(0.4);
 
