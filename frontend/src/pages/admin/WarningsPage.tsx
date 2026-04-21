@@ -47,6 +47,8 @@ export default function WarningsPage() {
   const [description, setDescription] = useState('');
   const [guidanceNote, setGuidanceNote] = useState('');
   const [issuedBy, setIssuedBy] = useState('');
+  const [classTeacherName, setClassTeacherName] = useState('');
+  const [schoolCounselorName, setSchoolCounselorName] = useState('');
   const [warningCount, setWarningCount] = useState(0);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -114,6 +116,8 @@ export default function WarningsPage() {
         description: description || undefined,
         guidanceNote: guidanceNote || undefined,
         issuedBy: issuedBy || undefined,
+        classTeacherName: classTeacherName || undefined,
+        schoolCounselorName: schoolCounselorName || undefined,
       });
 
       setShowCreateModal(false);
@@ -134,6 +138,8 @@ export default function WarningsPage() {
     setDescription('');
     setGuidanceNote('');
     setIssuedBy('');
+    setClassTeacherName('');
+    setSchoolCounselorName('');
     setWarningCount(0);
     setCreateError('');
   };
@@ -511,9 +517,33 @@ export default function WarningsPage() {
                 <small style={{ color: '#888' }}>{guidanceNote.length}/500</small>
               </div>
 
-              {/* Step 5: Düzenleyen */}
+              {/* Step 5: Sınıf Rehber Öğretmeni */}
               <div className="form-group">
-                <label>5. Düzenleyen</label>
+                <label>5. Sınıf Rehber Öğretmeni (Opsiyonel)</label>
+                <input
+                  type="text"
+                  placeholder="Sınıf rehber öğretmeninin adını yazın..."
+                  value={classTeacherName}
+                  onChange={(e) => setClassTeacherName(e.target.value)}
+                  maxLength={100}
+                />
+              </div>
+
+              {/* Step 6: Okul Rehber Öğretmeni */}
+              <div className="form-group">
+                <label>6. Okul Rehber Öğretmeni (Opsiyonel)</label>
+                <input
+                  type="text"
+                  placeholder="Okul rehber öğretmeninin adını yazın..."
+                  value={schoolCounselorName}
+                  onChange={(e) => setSchoolCounselorName(e.target.value)}
+                  maxLength={100}
+                />
+              </div>
+
+              {/* Step 7: Düzenleyen */}
+              <div className="form-group">
+                <label>7. Düzenleyen</label>
                 <input
                   type="text"
                   placeholder="Müdür yardımcısının adını yazın..."

@@ -11,6 +11,8 @@ interface WarningPdfData {
   behaviorArticle?: string;
   description?: string;
   guidanceNote?: string;
+  classTeacherName?: string;
+  schoolCounselorName?: string;
   issuedBy: string;
   issuedAt: Date;
   schoolName?: string;
@@ -389,8 +391,8 @@ export async function generateWarningPdf(
       doc.text('Tarih: ..../..../..........', x, tSigLineY + 12, { width: tColW, align: 'center' });
     };
 
-    drawTeacherCol(tCol1X, '', 'Sınıf Rehber Öğretmeni');
-    drawTeacherCol(tCol2X, '', 'Okul Rehber Öğretmeni');
+    drawTeacherCol(tCol1X, data.classTeacherName || '', 'Sınıf Rehber Öğretmeni');
+    drawTeacherCol(tCol2X, data.schoolCounselorName || '', 'Okul Rehber Öğretmeni');
     drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Düzenleyen');
 
     // ── OKUL MÜDÜRÜ ONAY ─────────────────────────────

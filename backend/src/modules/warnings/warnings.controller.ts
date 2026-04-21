@@ -10,6 +10,8 @@ const createSchema = z.object({
   guidanceNote: z.string().max(500, 'Rehberlik notu en fazla 500 karakter olabilir.').optional(),
   issuedBy: z.string().max(100).optional(),
   schoolName: z.string().max(200).optional(),
+  classTeacherName: z.string().max(100).optional(),
+  schoolCounselorName: z.string().max(100).optional(),
 });
 
 export class WarningsController {

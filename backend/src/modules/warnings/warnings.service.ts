@@ -74,6 +74,8 @@ export class WarningsService {
     issuedBy?: string;
     schoolName?: string;
     principalName?: string;
+    classTeacherName?: string;
+    schoolCounselorName?: string;
   }) {
     // Verify student exists
     const student = await prisma.student.findUnique({
@@ -116,6 +118,8 @@ export class WarningsService {
         issuedAt: new Date(),
         schoolName,
         principalName,
+        classTeacherName: data.classTeacherName,
+        schoolCounselorName: data.schoolCounselorName,
       },
       pdfPath
     );
