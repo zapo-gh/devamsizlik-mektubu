@@ -300,27 +300,20 @@ export async function generateWarningPdf(
       { align: 'justify', lineGap: 2 }
     );
 
-    // ── ÖĞRENCİ TEBELLÜĞ BEYANI VE İMZA ALANI ──────
-    // Tüm alt bölüm sayfanın altından yukarı doğru tam hesaplı konumlandırılır.
-    // Bu sayede içerik ne kadar uzun olursa olsun 2. sayfaya taşmaz.
+    // ── ÖĞRENCİ TEBELLÜĞ BEYANI ──────────────────────
+    // İçeriğin hemen altına akış sırasında yerleştirilir.
     doc.fillColor('#000000');
+    doc.moveDown(0.6);
+    hr(doc, doc.y, ML, RE, 1);
+    doc.moveDown(0.35);
 
-    const pageBottomY = doc.page.height - doc.page.margins.bottom;
+    doc.font('Kalin').fontSize(10).fillColor('#000000');
+    doc.text('ÖĞRENCİ TEBELLÜĞ BEYANI', ML, doc.y, { width: CW, align: 'center' });
+    doc.moveDown(0.35);
 
-    // ─ Öğretmen/Müdür Yardımcısı imza bloğu yükseklikleri ─────────────
-    // tSigLineY = tSigY + 42  (imza çizgisi)
-    // imza+tarih:              tSigLineY + 22  = tSigY + 64
-    // principalY = tSigLineY + 62 = tSigY + 104
-    // pLineY = principalY + 54  = tSigY + 158
-    // "Onay/İmza/Mühür":        pLineY + 3 + 8 = tSigY + 169
-    // footer moveDown+text:      ~ tSigY + 192
-    const teacherBlockH = 195; // tSigY → sayfa altı
-    const tSigY = pageBottomY - teacherBlockH;
-
-    // ─ Beyan kutusu yüksekliğini hesapla ────────────────────────────────
     const declText =
       'Okul idaresi, sınıf rehber öğretmeni ve okul rehber öğretmeni tarafından ' +
-      'yukarıda belirtilen davranışım sebebiyle uyardıldım ve hatalı olduğumu anladım. ' +
+      'yukarıda belirtilen davranışım sebebiyle uyarıldım ve hatalı olduğumu anladım. ' +
       'Olumsuz davranışımın tekrarlanması durumunda bana uygulanabilecek yaptırımlar ' +
       'konusunda bilgilendirildim.';
 
@@ -330,20 +323,9 @@ export async function generateWarningPdf(
     const declTextH = doc.heightOfString(declText, { width: declTextW, lineGap: 2 });
     const boxInnerH = Math.max(declTextH + 4, 60);
     const boxH = boxInnerH + 20;
+    const boxY = doc.y;
 
-    // ─ Kesin Y koordinatları (alttan yukarı) ────────────────────────────
-    const boxY    = tSigY - 14 - boxH;  // beyan kutusu üstü (14px boşluk)
-    const titleY  = boxY - 16;           // bölüm başlığı
-    const hrSepY  = titleY - 12;         // ayırıcı çizgi
-
-    // HR separator
-    hr(doc, hrSepY, ML, RE, 1);
-
-    // Başlık
-    doc.font('Kalin').fontSize(10).fillColor('#000000');
-    doc.text('ÖĞRENCİ TEBELLÜĞ BEYANI', ML, titleY, { width: CW, align: 'center' });
-
-    // Beyan kutu çerçevesi
+    // Kutu çerçevesi
     doc.save();
     doc.rect(ML, boxY, CW, boxH).strokeColor('#000000').lineWidth(0.6).stroke();
     doc.restore();
@@ -372,6 +354,12 @@ export async function generateWarningPdf(
     doc.text('İmza', stuX, stuLineY + 3, { width: stuW, align: 'center' });
     doc.fillColor('#555555').font('Normal').fontSize(6.5);
     doc.text('Tarih: ..../..../..........', stuX, stuLineY + 12, { width: stuW, align: 'center' });
+
+    // ── ÖĞRETMEN / MÜDÜR İMZA BLOĞU (sayfanın en altına sabitlenmiş) ──
+    const pageBottomY = doc.page.height - doc.page.margins.bottom;
+    // tSigLineY = tSigY + 42 | imza+tarih = +64 | principalY = +104
+    // pLineY = +158 | footer = +178  → toplam ~178px
+    const tSigY = pageBottomY - 178;
 
     const tGap = 8;
     const tColW = (CW - tGap * 2) / 3;
