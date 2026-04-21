@@ -390,7 +390,10 @@ export async function generateWarningPdf(
     drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Müdür Yardımcısı');
 
     // ── OKUL MÜDÜRÜ ONAY ─────────────────────────────
-    const principalY = tSigLineY + 62;
+    // İmza çizgisi öğretmen imzalarıyla aynı Y'de (tSigLineY)
+    const pLineY = tSigLineY;
+    // İsim ve unvan imza çizgisinin üstünde
+    const principalY = pLineY - 54;
     doc.fillColor('#000000');
     if (data.principalName) {
       doc.font('Kalin').fontSize(9);
@@ -401,8 +404,6 @@ export async function generateWarningPdf(
       doc.font('Kalin').fontSize(9);
       doc.text('OKUL MÜDÜRÜ', ML, principalY, { width: CW, align: 'center' });
     }
-    // İmza çizgisi: unvanın altından 42px boşluk (öğretmen imzalarıyla aynı yükseklik)
-    const pLineY = principalY + 12 + 42;
     hr(doc, pLineY, ML + CW * 3 / 8, ML + CW * 5 / 8, 0.5);
     doc.font('Normal').fontSize(6.5).fillColor('#999999');
     doc.text('Onay / İmza / Mühür', ML, pLineY + 3, { width: CW, align: 'center' });
