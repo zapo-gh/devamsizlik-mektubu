@@ -358,8 +358,11 @@ export async function generateWarningPdf(
 
     doc.y = boxY + boxH;
 
-    // ── 2. KATMAN: ÖĞRETMEN / DÜZENLEYEN İMZA SÜTUNLARI ─
-    doc.moveDown(0.65);
+    // ── 2. KATMAN: ÖĞRETMEN / DÜZENLEYEN İMZA SÜTUNLARI (sayfanın altına sabitlenmiş) ─
+    // Bloğun toplam yüksekliği: isim+unvan(24) + imza boşluğu(42) + imza+tarih(22) + müdür(40) + footer(20) ≈ 148
+    const bottomBlockH = 148;
+    const pageBottomY = doc.page.height - doc.page.margins.bottom;
+    const tSigY = pageBottomY - bottomBlockH;
 
     const tGap = 8;
     const tColW = (CW - tGap * 2) / 3;
@@ -367,7 +370,6 @@ export async function generateWarningPdf(
     const tCol2X = ML + tColW + tGap;
     const tCol3X = ML + (tColW + tGap) * 2;
 
-    const tSigY = doc.y;
     // İmza çizgisi daha aşağıda → satır yüksekliği artırıldı (26 → 42)
     const tSigLineY = tSigY + 42;
 
