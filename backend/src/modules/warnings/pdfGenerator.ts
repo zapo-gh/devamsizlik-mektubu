@@ -294,64 +294,107 @@ export async function generateWarningPdf(
       { align: 'justify', lineGap: 2 }
     );
 
-    // ── ÖĞRENCİ TEBLİĞ / İMZA ALANI ────────────────
+    // ── ÖĞRENCİ TEBELLÜĞ BEYANI VE İMZA ALANI ──────
     doc.fillColor('#000000');
 
-    // İmza alanını sayfanın en altına sabitle
-    // 4 imza sütunu (öğrenci, sınıf rehber öğr., okul rehber öğr., düzenleyen) + müdür + footer ≈ 200
-    const sigTotalH = 200;
+    // Toplam yükseklik: başlık + beyan kutusu + öğretmen imzaları + müdür + footer ≈ 235
+    const sigTotalH = 235;
     const pageBottom = doc.page.height - doc.page.margins.bottom;
     const sigStart = pageBottom - sigTotalH;
 
     doc.y = sigStart;
-    hr(doc, doc.y, ML, RE, 0.6);
-    doc.moveDown(0.3);
+    hr(doc, doc.y, ML, RE, 1);
+    doc.moveDown(0.4);
 
-    doc.font('Kalin').fontSize(10);
-    doc.text('ÖĞRENCİ TEBLİĞ / TEBELLÜĞ', ML, doc.y, { width: CW, align: 'center' });
-    doc.moveDown(0.2);
+    // Bölüm başlığı
+    doc.font('Kalin').fontSize(10).fillColor('#000000');
+    doc.text('ÖĞRENCİ TEBELLÜĞ BEYANI', ML, doc.y, { width: CW, align: 'center' });
+    doc.moveDown(0.35);
 
+    // ── BEYAN METNİ + ÖĞRENCİ İMZA KUTUSU ───────────
+    const declText =
+      'Okul idaresi, sınıf rehber öğretmeni ve okul rehber öğretmeni tarafından ' +
+      'yukarıda belirtilen davranışım sebebiyle uyarıldım ve hatalı olduğumu anladım. ' +
+      'Olumsuz davranışımın tekrarlanması durumunda bana uygulanabilecek yaptırımlar ' +
+      'konusunda bilgilendirildim.';
+
+    const stuColW = 115;              // öğrenci imza alanı genişliği (sağ taraf)
+    const declTextW = CW - stuColW - 30; // beyan metni genişliği (sol taraf)
+
+    doc.font('Normal').fontSize(9);
+    const declTextH = doc.heightOfString(declText, { width: declTextW, lineGap: 2 });
+    // Öğrenci bloğu ihtiyacı: ad(12) + unvan(10) + boşluk(10) + çizgi + imza(8) + tarih(8) = ~55px
+    const boxInnerH = Math.max(declTextH + 4, 58);
+    const boxH = boxInnerH + 20; // üst/alt padding
+
+    const boxY = doc.y;
+
+    // Kutu dış çerçevesi
+    doc.save();
+    doc.rect(ML, boxY, CW, boxH).strokeColor('#000000').lineWidth(0.6).stroke();
+    doc.restore();
+
+    // Beyan metni (sol)
     doc.font('Normal').fontSize(9).fillColor('#000000');
-    doc.text(
-      'Yukarıda belirtilen yazılı uyarıyı okudum ve tebellüğ ettim.',
-      { align: 'center' }
-    );
-    doc.moveDown(0.9);
+    doc.text(declText, ML + 12, boxY + 10, { width: declTextW, lineGap: 2 });
 
-    // 4 eşit imza sütunu
-    const gapBetween = 8;
-    const colW = (CW - gapBetween * 3) / 4;
-    const col1X = ML;
-    const col2X = ML + colW + gapBetween;
-    const col3X = ML + (colW + gapBetween) * 2;
-    const col4X = ML + (colW + gapBetween) * 3;
+    // Dikey ayırıcı
+    const divX = ML + CW - stuColW - 10;
+    doc.save();
+    doc.moveTo(divX, boxY).lineTo(divX, boxY + boxH)
+      .strokeColor('#cccccc').lineWidth(0.4).stroke();
+    doc.restore();
 
-    const sigY = doc.y;
-    const sigLineY = sigY + 44; // tüm imza çizgileri aynı hizada
+    // Öğrenci bilgileri (sağ)
+    const stuX = divX + 6;
+    const stuW = stuColW - 4;
+    doc.font('Kalin').fontSize(8.5).fillColor('#000000');
+    doc.text(data.studentFullName, stuX, boxY + 8, { width: stuW, align: 'center' });
+    doc.font('Normal').fontSize(7.5);
+    doc.text('Öğrenci', stuX, boxY + 21, { width: stuW, align: 'center' });
 
-    // Yardımcı: imza sütunu çizer
-    const drawSigCol = (x: number, name: string, role: string) => {
+    const stuLineY = boxY + boxH - 24;
+    hr(doc, stuLineY, stuX + stuW * 0.08, stuX + stuW * 0.92, 0.5);
+    doc.font('Normal').fontSize(6.5).fillColor('#999999');
+    doc.text('İmza', stuX, stuLineY + 3, { width: stuW, align: 'center' });
+    doc.fillColor('#555555').font('Normal').fontSize(6.5);
+    doc.text('Tarih: ..../..../..........', stuX, stuLineY + 12, { width: stuW, align: 'center' });
+
+    doc.y = boxY + boxH;
+
+    // ── ÖĞRETMEN / DÜZENLEyEN İMZA SÜTUNLARI ────────
+    doc.moveDown(0.55);
+
+    const tGap = 8;
+    const tColW = (CW - tGap * 2) / 3;
+    const tCol1X = ML;
+    const tCol2X = ML + tColW + tGap;
+    const tCol3X = ML + (tColW + tGap) * 2;
+
+    const tSigY = doc.y;
+    const tSigLineY = tSigY + 26;
+
+    const drawTeacherCol = (x: number, name: string, role: string) => {
       doc.fillColor('#000000');
       if (name) {
         doc.font('Kalin').fontSize(8);
-        doc.text(name, x, sigY, { width: colW, align: 'center' });
+        doc.text(name, x, tSigY, { width: tColW, align: 'center' });
       }
       doc.font('Normal').fontSize(7.5);
-      doc.text(role, x, sigY + (name ? 12 : 6), { width: colW, align: 'center' });
-      hr(doc, sigLineY, x + colW * 0.08, x + colW * 0.92, 0.5);
+      doc.text(role, x, tSigY + (name ? 11 : 3), { width: tColW, align: 'center' });
+      hr(doc, tSigLineY, x + tColW * 0.08, x + tColW * 0.92, 0.5);
       doc.font('Normal').fontSize(6.5).fillColor('#999999');
-      doc.text('İmza', x, sigLineY + 3, { width: colW, align: 'center' });
+      doc.text('İmza', x, tSigLineY + 3, { width: tColW, align: 'center' });
       doc.fillColor('#555555').font('Normal').fontSize(6.5);
-      doc.text('Tarih: ..../..../..........', x, sigLineY + 12, { width: colW, align: 'center' });
+      doc.text('Tarih: ..../..../..........', x, tSigLineY + 12, { width: tColW, align: 'center' });
     };
 
-    drawSigCol(col1X, data.studentFullName, 'Öğrenci');
-    drawSigCol(col2X, '', 'Sınıf Rehber Öğretmeni');
-    drawSigCol(col3X, '', 'Okul Rehber Öğretmeni');
-    drawSigCol(col4X, data.issuedBy || 'Okul Yönetimi', 'Düzenleyen');
+    drawTeacherCol(tCol1X, '', 'Sınıf Rehber Öğretmeni');
+    drawTeacherCol(tCol2X, '', 'Okul Rehber Öğretmeni');
+    drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Düzenleyen');
 
     // ── OKUL MÜDÜRÜ ONAY ─────────────────────────────
-    const principalY = sigLineY + 32;
+    const principalY = tSigLineY + 30;
     doc.fillColor('#000000');
     if (data.principalName) {
       doc.font('Kalin').fontSize(9);
