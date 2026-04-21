@@ -9,6 +9,7 @@ interface WarningPdfData {
   warningNumber: number;
   behaviorText: string;
   behaviorArticle?: string;
+  behaviorSanctionScope?: string;
   description?: string;
   guidanceNote?: string;
   classTeacherName?: string;
@@ -95,6 +96,7 @@ export async function generateWarningPdf(
     const school = data.schoolName || '';
     const dateStr = fmtDate(data.issuedAt);
     const behaviorArticle = data.behaviorArticle || 'Madde 164';
+    const sanctionScope = data.behaviorSanctionScope || '';
 
     // ── ANTET ──────────────────────────────────────────
     doc.font('Kalin').fontSize(11);
@@ -201,7 +203,9 @@ export async function generateWarningPdf(
     const h2 = doc.heightOfString(data.behaviorText, { width: bw - 24 });
     // İlgili madde satırı
     doc.font('Normal').fontSize(9);
-    const artLine = `(${behaviorArticle})`;
+    const artLine = sanctionScope
+      ? `(${behaviorArticle}) — ${sanctionScope}`
+      : `(${behaviorArticle})`;
     const artH = doc.heightOfString(artLine, { width: bw - 24 });
     let bh = 10 + h1 + 2 + h2 + 3 + artH + 10;
 
@@ -390,7 +394,7 @@ export async function generateWarningPdf(
 
     drawTeacherCol(tCol1X, data.classTeacherName || '', 'Sınıf Rehber Öğretmeni');
     drawTeacherCol(tCol2X, data.schoolCounselorName || '', 'Okul Rehber Öğretmeni');
-    drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Düzenleyen');
+    drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Müdür Yardımcısı');
 
     // ── OKUL MÜDÜRÜ ONAY ─────────────────────────────
     const principalY = tSigLineY + 62;

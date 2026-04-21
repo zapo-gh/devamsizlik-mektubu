@@ -162,6 +162,19 @@ export const WARNING_BEHAVIORS: WarningBehavior[] = [
 ];
 
 /**
+ * Yönetmelik maddesine göre ceza kapsamını döndürür
+ * Ortaöğretim Kurumları Yönetmeliği Madde 164
+ */
+export function getSanctionScope(article: string): string {
+  if (article.includes('Madde 36')) return 'Devamsızlık Mevzuatı Kapsamı';
+  if (article.includes('/1')) return 'Yazılı Uyarı Kapsamı';
+  if (article.includes('/2')) return 'Kınama Kapsamı';
+  if (article.includes('/3')) return 'Okul Değiştirme Kapsamı';
+  if (article.includes('/4')) return 'Okul Değiştirme Kapsamı';
+  return 'Yazılı Uyarı Kapsamı';
+}
+
+/**
  * Kategorilere göre gruplandırılmış davranışları döndürür
  */
 export function getBehaviorsByCategory(): Record<string, WarningBehavior[]> {

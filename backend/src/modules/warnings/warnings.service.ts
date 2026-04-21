@@ -3,7 +3,7 @@ import fs from 'fs';
 import prisma from '../shared/utils/prisma';
 import { config } from '../shared/config';import { settingsService } from '../settings/settings.service';import { AppError } from '../shared/middleware/errorHandler.middleware';
 import { generateWarningPdf } from './pdfGenerator';
-import { findBehaviorByCode, WARNING_BEHAVIORS, getBehaviorsByCategory } from './warningBehaviors';
+import { findBehaviorByCode, WARNING_BEHAVIORS, getBehaviorsByCategory, getSanctionScope } from './warningBehaviors';
 
 function fmtDate(date: Date): string {
   const d = new Date(date);
@@ -112,6 +112,7 @@ export class WarningsService {
         warningNumber,
         behaviorText: behavior.text,
         behaviorArticle: behavior.article,
+        behaviorSanctionScope: getSanctionScope(behavior.article),
         description: data.description,
         guidanceNote: data.guidanceNote,
         issuedBy: data.issuedBy || 'Okul Yönetimi',
@@ -172,6 +173,7 @@ export class WarningsService {
           warningNumber: record.warningNumber,
           behaviorText: record.behaviorText,
           behaviorArticle: behavior?.article,
+          behaviorSanctionScope: behavior ? getSanctionScope(behavior.article) : undefined,
           description: record.description || undefined,
           issuedBy: record.issuedBy,
           issuedAt: record.issuedAt,
