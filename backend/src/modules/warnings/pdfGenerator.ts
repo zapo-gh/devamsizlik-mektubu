@@ -393,24 +393,22 @@ export async function generateWarningPdf(
     drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Düzenleyen');
 
     // ── OKUL MÜDÜRÜ ONAY ─────────────────────────────
-    const principalY = tSigLineY + 48;
+    const principalY = tSigLineY + 62;
     doc.fillColor('#000000');
     if (data.principalName) {
       doc.font('Kalin').fontSize(9);
-      doc.text(data.principalName, ML, principalY - 2, { width: CW, align: 'center' });
-      doc.font('Normal').fontSize(7);
-      doc.text('Okul Müdürü', ML, doc.y + 1, { width: CW, align: 'center' });
-      const pLineY = doc.y + 8;
-      hr(doc, pLineY, ML + CW * 3 / 8, ML + CW * 5 / 8, 0.4);
-      doc.font('Normal').fontSize(7).fillColor('#999999');
-      doc.text('Onay / İmza / Mühür', ML, pLineY + 2, { width: CW, align: 'center' });
+      doc.text(data.principalName, ML, principalY, { width: CW, align: 'center' });
+      doc.font('Normal').fontSize(7.5);
+      doc.text('Okul Müdürü', ML, principalY + 12, { width: CW, align: 'center' });
     } else {
-      hr(doc, principalY, ML + CW * 3 / 8, ML + CW * 5 / 8, 0.4);
       doc.font('Kalin').fontSize(9);
-      doc.text('OKUL MÜDÜRÜ', ML, principalY + 3, { width: CW, align: 'center' });
-      doc.font('Normal').fontSize(7).fillColor('#999999');
-      doc.text('Onay / İmza / Mühür', ML, doc.y + 1, { width: CW, align: 'center' });
+      doc.text('OKUL MÜDÜRÜ', ML, principalY, { width: CW, align: 'center' });
     }
+    // İmza çizgisi: unvanın altından 42px boşluk (öğretmen imzalarıyla aynı yükseklik)
+    const pLineY = principalY + 12 + 42;
+    hr(doc, pLineY, ML + CW * 3 / 8, ML + CW * 5 / 8, 0.5);
+    doc.font('Normal').fontSize(6.5).fillColor('#999999');
+    doc.text('Onay / İmza / Mühür', ML, pLineY + 3, { width: CW, align: 'center' });
 
     // ── FOOTER ────────────────────────────────────────
     // Sayfa taşmaması için mevcut y'den devam et
