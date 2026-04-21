@@ -5,6 +5,7 @@ import fs from 'fs';
 
 import { config } from './modules/shared/config';
 import { errorHandler } from './modules/shared/middleware/errorHandler.middleware';
+import prisma from './modules/shared/utils/prisma';
 import authRoutes from './modules/auth/auth.routes';
 import studentRoutes from './modules/students/students.routes';
 import absenteeismRoutes from './modules/absenteeism/absenteeism.routes';
@@ -31,6 +32,14 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Render uyku modundan uyanma sonrası DB bağlantısını kontrol et
+app.use((_req, _res, next) => {
+  prisma.$queryRaw`SELECT 1`.catch(() => {
+    prisma.$connect().catch(() => {/* sessizce geç, bir sonraki istek yeniden dener */});
+  });
+  next();
+});
 
 // Health check
 app.get('/api/health', (_req, res) => {
