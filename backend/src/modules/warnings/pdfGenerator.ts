@@ -390,7 +390,7 @@ export async function generateWarningPdf(
     drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Müdür Yardımcısı');
 
     // ── OKUL MÜDÜRÜ ONAY (öğretmen satırının altında, ayrı satır) ────────
-    const principalY = tSigLineY + 28;
+    const principalY = tSigLineY + 50;
     doc.fillColor('#000000');
     if (data.principalName) {
       doc.font('Kalin').fontSize(9);
