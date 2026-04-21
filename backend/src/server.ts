@@ -8,7 +8,7 @@ async function main() {
     await prisma.$connect();
     console.log('✅ Database connected successfully');
 
-    app.listen(config.port, () => {
+    app.listen(config.port, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${config.port}`);
       console.log(`📋 Environment: ${config.nodeEnv}`);
     });
