@@ -1,9 +1,24 @@
+import { execSync } from 'child_process';
 import app from './app';
 import { config } from './modules/shared/config';
 import prisma from './modules/shared/utils/prisma';
 
 async function main() {
   try {
+    // Run migrations (uses DIRECT_URL if set, otherwise DATABASE_URL)
+    try {
+      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+    } catch (e) {
+      console.warn('⚠️  prisma migrate deploy failed (may already be up-to-date):', (e as Error).message);
+    }
+
+    // Seed admin user
+    try {
+      execSync('node prisma/seed-admin.js', { stdio: 'inherit' });
+    } catch (e) {
+      console.warn('⚠️  seed-admin failed:', (e as Error).message);
+    }
+
     // Test database connection
     await prisma.$connect();
     console.log('✅ Database connected successfully');
