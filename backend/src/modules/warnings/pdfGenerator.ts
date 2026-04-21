@@ -393,7 +393,7 @@ export async function generateWarningPdf(
     drawTeacherCol(tCol3X, data.issuedBy || 'Okul Yönetimi', 'Düzenleyen');
 
     // ── OKUL MÜDÜRÜ ONAY ─────────────────────────────
-    const principalY = tSigLineY + 30;
+    const principalY = tSigLineY + 48;
     doc.fillColor('#000000');
     if (data.principalName) {
       doc.font('Kalin').fontSize(9);
