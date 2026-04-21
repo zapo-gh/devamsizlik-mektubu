@@ -407,15 +407,6 @@ export async function generateWarningPdf(
     doc.font('Normal').fontSize(6.5).fillColor('#999999');
     doc.text('Onay / İmza / Mühür', ML, pLineY + 3, { width: CW, align: 'center' });
 
-    // ── FOOTER ────────────────────────────────────────
-    // Mutlak Y ile satır taşması riski olmadan konumlandır
-    const footerY = pLineY + 20;
-    doc.font('Normal').fontSize(6.5).fillColor('#bbbbbb');
-    doc.text(
-      `Bu belge ${fmtDate(new Date())} tarihinde düzenlenmiştir.`,
-      ML, footerY, { width: CW, align: 'center' }
-    );
-
     doc.end();
     stream.on('finish', () => resolve(outputPath));
     stream.on('error', reject);
