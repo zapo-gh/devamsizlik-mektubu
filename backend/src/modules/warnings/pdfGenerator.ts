@@ -299,8 +299,10 @@ export async function generateWarningPdf(
     // ── ÖĞRENCİ TEBELLÜĞ BEYANI VE İMZA ALANI ──────
     doc.fillColor('#000000');
 
-    // Toplam yükseklik: başlık + beyan kutusu + öğretmen imzaları + müdür + footer ≈ 235
-    const sigTotalH = 235;
+    // Toplam yükseklik:
+    //   ayırıcı(6) + başlık(16) + beyan kutusu(~78) + boşluk(8)
+    //   + öğretmen imzaları(55) + müdür(42) + footer(18) ≈ 223 → 250 güvenlik payıyla
+    const sigTotalH = 250;
     const pageBottom = doc.page.height - doc.page.margins.bottom;
     const sigStart = pageBottom - sigTotalH;
 
@@ -308,30 +310,29 @@ export async function generateWarningPdf(
     hr(doc, doc.y, ML, RE, 1);
     doc.moveDown(0.4);
 
+    // ── 1. KATMAN: BEYAN METNİ + ÖĞRENCİ İMZA KUTUSU ─
     // Bölüm başlığı
     doc.font('Kalin').fontSize(10).fillColor('#000000');
     doc.text('ÖĞRENCİ TEBELLÜĞ BEYANI', ML, doc.y, { width: CW, align: 'center' });
     doc.moveDown(0.35);
 
-    // ── BEYAN METNİ + ÖĞRENCİ İMZA KUTUSU ───────────
     const declText =
       'Okul idaresi, sınıf rehber öğretmeni ve okul rehber öğretmeni tarafından ' +
       'yukarıda belirtilen davranışım sebebiyle uyarıldım ve hatalı olduğumu anladım. ' +
       'Olumsuz davranışımın tekrarlanması durumunda bana uygulanabilecek yaptırımlar ' +
       'konusunda bilgilendirildim.';
 
-    const stuColW = 115;              // öğrenci imza alanı genişliği (sağ taraf)
-    const declTextW = CW - stuColW - 30; // beyan metni genişliği (sol taraf)
+    const stuColW = 115;
+    const declTextW = CW - stuColW - 30;
 
     doc.font('Normal').fontSize(9);
     const declTextH = doc.heightOfString(declText, { width: declTextW, lineGap: 2 });
-    // Öğrenci bloğu ihtiyacı: ad(12) + unvan(10) + boşluk(10) + çizgi + imza(8) + tarih(8) = ~55px
-    const boxInnerH = Math.max(declTextH + 4, 58);
-    const boxH = boxInnerH + 20; // üst/alt padding
+    const boxInnerH = Math.max(declTextH + 4, 60);
+    const boxH = boxInnerH + 20;
 
     const boxY = doc.y;
 
-    // Kutu dış çerçevesi
+    // Kutu çerçevesi
     doc.save();
     doc.rect(ML, boxY, CW, boxH).strokeColor('#000000').lineWidth(0.6).stroke();
     doc.restore();
@@ -347,14 +348,13 @@ export async function generateWarningPdf(
       .strokeColor('#cccccc').lineWidth(0.4).stroke();
     doc.restore();
 
-    // Öğrenci bilgileri (sağ)
+    // Öğrenci (sağ bölüm)
     const stuX = divX + 6;
     const stuW = stuColW - 4;
     doc.font('Kalin').fontSize(8.5).fillColor('#000000');
     doc.text(data.studentFullName, stuX, boxY + 8, { width: stuW, align: 'center' });
     doc.font('Normal').fontSize(7.5);
     doc.text('Öğrenci', stuX, boxY + 21, { width: stuW, align: 'center' });
-
     const stuLineY = boxY + boxH - 24;
     hr(doc, stuLineY, stuX + stuW * 0.08, stuX + stuW * 0.92, 0.5);
     doc.font('Normal').fontSize(6.5).fillColor('#999999');
@@ -364,8 +364,8 @@ export async function generateWarningPdf(
 
     doc.y = boxY + boxH;
 
-    // ── ÖĞRETMEN / DÜZENLEyEN İMZA SÜTUNLARI ────────
-    doc.moveDown(0.55);
+    // ── 2. KATMAN: ÖĞRETMEN / DÜZENLEYEN İMZA SÜTUNLARI ─
+    doc.moveDown(0.65);
 
     const tGap = 8;
     const tColW = (CW - tGap * 2) / 3;
@@ -374,7 +374,8 @@ export async function generateWarningPdf(
     const tCol3X = ML + (tColW + tGap) * 2;
 
     const tSigY = doc.y;
-    const tSigLineY = tSigY + 26;
+    // İmza çizgisi daha aşağıda → satır yüksekliği artırıldı (26 → 42)
+    const tSigLineY = tSigY + 42;
 
     const drawTeacherCol = (x: number, name: string, role: string) => {
       doc.fillColor('#000000');
