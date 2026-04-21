@@ -1,0 +1,12 @@
+services:
+  - type: static
+    name: devamsizlik-mektubu
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://devamsizlik-backend.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html

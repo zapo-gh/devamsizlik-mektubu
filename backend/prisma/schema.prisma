@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  PARENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(PARENT)
+  createdAt DateTime @default(now())
+
+  parent Parent?
+}
+
+model Student {
+  id           String        @id @default(uuid())
+  schoolNumber String        @unique
+  fullName     String
+  className    String
+  status       StudentStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+
+  parents         Parent[]         @relation("StudentParents")
+  absenteeisms    Absenteeism[]
+  writtenWarnings WrittenWarning[]
+  dailyViolations DailyViolation[]
+}
+
+model Parent {
+  id       String @id @default(uuid())
+  userId   String @unique
+  fullName String
+  phone    String
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  students Student[] @relation("StudentParents")
+
+  @@index([phone])
+}
+
+model Absenteeism {
+  id             String   @id @default(uuid())
+  studentId      String
+  warningNumber  Int      @default(1)
+  pdfPath        String
+  createdAt      DateTime @default(now())
+  viewedByParent Boolean  @default(false)
+
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  otpCodes OTP[]
+
+  @@index([studentId])
+}
+
+model OTP {
+  id             String   @id @default(uuid())
+  absenteeismId  String
+  parentPhone    String
+  codeHash       String
+  token          String   @unique @default(uuid())
+  expiresAt      DateTime
+  isUsed         Boolean  @default(false)
+  attemptCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  absenteeism Absenteeism @relation(fields: [absenteeismId], references: [id], onDelete: Cascade)
+
+  @@index([absenteeismId])
+  @@index([parentPhone])
+  @@index([token])
+}
+
+model WrittenWarning {
+  id            String   @id @default(uuid())
+  studentId     String
+  warningNumber Int      @default(1)
+  behaviorCode  String
+  behaviorText  String
+  description   String?
+  pdfPath       String
+  issuedBy      String   @default("Okul Yönetimi")
+  issuedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+// ── Günlük İhlal Takip Sistemi ──────────────────────
+
+enum ViolationType {
+  KIYAFET      // Kıyafet / Makyaj kontrolü
+  TOREN_GEC    // Tören geç kalma
+  DIGER        // Diğer
+}
+
+model ViolationUpload {
+  id          String        @id @default(uuid())
+  type        ViolationType
+  description String?
+  imagePath   String
+  ocrRawText  String?
+  uploadedBy  String        @default("Okul Yönetimi")
+  violationDate DateTime    @default(now())
+  createdAt   DateTime      @default(now())
+
+  records DailyViolation[]
+}
+
+model DailyViolation {
+  id              String        @id @default(uuid())
+  studentId       String
+  uploadId        String
+  type            ViolationType
+  violationDate   DateTime      @default(now())
+  matchedBy       String        @default("OCR")   // OCR, MANUAL
+  isConfirmed     Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  upload  ViolationUpload  @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, uploadId])
+  @@index([studentId])
+  @@index([uploadId])
+  @@index([type])
+  @@index([violationDate])
+}
+
+// ── Okul Ayarları ──────────────────────────────────
+
+model SchoolSettings {
+  id             String   @id @default("singleton")
+  schoolName     String   @default("")
+  principalName  String   @default("")
+  updatedAt      DateTime @updatedAt
+}
