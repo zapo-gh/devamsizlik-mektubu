@@ -44,8 +44,8 @@ export default function WarningsPage() {
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBehaviorCode, setSelectedBehaviorCode] = useState('');
-  const [description, setDescription] = useState('');
-  const [guidanceNote, setGuidanceNote] = useState('');
+  const [description] = useState('');
+  const [guidanceNote] = useState('');
   const [issuedBy, setIssuedBy] = useState('');
   const [classTeacherName, setClassTeacherName] = useState('');
   const [schoolCounselorName, setSchoolCounselorName] = useState('');
@@ -135,8 +135,7 @@ export default function WarningsPage() {
     setStudentSearch('');
     setSelectedCategory('');
     setSelectedBehaviorCode('');
-    setDescription('');
-    setGuidanceNote('');
+
     setIssuedBy('');
     setClassTeacherName('');
     setSchoolCounselorName('');
@@ -489,37 +488,9 @@ export default function WarningsPage() {
                 )}
               </div>
 
-              {/* Step 3: Optional Description */}
+              {/* Step 3: Sınıf Rehber Öğretmeni */}
               <div className="form-group">
-                <label>3. Ek Açıklama (Opsiyonel)</label>
-                <textarea
-                  rows={3}
-                  placeholder="Davranışla ilgili ek detaylar..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={500}
-                  style={{ resize: 'vertical' }}
-                />
-                <small style={{ color: '#888' }}>{description.length}/500</small>
-              </div>
-
-              {/* Step 4: Rehberlik Servisi Görüşü */}
-              <div className="form-group">
-                <label>4. Rehberlik Servisi Görüşü (Opsiyonel)</label>
-                <textarea
-                  rows={2}
-                  placeholder="Rehberlik servisi ile görüşme notu..."
-                  value={guidanceNote}
-                  onChange={(e) => setGuidanceNote(e.target.value)}
-                  maxLength={500}
-                  style={{ resize: 'vertical' }}
-                />
-                <small style={{ color: '#888' }}>{guidanceNote.length}/500</small>
-              </div>
-
-              {/* Step 5: Sınıf Rehber Öğretmeni */}
-              <div className="form-group">
-                <label>5. Sınıf Rehber Öğretmeni (Opsiyonel)</label>
+                <label>3. Sınıf Rehber Öğretmeni (Opsiyonel)</label>
                 <input
                   type="text"
                   placeholder="Sınıf rehber öğretmeninin adını yazın..."
@@ -529,9 +500,9 @@ export default function WarningsPage() {
                 />
               </div>
 
-              {/* Step 6: Okul Rehber Öğretmeni */}
+              {/* Step 4: Okul Rehber Öğretmeni */}
               <div className="form-group">
-                <label>6. Okul Rehber Öğretmeni (Opsiyonel)</label>
+                <label>4. Okul Rehber Öğretmeni (Opsiyonel)</label>
                 <input
                   type="text"
                   placeholder="Okul rehber öğretmeninin adını yazın..."
@@ -541,9 +512,9 @@ export default function WarningsPage() {
                 />
               </div>
 
-              {/* Step 7: Düzenleyen */}
+              {/* Step 5: Düzenleyen */}
               <div className="form-group">
-                <label>7. Düzenleyen</label>
+                <label>5. Düzenleyen</label>
                 <input
                   type="text"
                   placeholder="Müdür yardımcısının adını yazın..."
