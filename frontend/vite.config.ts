@@ -9,6 +9,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    // Derlenmiş frontend, backend'in dist/public klasörüne gider
+    outDir: path.resolve(__dirname, '../backend/dist/public'),
+    emptyOutDir: true,
+  },
   server: {
     port: 5173,
     proxy: {

@@ -8,11 +8,6 @@ const createSchema = z.object({
   warningNumber: z.number().int().min(1, 'Uyarı numarası en az 1 olmalıdır.').max(10, 'Uyarı numarası en fazla 10 olabilir.'),
 });
 
-const generateOtpSchema = z.object({
-  parentPhone: z.string().min(10, 'Geçerli bir telefon numarası giriniz.'),
-  parentName: z.string().optional().default(''),
-});
-
 export class AbsenteeismController {
   async getStats(req: Request, res: Response, next: NextFunction) {
     try {
@@ -28,8 +23,9 @@ export class AbsenteeismController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const studentId = req.query.studentId as string | undefined;
+      const search    = req.query.search    as string | undefined;
 
-      const result = await absenteeismService.getAll(page, limit, studentId);
+      const result = await absenteeismService.getAll(page, limit, studentId, search);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -74,27 +70,10 @@ export class AbsenteeismController {
         studentId: parsed.data.studentId,
         warningNumber: parsed.data.warningNumber,
         pdfPath: req.file.path,
+        isBep: req.body.isBep === 'true' || req.body.isBep === true,
       });
 
       res.status(201).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async generateOtpAndLink(req: Request, res: Response, next: NextFunction) {
-    try {
-      const parsed = generateOtpSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw new AppError(parsed.error.errors[0].message, 400);
-      }
-
-      const result = await absenteeismService.generateOtpAndWhatsAppLink(
-        req.params.id,
-        parsed.data.parentPhone,
-        parsed.data.parentName || ''
-      );
-      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

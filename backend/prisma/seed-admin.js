@@ -1,21 +1,32 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding admin user...');
-  const adminPassword = await bcrypt.hash('admin123', 12);
-  const admin = await prisma.user.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
+
+  const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
+  if (existing) {
+    console.log('ℹ️  Admin kullanıcısı zaten var, atlanıyor.');
+    return;
+  }
+
+  // Güvenli rastgele şifre üret — asla hardcoded şifre kullanma
+  const rawPassword = crypto.randomBytes(10).toString('base64url');
+  const adminPassword = await bcrypt.hash(rawPassword, 12);
+  const admin = await prisma.user.create({
+    data: {
       username: 'admin',
       password: adminPassword,
       role: 'ADMIN',
+      mustChangePassword: true,
     },
   });
-  console.log(`✅ Admin user ready: ${admin.username}`);
+  console.log(`✅ Admin kullanıcısı oluşturuldu: ${admin.username}`);
+  console.log(`🔑 İlk giriş şifresi: ${rawPassword}`);
+  console.log('⚠️  Bu şifreyi not alın ve ilk girişten sonra değiştirin.');
 }
 
 main()

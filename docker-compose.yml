@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: devamsizlik_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD ortam degiskeni zorunludur}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -33,8 +33,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@db:5432/devamsizlik_db?schema=public
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?DB_PASSWORD ortam degiskeni zorunludur}@db:5432/devamsizlik_db?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET ortam degiskeni zorunludur (min 32 karakter)}
       JWT_EXPIRES_IN: 8h
       OTP_EXPIRY_MINUTES: 1440
       OTP_MAX_ATTEMPTS: 3

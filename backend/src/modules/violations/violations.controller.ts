@@ -175,6 +175,19 @@ export class ViolationsController {
   }
 
   /**
+   * GET /api/violations/student/:studentId
+   * Öğrencinin tüm ihlal geçmişi
+   */
+  async getStudentHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await violationsService.getStudentHistory(req.params.studentId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/violations/stats
    * İhlal istatistikleri
    */

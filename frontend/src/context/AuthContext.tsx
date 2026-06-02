@@ -5,13 +5,15 @@ interface User {
   id: string;
   username: string;
   role: 'ADMIN' | 'PARENT';
+  mustChangePassword: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
+  clearMustChangePassword: () => void;
   isLoading: boolean;
 }
 
@@ -23,8 +25,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+    // localStorage (beni hatırla) veya sessionStorage (geçici oturum) kontrol et
+    const savedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const savedUser  = localStorage.getItem('user')  || sessionStorage.getItem('user');
 
     if (savedToken && savedUser) {
       setToken(savedToken);
@@ -33,12 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const response = await api.post('/auth/login', { username, password });
+  const login = async (username: string, password: string, rememberMe = false) => {
+    const response = await api.post('/auth/login', { username, password, rememberMe });
     const { token: newToken, user: newUser } = response.data.data;
 
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('token', newToken);
+    storage.setItem('user', JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   };
@@ -46,12 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setToken(null);
     setUser(null);
   };
 
+  // Şifre değiştirildikten sonra flag'i sıfırla (sayfayı yeniden yüklemeden)
+  const clearMustChangePassword = () => {
+    setUser((prev) => prev ? { ...prev, mustChangePassword: false } : null);
+    const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      parsed.mustChangePassword = false;
+      if (localStorage.getItem('user')) localStorage.setItem('user', JSON.stringify(parsed));
+      else sessionStorage.setItem('user', JSON.stringify(parsed));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, clearMustChangePassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

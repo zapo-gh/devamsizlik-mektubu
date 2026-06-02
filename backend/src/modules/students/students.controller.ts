@@ -24,8 +24,8 @@ const updateStudentSchema = z.object({
 export class StudentsController {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.max(1, Math.min(1000, parseInt(req.query.limit as string) || 20));
       const search = req.query.search as string | undefined;
       const status = req.query.status as string | undefined;
 
@@ -87,6 +87,10 @@ export class StudentsController {
       const { ids } = req.body;
       if (!Array.isArray(ids) || ids.length === 0) {
         throw new AppError('Silinecek öğrenci ID listesi gereklidir.', 400);
+      }
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!ids.every((id: unknown) => typeof id === 'string' && uuidRe.test(id))) {
+        throw new AppError('Geçersiz öğrenci ID formatı.', 400);
       }
       const result = await studentsService.bulkDelete(ids);
       res.json({ success: true, data: result });

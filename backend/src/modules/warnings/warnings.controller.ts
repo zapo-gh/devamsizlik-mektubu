@@ -3,6 +3,20 @@ import { warningsService } from './warnings.service';
 import { z } from 'zod';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
 
+/** Türkçe karakterleri ASCII karşılığına çevirir, HTTP header-safe isim üretir */
+function toAsciiFn(name: string): string {
+  return name
+    .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+    .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+    .replace(/ş/g, 's').replace(/Ş/g, 'S')
+    .replace(/ı/g, 'i').replace(/İ/g, 'I')
+    .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+    .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
 const createSchema = z.object({
   studentId: z.string().uuid('Geçersiz öğrenci ID.'),
   behaviorCode: z.string().min(1, 'Davranış kodu gereklidir.'),
@@ -38,8 +52,9 @@ export class WarningsController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const studentId = req.query.studentId as string | undefined;
+      const search = req.query.search as string | undefined;
 
-      const result = await warningsService.getAll(page, limit, studentId);
+      const result = await warningsService.getAll(page, limit, studentId, search);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -82,9 +97,11 @@ export class WarningsController {
 
   async servePdf(req: Request, res: Response, next: NextFunction) {
     try {
-      const fullPath = await warningsService.servePdf(req.params.id);
+      const { fullPath, student, warningNumber } = await warningsService.servePdf(req.params.id);
+      const safeName = toAsciiFn(student.fullName);
+      const fileName = `yazili-uyari-${warningNumber}-${safeName}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="yazili-uyari.pdf"`);
+      res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
       res.sendFile(fullPath);
     } catch (error) {
       next(error);
@@ -93,9 +110,11 @@ export class WarningsController {
 
   async downloadPdf(req: Request, res: Response, next: NextFunction) {
     try {
-      const fullPath = await warningsService.servePdf(req.params.id);
+      const { fullPath, student, warningNumber } = await warningsService.servePdf(req.params.id);
+      const safeName = toAsciiFn(student.fullName);
+      const fileName = `yazili-uyari-${warningNumber}-${safeName}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="yazili-uyari.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
       res.sendFile(fullPath);
     } catch (error) {
       next(error);

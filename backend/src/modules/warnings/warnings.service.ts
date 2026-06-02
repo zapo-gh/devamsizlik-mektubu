@@ -1,9 +1,13 @@
 import path from 'path';
 import fs from 'fs';
+import { Prisma } from '@prisma/client';
 import prisma from '../shared/utils/prisma';
-import { config } from '../shared/config';import { settingsService } from '../settings/settings.service';import { AppError } from '../shared/middleware/errorHandler.middleware';
+import { config } from '../shared/config';
+import { settingsService } from '../settings/settings.service';
+import { AppError } from '../shared/middleware/errorHandler.middleware';
 import { generateWarningPdf } from './pdfGenerator';
 import { findBehaviorByCode, WARNING_BEHAVIORS, getBehaviorsByCategory, getSanctionScope } from './warningBehaviors';
+import { normalizePhone } from '../notifications/notifications.service';
 
 function fmtDate(date: Date): string {
   const d = new Date(date);
@@ -13,9 +17,17 @@ function fmtDate(date: Date): string {
 }
 
 export class WarningsService {
-  async getAll(page = 1, limit = 20, studentId?: string) {
+  async getAll(page = 1, limit = 20, studentId?: string, search?: string) {
     const skip = (page - 1) * limit;
-    const where = studentId ? { studentId } : {};
+    const where: Prisma.WrittenWarningWhereInput = {};
+    if (studentId) where.studentId = studentId;
+    if (search) {
+      where.OR = [
+        { student: { fullName: { contains: search } } },
+        { student: { schoolNumber: { contains: search } } },
+        { student: { className: { contains: search } } },
+      ];
+    }
 
     const [records, total] = await Promise.all([
       prisma.writtenWarning.findMany({
@@ -91,60 +103,64 @@ export class WarningsService {
       throw new AppError('Geçersiz davranış kodu.', 400);
     }
 
-    // Get next warning number
-    const currentCount = await this.getWarningCount(data.studentId);
-    const warningNumber = currentCount + 1;
+    // Get next warning number and create record atomically to prevent race conditions
+    const record = await prisma.$transaction(async (tx) => {
+      const currentCount = await tx.writtenWarning.count({ where: { studentId: data.studentId } });
+      const warningNumber = currentCount + 1;
 
-    // Generate PDF
-    const fileName = `uyari_${student.schoolNumber}_${warningNumber}_${Date.now()}.pdf`;
-    const pdfPath = path.join(config.upload.dir, 'warnings', fileName);
+      // Generate PDF (outside transaction is fine — file system op)
+      const fileName = `uyari_${student.schoolNumber}_${warningNumber}_${Date.now()}.pdf`;
+      const pdfPath = path.join(config.upload.dir, 'warnings', fileName);
 
-    // Fetch school settings from DB if not provided
-    const dbSettings = await settingsService.get();
-    const schoolName = data.schoolName || dbSettings.schoolName || '';
-    const principalName = data.principalName || dbSettings.principalName || '';
+      // Fetch school settings from DB if not provided
+      const dbSettings = await settingsService.get();
+      const schoolName = data.schoolName || dbSettings.schoolName || '';
+      const principalName = data.principalName || dbSettings.principalName || '';
 
-    await generateWarningPdf(
-      {
-        studentFullName: student.fullName,
-        studentClassName: student.className,
-        studentSchoolNumber: student.schoolNumber,
-        warningNumber,
-        behaviorText: behavior.text,
-        behaviorArticle: behavior.article,
-        behaviorSanctionScope: getSanctionScope(behavior.article),
-        description: data.description,
-        guidanceNote: data.guidanceNote,
-        issuedBy: data.issuedBy || 'Okul Yönetimi',
-        issuedAt: new Date(),
-        schoolName,
-        principalName,
-        classTeacherName: data.classTeacherName,
-        schoolCounselorName: data.schoolCounselorName,
-      },
-      pdfPath
-    );
+      await generateWarningPdf(
+        {
+          studentFullName: student.fullName,
+          studentClassName: student.className,
+          studentSchoolNumber: student.schoolNumber,
+          warningNumber,
+          behaviorText: behavior.text,
+          behaviorArticle: behavior.article,
+          behaviorSanctionScope: getSanctionScope(behavior.article),
+          description: data.description,
+          guidanceNote: data.guidanceNote,
+          issuedBy: data.issuedBy || 'Okul Yönetimi',
+          issuedAt: new Date(),
+          schoolName,
+          principalName,
+          classTeacherName: data.classTeacherName,
+          schoolCounselorName: data.schoolCounselorName,
+        },
+        pdfPath
+      );
 
-    // Save to database
-    const record = await prisma.writtenWarning.create({
-      data: {
-        studentId: data.studentId,
-        warningNumber,
-        behaviorCode: data.behaviorCode,
-        behaviorText: behavior.text,
-        description: data.description || null,
-        pdfPath,
-        issuedBy: data.issuedBy || 'Okul Yönetimi',
-      },
-      include: {
-        student: { select: { fullName: true, className: true, schoolNumber: true } },
-      },
+      return tx.writtenWarning.create({
+        data: {
+          studentId: data.studentId,
+          warningNumber,
+          behaviorCode: data.behaviorCode,
+          behaviorText: behavior.text,
+          description: data.description || null,
+          guidanceNote: data.guidanceNote || null,
+          classTeacherName: data.classTeacherName || null,
+          schoolCounselorName: data.schoolCounselorName || null,
+          pdfPath,
+          issuedBy: data.issuedBy || 'Okul Yönetimi',
+        },
+        include: {
+          student: { select: { fullName: true, className: true, schoolNumber: true } },
+        },
+      });
     });
 
     return record;
   }
 
-  async servePdf(warningId: string): Promise<string> {
+  async servePdf(warningId: string): Promise<{ fullPath: string; student: { fullName: string; schoolNumber: string }; warningNumber: number }> {
     const record = await prisma.writtenWarning.findUnique({
       where: { id: warningId },
       include: {
@@ -158,7 +174,11 @@ export class WarningsService {
       throw new AppError('Yazılı uyarı kaydı bulunamadı.', 404);
     }
 
+    const uploadBase = path.resolve(config.upload.dir);
     const fullPath = path.resolve(record.pdfPath);
+    if (!fullPath.startsWith(uploadBase + path.sep) && !fullPath.startsWith(uploadBase + '/')) {
+      throw new AppError('Geçersiz dosya yolu.', 403);
+    }
 
     // PDF dosyası diskte yoksa yeniden oluştur (ephemeral filesystem desteği)
     if (!fs.existsSync(fullPath)) {
@@ -175,6 +195,9 @@ export class WarningsService {
           behaviorArticle: behavior?.article,
           behaviorSanctionScope: behavior ? getSanctionScope(behavior.article) : undefined,
           description: record.description || undefined,
+          guidanceNote: record.guidanceNote || undefined,
+          classTeacherName: record.classTeacherName || undefined,
+          schoolCounselorName: record.schoolCounselorName || undefined,
           issuedBy: record.issuedBy,
           issuedAt: record.issuedAt,
           schoolName: dbSettings.schoolName || '',
@@ -184,7 +207,7 @@ export class WarningsService {
       );
     }
 
-    return fullPath;
+    return { fullPath, student: record.student, warningNumber: record.warningNumber };
   }
 
   async getStats() {
@@ -208,12 +231,15 @@ export class WarningsService {
     await prisma.writtenWarning.delete({ where: { id } });
 
     // Delete PDF file
+    const uploadBase = path.resolve(config.upload.dir);
     const fullPath = path.resolve(record.pdfPath);
-    try {
-      await fs.promises.access(fullPath);
-      await fs.promises.unlink(fullPath);
-    } catch {
-      // File already missing, ignore
+    if (fullPath.startsWith(uploadBase + path.sep) || fullPath.startsWith(uploadBase + '/')) {
+      try {
+        await fs.promises.access(fullPath);
+        await fs.promises.unlink(fullPath);
+      } catch {
+        // File already missing, ignore
+      }
     }
 
     return { message: 'Yazılı uyarı kaydı başarıyla silindi.' };
@@ -253,38 +279,27 @@ export class WarningsService {
       throw new AppError('Bu öğrenciye tanımlı veli bulunamadı.', 404);
     }
 
-    // Generate PDF download URL
-    const domain = config.frontendDomain || 'http://localhost:5173';
-
     const message =
-      `Sayin Veli,\n\n` +
-      `Ogreciniz ${record.student.fullName} (${record.student.className} sinifi, ` +
+      `Sayın Veli,\n\n` +
+      `Öğrenciniz ${record.student.fullName} (${record.student.className} sınıfı, ` +
       `No: ${record.student.schoolNumber}), ` +
-      `asagida belirtilen davranis sebebiyle yazili olarak uyarilmistir.\n\n` +
-      `Uyari No: ${record.warningNumber}\n` +
-      `Davranis: ${record.behaviorText}\n` +
-      (record.description ? `Aciklama: ${record.description}\n` : '') +
+      `aşağıda belirtilen davranış sebebiyle yazılı olarak uyarılmıştır.\n\n` +
+      `Uyarı No: ${record.warningNumber}\n` +
+      `Davranış: ${record.behaviorText}\n` +
+      (record.description ? `Açıklama: ${record.description}\n` : '') +
       `Tarih: ${fmtDate(record.issuedAt)}\n\n` +
-      `Bu uyari, ogrencinin davranislarini duzeltmesi amaciyla verilmis olup, ` +
-      `tekrari halinde ilgili yonetmelik hukumleri dogrultusunda disiplin sureci baslatilacaktir.\n\n` +
+      `Bu uyarı, öğrencinin davranışlarını düzeltmesi amacıyla verilmiş olup, ` +
+      `tekrarı halinde ilgili yönetmelik hükümleri doğrultusunda disiplin süreci başlatılacaktır.\n\n` +
+      `Yazılı uyarı belgesi tarafınıza ayrıca iletilecektir.\n\n` +
       `Bilgilerinize arz ederiz.`;
 
     const encodedMessage = encodeURIComponent(message);
 
-    const links = parents.map((p) => {
-      let cleanPhone = p.phone.replace(/\D/g, '');
-      if (cleanPhone.startsWith('0')) {
-        cleanPhone = '90' + cleanPhone.slice(1);
-      }
-      if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) {
-        cleanPhone = '90' + cleanPhone;
-      }
-      return {
-        parentName: p.fullName,
-        phone: p.phone,
-        whatsappUrl: `https://wa.me/${cleanPhone}?text=${encodedMessage}`,
-      };
-    });
+    const links = parents.map((p) => ({
+      parentName: p.fullName,
+      phone: p.phone,
+      whatsappUrl: `https://wa.me/${normalizePhone(p.phone)}?text=${encodedMessage}`,
+    }));
 
     return {
       warningId: record.id,

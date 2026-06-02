@@ -114,10 +114,12 @@ export async function extractTextFromImage(imagePath: string): Promise<string> {
   const allPaths = [...variants, fullPath];
 
   // Tesseract ayarları: el yazısı + tablo formatı için optimize
+  // Electron paketi içinde tessdata offline klasöründen yükle
   const tesseractOpts: any = {
     logger: () => {},
     // PSM 6 = Assume a single uniform block of text
     // El yazısı tablolar için en uygun mod
+    ...(process.env.TESSDATA_PATH ? { langPath: process.env.TESSDATA_PATH } : {}),
   };
 
   let bestText = '';

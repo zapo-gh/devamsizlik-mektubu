@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import api from '../../services/api';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface Student {
   id: string;
@@ -54,6 +55,7 @@ interface ParentImportResult {
 }
 
 export default function StudentListPage() {
+  const { confirm, alert, confirmModal } = useConfirm();
   const [students, setStudents] = useState<Student[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [search, setSearch] = useState('');
@@ -146,7 +148,7 @@ export default function StudentListPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" öğrencisini silmek istediğinize emin misiniz?`)) return;
+    if (!await confirm(`"${name}" öğrencisini silmek istediğinize emin misiniz?`)) return;
 
     try {
       await api.delete(`/students/${id}`);
@@ -186,7 +188,7 @@ export default function StudentListPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Seçili ${selectedIds.size} öğrenciyi silmek istediğinize emin misiniz?`)) return;
+    if (!await confirm(`Seçili ${selectedIds.size} öğrenciyi silmek istediğinize emin misiniz?`)) return;
 
     setBulkDeleting(true);
     try {
@@ -195,7 +197,7 @@ export default function StudentListPage() {
       loadStudents();
     } catch (error) {
       console.error('Bulk delete failed:', error);
-      alert('Toplu silme başarısız oldu.');
+      await alert('Toplu silme başarısız oldu.');
     } finally {
       setBulkDeleting(false);
     }
@@ -364,7 +366,7 @@ export default function StudentListPage() {
 
   const handleRemoveParent = async (parentId: string) => {
     if (!editStudent) return;
-    if (!confirm('Bu veliyi öğrenciden kaldırmak istediğinize emin misiniz?')) return;
+    if (!await confirm('Bu veliyi öğrenciden kaldırmak istediğinize emin misiniz?')) return;
 
     try {
       await api.delete(`/students/${editStudent.id}/parents/${parentId}`);
@@ -377,7 +379,10 @@ export default function StudentListPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>Öğrenciler</h1>
+        <div>
+          <h1 className="page-title">👨‍🎓 Öğrenciler</h1>
+          <p className="page-subtitle">Öğrenci listesini yönetin ve veli bilgilerini güncelleyin</p>
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className="btn btn-outline"
@@ -427,7 +432,7 @@ export default function StudentListPage() {
                 <button
                   key={cls}
                   className={`class-tab ${effectiveClass === cls ? 'class-tab-active' : ''}`}
-                  onClick={() => setActiveClass(cls)}
+                  onClick={() => { setActiveClass(cls); setSelectedIds(new Set()); }}
                 >
                   {cls}
                   <span className="class-tab-count">{grouped[cls].length}</span>
@@ -457,9 +462,10 @@ export default function StudentListPage() {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {selectedIds.size > 0 && (
                   <button
-                    className="btn btn-danger btn-sm"
+                    className="btn btn-outline btn-sm"
                     onClick={handleBulkDelete}
                     disabled={bulkDeleting}
+                    style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
                   >
                     {bulkDeleting ? '⏳ Siliniyor...' : `🗑️ ${selectedIds.size} Öğrenci Sil`}
                   </button>
@@ -486,20 +492,19 @@ export default function StudentListPage() {
                     <th>Ad Soyad</th>
                     <th>Durum</th>
                     <th>Veli</th>
-                    <th>Devamsızlık</th>
                     <th>İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                         Bu sınıfta öğrenci bulunamadı.
                       </td>
                     </tr>
                   ) : (
                     filteredStudents.map((s) => (
-                      <tr key={s.id} style={selectedIds.has(s.id) ? { background: '#fef2f2' } : undefined}>
+                      <tr key={s.id} style={selectedIds.has(s.id) ? { background: '#eff6ff' } : undefined}>
                         <td style={{ textAlign: 'center' }}>
                           <input
                             type="checkbox"
@@ -529,7 +534,6 @@ export default function StudentListPage() {
                             : <span style={{ color: 'var(--text-muted)' }}>-</span>
                           }
                         </td>
-                        <td>{s._count.absenteeisms}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button
@@ -539,8 +543,9 @@ export default function StudentListPage() {
                               Düzenle
                             </button>
                             <button
-                              className="btn btn-danger btn-sm"
+                              className="btn btn-outline btn-sm"
                               onClick={() => handleDelete(s.id, s.fullName)}
+                              style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
                             >
                               Sil
                             </button>
@@ -580,8 +585,8 @@ export default function StudentListPage() {
 
       {/* ——— Excel Import Modal ——— */}
       {showImportModal && (
-        <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 700 }}>
+        <div className="modal-overlay" onMouseDown={() => setShowImportModal(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 700 }}>
             <div className="modal-header">
               <h2>📥 Excel'den Öğrenci Aktar</h2>
               <button className="modal-close" onClick={() => setShowImportModal(false)}>×</button>
@@ -737,8 +742,8 @@ export default function StudentListPage() {
 
       {/* ——— Parent Import Modal ——— */}
       {showParentModal && (
-        <div className="modal-overlay" onClick={() => setShowParentModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800 }}>
+        <div className="modal-overlay" onMouseDown={() => setShowParentModal(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 800 }}>
             <div className="modal-header">
               <h2>👨‍👩‍👧 Veli Bilgisi Aktar</h2>
               <button className="modal-close" onClick={() => setShowParentModal(false)}>×</button>
@@ -917,8 +922,8 @@ export default function StudentListPage() {
 
       {/* ——— New Student Modal ——— */}
       {showNewModal && (
-        <div className="modal-overlay" onClick={() => setShowNewModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+        <div className="modal-overlay" onMouseDown={() => setShowNewModal(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
             <div className="modal-header">
               <h2>➕ Yeni Öğrenci Ekle</h2>
               <button className="modal-close" onClick={() => setShowNewModal(false)}>×</button>
@@ -954,6 +959,7 @@ export default function StudentListPage() {
                   onChange={(e) => setNewForm({ ...newForm, schoolNumber: e.target.value })}
                   placeholder="ör: 1234"
                   required
+                  autoFocus
                 />
               </div>
 
@@ -1039,10 +1045,10 @@ export default function StudentListPage() {
                     {newParents.length > 1 && (
                       <button
                         type="button"
-                        className="btn btn-danger btn-sm"
+                        className="btn btn-outline btn-sm"
                         onClick={() => setNewParents(newParents.filter((_, i) => i !== idx))}
                         title="Veliyi kaldır"
-                        style={{ flexShrink: 0, marginBottom: 2 }}
+                        style={{ flexShrink: 0, marginBottom: 2, color: 'var(--danger)', borderColor: 'var(--danger)' }}
                       >
                         ✕
                       </button>
@@ -1070,8 +1076,8 @@ export default function StudentListPage() {
 
       {/* ——— Edit Student Modal ——— */}
       {showEditModal && editStudent && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+        <div className="modal-overlay" onMouseDown={() => setShowEditModal(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
             <div className="modal-header">
               <h2>✏️ Öğrenci Düzenle</h2>
               <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
@@ -1167,10 +1173,10 @@ export default function StudentListPage() {
                       </div>
                       <button
                         type="button"
-                        className="btn btn-danger btn-sm"
+                        className="btn btn-outline btn-sm"
                         onClick={() => handleRemoveParent(p.id)}
                         title="Veliyi kaldır"
-                        style={{ flexShrink: 0, marginBottom: 2 }}
+                        style={{ flexShrink: 0, marginBottom: 2, color: 'var(--danger)', borderColor: 'var(--danger)' }}
                       >
                         ✕
                       </button>
@@ -1212,10 +1218,10 @@ export default function StudentListPage() {
                     </div>
                     <button
                       type="button"
-                      className="btn btn-danger btn-sm"
+                      className="btn btn-outline btn-sm"
                       onClick={() => setNewEditParent(null)}
                       title="İptal"
-                      style={{ flexShrink: 0, marginBottom: 2 }}
+                      style={{ flexShrink: 0, marginBottom: 2, color: 'var(--danger)', borderColor: 'var(--danger)' }}
                     >
                       ✕
                     </button>
@@ -1250,6 +1256,7 @@ export default function StudentListPage() {
           </div>
         </div>
       )}
+      {confirmModal}
     </div>
   );
 }

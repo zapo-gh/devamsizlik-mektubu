@@ -1,5 +1,13 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import api from '../../services/api';
+import { useConfirm } from '../../hooks/useConfirm';
+
+interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  className?: string | null;
+}
 
 interface Student {
   id: string;
@@ -22,18 +30,26 @@ interface WarningRecord {
   behaviorCode: string;
   behaviorText: string;
   description: string | null;
+  guidanceNote: string | null;
   issuedBy: string;
   issuedAt: string;
   createdAt: string;
+  waSentAt?: string | null;
   student: { fullName: string; className: string; schoolNumber: string };
 }
 
 export default function WarningsPage() {
+  const { confirm, alert, confirmModal } = useConfirm();
   const [records, setRecords] = useState<WarningRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [behaviors, setBehaviors] = useState<Record<string, WarningBehavior[]>>({});
   const [allBehaviors, setAllBehaviors] = useState<WarningBehavior[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Staff
+  const [assistantPrincipals, setAssistantPrincipals] = useState<StaffMember[]>([]);
+  const [counselors, setCounselors] = useState<StaffMember[]>([]);
+  const [classTeachers, setClassTeachers] = useState<StaffMember[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<WarningRecord | null>(null);
@@ -44,8 +60,8 @@ export default function WarningsPage() {
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBehaviorCode, setSelectedBehaviorCode] = useState('');
-  const [description] = useState('');
-  const [guidanceNote] = useState('');
+  const [description, setDescription] = useState('');
+  const [guidanceNote, setGuidanceNote] = useState('');
   const [issuedBy, setIssuedBy] = useState('');
   const [classTeacherName, setClassTeacherName] = useState('');
   const [schoolCounselorName, setSchoolCounselorName] = useState('');
@@ -53,26 +69,66 @@ export default function WarningsPage() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
 
+  // List search + pagination
+  const [listSearch, setListSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<{ total: number; totalPages: number } | null>(null);
+  const prevSearchRef = useRef('');
+  useEffect(() => {
+    if (listSearch !== prevSearchRef.current) {
+      prevSearchRef.current = listSearch;
+      setPage(1);
+    }
+  }, [listSearch]);
+
   // Delete
   const [deleteId, setDeleteId] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [whatsappLoading, setWhatsappLoading] = useState('');
+  const [waConnected, setWaConnected] = useState(false);
+  const [waSendLoading, setWaSendLoading] = useState('');
+
+  // WhatsApp önizleme modal
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waRecord, setWaRecord] = useState<WarningRecord | null>(null);
+  const [waPreviewData, setWaPreviewData] = useState<{
+    messages: { parent: string; phone: string; message: string }[];
+    studentName: string;
+  } | null>(null);
+  const [waPreviewLoading, setWaPreviewLoading] = useState(false);
+  const [waPreviewError, setWaPreviewError] = useState('');
+  const [waSelectedPhones, setWaSelectedPhones] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
-  }, []);
+    // WhatsApp bağlantı durumunu kontrol et
+    api.get('/whatsapp/status').then(r => setWaConnected(r.data.data.status === 'connected')).catch(() => {});
+  }, [page, listSearch]);
 
   const loadData = async () => {
     try {
-      const [recordsRes, studentsRes, behaviorsRes] = await Promise.all([
-        api.get('/warnings?limit=100'),
+      const isSearch = !!listSearch.trim();
+      const searchParam = isSearch
+        ? `&search=${encodeURIComponent(listSearch.trim())}&limit=1000`
+        : `&limit=20&page=${page}`;
+      const [recordsRes, studentsRes, behaviorsRes, staffRes] = await Promise.all([
+        api.get(`/warnings?${searchParam}`),
         api.get('/students?limit=2000'),
         api.get('/warnings/behaviors'),
+        api.get('/staff'),
       ]);
       setRecords(recordsRes.data.data.records);
+      if (isSearch) {
+        setPagination(null);
+      } else {
+        setPagination(recordsRes.data.data.pagination);
+      }
       setStudents(studentsRes.data.data.students);
       setBehaviors(behaviorsRes.data.data.byCategory);
       setAllBehaviors(behaviorsRes.data.data.all);
+      const allStaff: StaffMember[] = staffRes.data.data.staff;
+      setAssistantPrincipals(allStaff.filter((s) => s.role === 'MUDUR_YARDIMCISI'));
+      setCounselors(allStaff.filter((s) => s.role === 'REHBER_OGRETMEN'));
+      setClassTeachers(allStaff.filter((s) => s.role === 'SINIF_REHBER_OGRETMEN'));
     } catch (error) {
       console.error('Veri yükleme hatası:', error);
     } finally {
@@ -83,15 +139,26 @@ export default function WarningsPage() {
   // Student search & select
   const filteredStudents = students.filter(
     (s) =>
-      s.fullName.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.fullName.toLocaleLowerCase('tr-TR').includes(studentSearch.toLocaleLowerCase('tr-TR')) ||
       s.schoolNumber.includes(studentSearch) ||
-      s.className.toLowerCase().includes(studentSearch.toLowerCase())
+      s.className.toLocaleLowerCase('tr-TR').includes(studentSearch.toLocaleLowerCase('tr-TR'))
   );
 
   const handleStudentSelect = async (student: Student) => {
     setSelectedStudentId(student.id);
     setStudentSearch(`${student.fullName} - ${student.className} (${student.schoolNumber})`);
     setShowStudentDropdown(false);
+
+    // Auto-select class teacher based on student's class
+    const ct = classTeachers.find(
+      (t) => t.className?.toLocaleLowerCase('tr-TR').trim() === student.className?.toLocaleLowerCase('tr-TR').trim()
+    );
+    setClassTeacherName(ct ? ct.name : '');
+
+    // Auto-select school counselor if only one registered
+    if (counselors.length === 1) {
+      setSchoolCounselorName(counselors[0].name);
+    }
 
     // Fetch warning count
     try {
@@ -135,7 +202,8 @@ export default function WarningsPage() {
     setStudentSearch('');
     setSelectedCategory('');
     setSelectedBehaviorCode('');
-
+    setDescription('');
+    setGuidanceNote('');
     setIssuedBy('');
     setClassTeacherName('');
     setSchoolCounselorName('');
@@ -144,14 +212,14 @@ export default function WarningsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bu yazılı uyarı kaydını silmek istediğinize emin misiniz?')) return;
+    if (!await confirm('Bu yazılı uyarı kaydını silmek istediğinize emin misiniz?')) return;
     setDeleteId(id);
     setDeleteLoading(true);
     try {
       await api.delete(`/warnings/${id}`);
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Silme işlemi başarısız.');
+      await alert(err.response?.data?.message || 'Silme işlemi başarısız.');
     } finally {
       setDeleteLoading(false);
       setDeleteId('');
@@ -161,10 +229,15 @@ export default function WarningsPage() {
   const handleViewPdf = async (id: string) => {
     try {
       const response = await api.get(`/warnings/${id}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      window.open(url, '_blank');
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      // Electron'da yeni pencere açılmasını sağla; popup engelleyici varsa aynı sekmede aç
+      const newWin = window.open(url, '_blank');
+      if (!newWin) {
+        window.location.href = url;
+      }
     } catch {
-      alert('PDF görüntüleme başarısız.');
+      await alert('PDF görüntüleme başarısız.');
     }
   };
 
@@ -182,41 +255,58 @@ export default function WarningsPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('PDF indirme başarısız.');
+      await alert('PDF indirme başarısız.');
     }
   };
 
-  const handleWhatsApp = async (id: string) => {
-    setWhatsappLoading(id);
+  const handleWaPreviewOpen = async (record: WarningRecord) => {
+    setWaRecord(record);
+    setWaPreviewData(null);
+    setWaPreviewError('');
+    setShowWaModal(true);
+    setWaPreviewLoading(true);
     try {
-      const res = await api.get(`/warnings/${id}/whatsapp`);
-      const data = res.data.data;
-      if (data.parents && data.parents.length > 0) {
-        // Open first parent's WhatsApp link
-        window.open(data.parents[0].whatsappUrl, '_blank');
-        // If multiple parents, show info
-        if (data.parents.length > 1) {
-          const others = data.parents.slice(1);
-          const openOthers = confirm(
-            `${data.parents[0].parentName} için WhatsApp açıldı. ` +
-            `${others.length} veli daha var: ${others.map((p: any) => p.parentName).join(', ')}. ` +
-            `Diğer velilere de göndermek ister misiniz?`
-          );
-          if (openOthers) {
-            others.forEach((p: any) => window.open(p.whatsappUrl, '_blank'));
-          }
-        }
+      const res = await api.post(`/whatsapp/preview/warning/${record.id}`);
+      setWaPreviewData(res.data.data);
+      // Tüm velileri varsayılan seçili yap
+      setWaSelectedPhones(new Set((res.data.data.messages as { phone: string }[]).map(m => m.phone)));
+    } catch (err: any) {
+      setWaPreviewError(err.response?.data?.message || 'Önizleme yüklenemedi.');
+    } finally {
+      setWaPreviewLoading(false);
+    }
+  };
+
+  const handleWaSend = async () => {
+    if (!waRecord) return;
+    if (waSelectedPhones.size === 0) return;
+    setWaSendLoading(waRecord.id);
+    try {
+      const res = await api.post(`/whatsapp/send/warning/${waRecord.id}`, {
+        selectedPhones: Array.from(waSelectedPhones),
+      });
+      const results = res.data.data.results as { parent: string; phone: string; ok: boolean; error?: string }[];
+      const failed = results.filter(r => !r.ok);
+      if (results.some(r => r.ok)) {
+        setRecords(prev => prev.map(rec =>
+          rec.id === waRecord.id ? { ...rec, waSentAt: new Date().toISOString() } : rec
+        ));
+      }
+      setShowWaModal(false);
+      if (failed.length === 0) {
+        await alert(`✅ Mesaj ${results.length} veliye başarıyla gönderildi.`);
+      } else {
+        const msg = failed.map(r => `${r.parent}: ${r.error}`).join('\n');
+        await alert(`⚠️ ${results.length - failed.length} gönderildi, ${failed.length} başarısız:\n${msg}`);
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'WhatsApp linki oluşturulamadı.';
-      alert(msg);
+      await alert(err.response?.data?.message || 'Gönderim başarısız.');
     } finally {
-      setWhatsappLoading('');
+      setWaSendLoading('');
     }
   };
 
-  const handleShowDetail = (record: WarningRecord) => {
-    setSelectedRecord(record);
+  const handleShowDetail = (record: WarningRecord) => {    setSelectedRecord(record);
     setShowDetailModal(true);
   };
 
@@ -258,25 +348,32 @@ export default function WarningsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', padding: 40 }}>
         <div className="spinner spinner-dark" />
-        <p>Yükleniyor...</p>
       </div>
     );
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ margin: 0 }}>Yazılı Uyarılar</h1>
-          <p style={{ margin: '4px 0 0', color: '#666', fontSize: 14 }}>
-            Öğrencilere verilen yazılı uyarı belgelerini yönetin
-          </p>
+          <h1 className="page-title">⚠️ Yazılı Uyarılar</h1>
+          <p className="page-subtitle">Öğrencilere verilen yazılı uyarı belgelerini yönetin</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-          + Yeni Uyarı
-        </button>
+        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>+ Yeni Uyarı</button>
+      </div>
+
+      {/* Arama çubuğu */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <input
+            type="text"
+            placeholder="Öğrenci adı, numarası veya sınıf ile ara..."
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            className="form-control"
+            style={{ maxWidth: 400 }}
+          />
       </div>
 
       {/* Records Table */}
@@ -284,11 +381,12 @@ export default function WarningsPage() {
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <p style={{ fontSize: 48, margin: 0 }}>📋</p>
           <h3>Henüz yazılı uyarı kaydı bulunmuyor</h3>
-          <p style={{ color: '#666' }}>Yeni bir yazılı uyarı oluşturmak için yukarıdaki butonu kullanın.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Yeni bir yazılı uyarı oluşturmak için yukarıdaki butonu kullanın.</p>
         </div>
       ) : (
-        <div className="card" style={{ overflowX: 'auto' }}>
-          <table className="table">
+        <div className="card">
+          <div className="table-container">
+          <table>
             <thead>
               <tr>
                 <th>Öğrenci</th>
@@ -305,7 +403,7 @@ export default function WarningsPage() {
                   <td>
                     <strong>{r.student.fullName}</strong>
                     <br />
-                    <small style={{ color: '#888' }}>No: {r.student.schoolNumber}</small>
+                    <small style={{ color: 'var(--text-muted)' }}>No: {r.student.schoolNumber}</small>
                   </td>
                   <td>{r.student.className}</td>
                   <td>
@@ -350,28 +448,34 @@ export default function WarningsPage() {
                       <button
                         className="btn btn-sm"
                         style={{ background: '#dbeafe', color: '#1d4ed8', border: 'none', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                        onClick={() => handleDownloadPdf(r.id)}
-                        title="PDF İndir"
+                        onClick={() => handleViewPdf(r.id)}
+                        title="PDF Görüntüle"
                       >
-                        📥 PDF
+                        📄 PDF
                       </button>
+                      {waConnected && (
+                        r.waSentAt ? (
+                          <span style={{ fontSize: 12, color: '#16a34a', padding: '4px 8px' }}>✅ WA Gönderildi</span>
+                        ) : (
+                          <button
+                            className="btn btn-sm"
+                            style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
+                            onClick={() => handleWaPreviewOpen(r)}
+                            disabled={waSendLoading === r.id}
+                          title="WhatsApp'tan bilgilendirme mesajı gönder"
+                          >
+                            {waSendLoading === r.id ? '...' : '📱 Otomatik Gönder'}
+                          </button>
+                        )
+                      )}
                       <button
-                        className="btn btn-sm"
-                        style={{ background: '#dcfce7', color: '#16a34a', border: 'none', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                        onClick={() => handleWhatsApp(r.id)}
-                        disabled={whatsappLoading === r.id}
-                        title="WhatsApp ile Gönder"
-                      >
-                        {whatsappLoading === r.id ? '...' : '📩 WhatsApp'}
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
+                        className="btn btn-outline btn-sm"
                         onClick={() => handleDelete(r.id)}
                         disabled={deleteLoading && deleteId === r.id}
                         title="Sil"
+                        style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
                       >
-                        {deleteLoading && deleteId === r.id ? '...' : '🗑 Sil'}
+                        {deleteLoading && deleteId === r.id ? '...' : 'Sil'}
                       </button>
                     </div>
                   </td>
@@ -379,26 +483,32 @@ export default function WarningsPage() {
               ))}
             </tbody>
           </table>
+          </div>
+        </div>
+      )}
+
+      {/* Sayfalama */}
+      {pagination && pagination.totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+          <button className="btn btn-outline btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Önceki</button>
+          <span style={{ padding: '6px 12px', fontSize: 13, color: 'var(--text)' }}>{page} / {pagination.totalPages}</span>
+          <button className="btn btn-outline btn-sm" disabled={page >= pagination.totalPages} onClick={() => setPage(p => p + 1)}>Sonraki →</button>
         </div>
       )}
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
-            <div className="modal-header">
-              <h2>Yeni Yazılı Uyarı</h2>
-              <button className="modal-close" onClick={() => { setShowCreateModal(false); resetCreateForm(); }}>
-                ✕
-              </button>
-            </div>
+        <div className="modal-overlay" onMouseDown={() => { setShowCreateModal(false); resetCreateForm(); }}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <h2>➕ Yeni Yazılı Uyarı</h2>
 
             <form onSubmit={handleCreate}>
               {/* Step 1: Student Selection */}
               <div className="form-group">
-                <label>1. Öğrenci Seçin</label>
+                <label className="form-label">1. Öğrenci Seçin</label>
                 <div style={{ position: 'relative' }}>
                   <input
+                    className="form-control"
                     type="text"
                     placeholder="Öğrenci adı, numarası veya sınıfı ile arayın..."
                     value={studentSearch}
@@ -460,15 +570,15 @@ export default function WarningsPage() {
 
               {/* Step 2: Behavior Selection — Madde numarasına göre */}
               <div className="form-group">
-                <label>2. Davranış Seçin</label>
+                <label className="form-label">2. Davranış Seçin</label>
                 <select
+                  className="form-control"
                   value={selectedBehaviorCode}
                   onChange={(e) => {
                     setSelectedBehaviorCode(e.target.value);
                     const b = allBehaviors.find((b) => b.code === e.target.value);
                     if (b) setSelectedCategory(b.category);
                   }}
-                  style={{ fontSize: 14 }}
                 >
                   <option value="">Davranış seçin...</option>
                   {articleKeys.map((article) => (
@@ -490,45 +600,120 @@ export default function WarningsPage() {
 
               {/* Step 3: Sınıf Rehber Öğretmeni */}
               <div className="form-group">
-                <label>3. Sınıf Rehber Öğretmeni (Opsiyonel)</label>
-                <input
-                  type="text"
-                  placeholder="Sınıf rehber öğretmeninin adını yazın..."
-                  value={classTeacherName}
-                  onChange={(e) => setClassTeacherName(e.target.value)}
-                  maxLength={100}
-                />
+                <label className="form-label">3. Sınıf Rehber Öğretmeni (Opsiyonel)</label>
+                {classTeachers.length > 0 ? (
+                  <select
+                    className="form-control"
+                    value={classTeacherName}
+                    onChange={(e) => setClassTeacherName(e.target.value)}
+                  >
+                    <option value="">— Seçilmedi —</option>
+                    {classTeachers.map((t) => (
+                      <option key={t.id} value={t.name}>
+                        {t.name} ({t.className})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="form-control"
+                    type="text"
+                    placeholder="Sınıf rehber öğretmeninin adını yazın..."
+                    value={classTeacherName}
+                    onChange={(e) => setClassTeacherName(e.target.value)}
+                    maxLength={100}
+                  />
+                )}
+                {classTeachers.length > 0 && (
+                  <small style={{ color: 'var(--text-muted)' }}>
+                    Öğrenci seçildiğinde sınıfına göre otomatik seçilir.
+                  </small>
+                )}
               </div>
 
               {/* Step 4: Okul Rehber Öğretmeni */}
               <div className="form-group">
-                <label>4. Okul Rehber Öğretmeni (Opsiyonel)</label>
-                <input
-                  type="text"
-                  placeholder="Okul rehber öğretmeninin adını yazın..."
-                  value={schoolCounselorName}
-                  onChange={(e) => setSchoolCounselorName(e.target.value)}
-                  maxLength={100}
-                />
+                <label className="form-label">4. Okul Rehber Öğretmeni (Opsiyonel)</label>
+                {counselors.length > 0 ? (
+                  <select
+                    className="form-control"
+                    value={schoolCounselorName}
+                    onChange={(e) => setSchoolCounselorName(e.target.value)}
+                  >
+                    <option value="">— Seçilmedi —</option>
+                    {counselors.map((c) => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="form-control"
+                    type="text"
+                    placeholder="Okul rehber öğretmeninin adını yazın..."
+                    value={schoolCounselorName}
+                    onChange={(e) => setSchoolCounselorName(e.target.value)}
+                    maxLength={100}
+                  />
+                )}
               </div>
 
               {/* Step 5: Düzenleyen */}
               <div className="form-group">
-                <label>5. Düzenleyen</label>
-                <input
-                  type="text"
-                  placeholder="Müdür yardımcısının adını yazın..."
-                  value={issuedBy}
-                  onChange={(e) => setIssuedBy(e.target.value)}
-                  maxLength={100}
+                <label className="form-label">5. Düzenleyen (Müdür Yardımcısı)</label>
+                {assistantPrincipals.length > 0 ? (
+                  <select
+                    className="form-control"
+                    value={issuedBy}
+                    onChange={(e) => setIssuedBy(e.target.value)}
+                  >
+                    <option value="">— Seçilmedi (Okul Yönetimi) —</option>
+                    {assistantPrincipals.map((a) => (
+                      <option key={a.id} value={a.name}>{a.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="form-control"
+                    type="text"
+                    placeholder="Müdür yardımcısının adını yazın..."
+                    value={issuedBy}
+                    onChange={(e) => setIssuedBy(e.target.value)}
+                    maxLength={100}
+                  />
+                )}
+                <small style={{ color: 'var(--text-muted)' }}>Boş bırakılırsa "Okul Yönetimi" olarak kaydedilir.</small>
+              </div>
+
+              {/* Açıklama */}
+              <div className="form-group">
+                <label className="form-label">Açıklama (Opsiyonel)</label>
+                <textarea
+                  className="form-control"
+                  placeholder="İhlalin detayını buraya yazabilirsiniz..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
                 />
-                <small style={{ color: '#888' }}>Boş bırakılırsa "Okul Yönetimi" olarak kaydedilir.</small>
+              </div>
+
+              {/* Rehberlik Notu */}
+              <div className="form-group">
+                <label className="form-label">Rehberlik Notu (Opsiyonel)</label>
+                <textarea
+                  className="form-control"
+                  placeholder="Rehberlik servisi notu..."
+                  value={guidanceNote}
+                  onChange={(e) => setGuidanceNote(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
               </div>
 
               {createError && (
-                <div style={{ background: '#fee2e2', color: '#dc2626', padding: '8px 14px', borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
-                  {createError}
-                </div>
+                <div className="alert alert-error">{createError}</div>
               )}
 
               <div className="modal-actions">
@@ -554,14 +739,9 @@ export default function WarningsPage() {
 
       {/* Detail Modal */}
       {showDetailModal && selectedRecord && (
-        <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
-            <div className="modal-header">
-              <h2>Uyarı Detayı</h2>
-              <button className="modal-close" onClick={() => setShowDetailModal(false)}>
-                ✕
-              </button>
-            </div>
+        <div className="modal-overlay" onMouseDown={() => setShowDetailModal(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <h2>👁 Uyarı Detayı</h2>
 
             <div style={{ lineHeight: 1.8 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '4px 12px', marginBottom: 16 }}>
@@ -598,6 +778,13 @@ export default function WarningsPage() {
                   </>
                 )}
 
+                {selectedRecord.guidanceNote && (
+                  <>
+                    <strong>Rehberlik Notu:</strong>
+                    <span>{selectedRecord.guidanceNote}</span>
+                  </>
+                )}
+
                 <strong>Düzenleyen:</strong>
                 <span>{selectedRecord.issuedBy}</span>
 
@@ -606,20 +793,21 @@ export default function WarningsPage() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button
-                  className="btn"
-                  onClick={() => handleWhatsApp(selectedRecord.id)}
-                  disabled={whatsappLoading === selectedRecord.id}
-                  style={{ background: '#dcfce7', color: '#16a34a', border: 'none', fontSize: 14 }}
-                >
-                  {whatsappLoading === selectedRecord.id ? 'Gönderiliyor...' : '📩 WhatsApp ile Gönder'}
-                </button>
+                {waConnected && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => { setShowDetailModal(false); handleWaPreviewOpen(selectedRecord); }}
+                    disabled={waSendLoading === selectedRecord.id}
+                  >
+                    {waSendLoading === selectedRecord.id ? 'Gönderiliyor...' : '📱 Otomatik Gönder'}
+                  </button>
+                )}
                 <button
                   className="btn btn-primary"
-                  onClick={() => handleDownloadPdf(selectedRecord.id)}
+                  onClick={() => handleViewPdf(selectedRecord.id)}
                   style={{ fontSize: 14 }}
                 >
-                  📥 PDF İndir
+                  📄 PDF Görüntüle
                 </button>
                 <button
                   className="btn btn-outline"
@@ -632,6 +820,112 @@ export default function WarningsPage() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Önizleme Modal */}
+      {showWaModal && waRecord && (
+        <div className="modal-overlay" onMouseDown={() => setShowWaModal(false)} style={{ zIndex: 1100 }}>
+          <div className="modal" style={{ maxWidth: 560 }} onMouseDown={(e) => e.stopPropagation()}>
+            <h2>📱 WhatsApp Mesaj Önizleme</h2>
+
+            <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+              <strong>{waRecord.student.fullName}</strong> — {waRecord.student.className} — {waRecord.warningNumber}. Uyarı
+            </div>
+
+            {waPreviewLoading && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
+                <span className="spinner" /> Önizleme yükleniyor...
+              </div>
+            )}
+
+            {waPreviewError && (
+              <div style={{ background: '#fee2e2', color: '#dc2626', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
+                {waPreviewError}
+              </div>
+            )}
+
+            {waPreviewData && (
+              <div>
+                {/* Veli seçimi */}
+                {waPreviewData.messages.length > 1 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>Gönderilecek Veliler</div>
+                    {waPreviewData.messages.map((m, i) => (
+                      <label key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '7px 12px', borderRadius: 8, marginBottom: 4, cursor: 'pointer',
+                        background: waSelectedPhones.has(m.phone) ? '#f0fdf4' : '#f9fafb',
+                        border: `1.5px solid ${waSelectedPhones.has(m.phone) ? '#86efac' : '#e5e7eb'}`,
+                        userSelect: 'none',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={waSelectedPhones.has(m.phone)}
+                          onChange={() => {
+                            setWaSelectedPhones(prev => {
+                              const next = new Set(prev);
+                              next.has(m.phone) ? next.delete(m.phone) : next.add(m.phone);
+                              return next;
+                            });
+                          }}
+                          style={{ width: 15, height: 15, cursor: 'pointer' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{m.parent}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.phone}</div>
+                        </div>
+                      </label>
+                    ))}
+                    <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 12, paddingTop: 12 }} />
+                  </div>
+                )}
+
+                {/* Mesaj önizleme — sadece seçili veliler */}
+                {waPreviewData.messages
+                  .filter(m => waSelectedPhones.has(m.phone))
+                  .map((m, i) => (
+                    <div key={i} style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+                        📞 {m.parent} — {m.phone}
+                      </div>
+                      <div style={{
+                        background: '#dcfce7',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: 10,
+                        padding: '12px 14px',
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: 'inherit',
+                      }}>
+                        {m.message}
+                      </div>
+                    </div>
+                  ))}
+
+                {waSelectedPhones.size === 0 && (
+                  <div style={{ padding: '12px 14px', background: '#fef3c7', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 12 }}>
+                    ⚠️ Gönderim için en az bir veli seçin.
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <button className="btn btn-outline" onClick={() => setShowWaModal(false)}>İptal</button>
+              <button
+                className="btn btn-success"
+                style={{ background: '#25d366', color: '#fff' }}
+                onClick={handleWaSend}
+                disabled={waPreviewLoading || !!waPreviewError || waSendLoading === waRecord.id || waSelectedPhones.size === 0}
+              >
+                {waSendLoading === waRecord.id ? <><span className="spinner" /> Gönderiliyor...</> : `📱 ${waSelectedPhones.size} Veliye Gönder`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmModal}
     </div>
   );
 }

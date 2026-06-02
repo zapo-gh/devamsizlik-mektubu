@@ -7,3 +7,4 @@ nginx/ssl/
 *.traineddata
 *.pdf
 .vscode/
+dist-electron/

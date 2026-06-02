@@ -7,6 +7,7 @@ const router = Router();
 
 // All routes require admin auth
 router.get('/stats', authMiddleware, adminOnly, violationsController.getStats);
+router.get('/student/:studentId', authMiddleware, adminOnly, violationsController.getStudentHistory.bind(violationsController));
 router.get('/uploads', authMiddleware, adminOnly, violationsController.getUploads);
 router.get('/uploads/:uploadId', authMiddleware, adminOnly, violationsController.getUploadDetail);
 

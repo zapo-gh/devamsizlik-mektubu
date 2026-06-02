@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -7,6 +7,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -18,6 +19,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user || user.role !== 'ADMIN') {
     return <Navigate to="/login" replace />;
+  }
+
+  // İlk girişte şifre değiştirme zorunlu — yalnızca settings dışındaki sayfalarda yönlendir
+  if (user.mustChangePassword && location.pathname !== '/admin/settings') {
+    return <Navigate to="/admin/settings" replace />;
   }
 
   return <>{children}</>;

@@ -10,13 +10,12 @@ export const config = {
   },
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-secret-change-me',
+    secret: (() => {
+      const s = process.env.JWT_SECRET;
+      if (!s || s.length < 32) throw new Error('JWT_SECRET ortam değişkeni ayarlanmamış veya çok kısa (min 32 karakter).');
+      return s;
+    })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '8h',
-  },
-
-  otp: {
-    expiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '1440', 10),
-    maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3', 10),
   },
 
   upload: {

@@ -1,0 +1,80 @@
+{
+  "name": "okuldesk",
+  "version": "1.0.0",
+  "description": "OkulDesk - Masaüstü Uygulaması",
+  "main": "electron/main.js",
+  "scripts": {
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:backend && npm run install:frontend",
+
+    "build:backend": "cd backend && npx prisma generate && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:all": "npm run build:backend && npm run build:frontend",
+
+    "electron:start": "npm run build:all && npx electron .",
+    "dist": "npm run build:all && npx electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.okuldesk.app",
+    "productName": "OkulDesk",
+    "copyright": "Copyright © 2025",
+    "asar": true,
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist",
+        "to": "backend/dist",
+        "filter": ["**/*", "!**/*.map"]
+      },
+      {
+        "from": "backend/node_modules",
+        "to": "backend/node_modules",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "backend/prisma/schema.prisma",
+        "to": "backend/prisma/schema.prisma"
+      },
+      {
+        "from": "backend/fonts",
+        "to": "backend/fonts"
+      },
+      {
+        "from": "backend/tessdata",
+        "to": "backend/tessdata"
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "OkulDesk",
+      "installerLanguages": ["tr_TR", "en_US"],
+      "language": "1055",
+      "deleteAppDataOnUninstall": false,
+      "differentialPackage": false
+    }
+  }
+}

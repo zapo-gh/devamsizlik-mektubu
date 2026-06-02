@@ -1,17 +1,36 @@
+import crypto from 'crypto';
 import prisma from '../shared/utils/prisma';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
 import bcrypt from 'bcrypt';
 
 export class StudentsService {
+  // Türkçe title-case: "şule yılmaz" → "Şule Yılmaz"
+  // SQLite LIKE Türkçe karakterlerde büyük/küçük harf dönüşümü yapmaz,
+  // bu yüzden title-case halini de ayrıca arıyoruz.
+  private static turkishTitleCase(s: string): string {
+    return s.replace(/\S+/g, (word) =>
+      word[0].toLocaleUpperCase('tr-TR') + word.slice(1).toLocaleLowerCase('tr-TR')
+    );
+  }
+
   async getAll(page = 1, limit = 20, search?: string, status?: string) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (search) {
+      const sLower = search.toLocaleLowerCase('tr-TR');
+      const sUpper = search.toLocaleUpperCase('tr-TR');
+      const sTitle = StudentsService.turkishTitleCase(search);
       where.OR = [
-        { fullName: { contains: search, mode: 'insensitive' as const } },
-        { schoolNumber: { contains: search, mode: 'insensitive' as const } },
-        { className: { contains: search, mode: 'insensitive' as const } },
+        { fullName: { contains: search } },
+        { fullName: { contains: sLower } },
+        { fullName: { contains: sUpper } },
+        { fullName: { contains: sTitle } },
+        { schoolNumber: { contains: search } },
+        { className: { contains: search } },
+        { className: { contains: sLower } },
+        { className: { contains: sUpper } },
+        { className: { contains: sTitle } },
       ];
     }
     if (status === 'ACTIVE' || status === 'INACTIVE') {
@@ -97,7 +116,8 @@ export class StudentsService {
 
           const phone = p.phone.trim();
           const username = phone;
-          const passwordRaw = phone.slice(-6);
+          // Güvenli rastgele şifre — telefon numarasından türetilmiyor
+          const passwordRaw = crypto.randomBytes(8).toString('base64url');
           const passwordHash = await bcrypt.hash(passwordRaw, 10);
 
           // Find or create user by phone-based username

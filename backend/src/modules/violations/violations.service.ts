@@ -8,9 +8,9 @@ import { matchStudents, matchBySchoolNumbers, getBulkViolationCounts } from './m
 
 // İhlal tipi → Yazılı uyarı davranış kodu eşleşmesi
 const VIOLATION_TO_BEHAVIOR: Record<string, string> = {
-  KIYAFET: 'KIYAFET_KURALLAR',
-  TOREN_GEC: 'DEVAMSIZLIK_OZURSUZ',
-  DIGER: 'GENEL_KURAL_IHLAL',
+  KIYAFET: 'M164_1_C',
+  TOREN_GEC: 'M164_1_F',
+  DIGER: 'M164_1_B',
 };
 
 // İhlal tipi açıklamaları
@@ -76,7 +76,7 @@ export class ViolationsService {
             uploadId: upload.id,
             type: data.type as any,
             violationDate: vDate,
-            matchedBy: m.matchedBy === 'SCHOOL_NUMBER' ? 'OCR' : 'OCR',
+            matchedBy: m.matchedBy,  // SCHOOL_NUMBER | NAME_EXACT | NAME_FUZZY
             isConfirmed: false,  // Admin onayı bekleyecek
           },
           include: {
@@ -102,9 +102,18 @@ export class ViolationsService {
     const studentIds = createdRecords.map((r) => r.studentId);
     const prevCounts = await getBulkViolationCounts(studentIds, data.type);
 
+    // 7. Bu ihlal tipine karşılık gelen davranış kodu için yazılı uyarı almış öğrencileri bul
+    const behaviorCode = VIOLATION_TO_BEHAVIOR[data.type] || 'M164_1_B';
+    const existingWarnings = await prisma.writtenWarning.findMany({
+      where: { studentId: { in: studentIds }, behaviorCode },
+      select: { studentId: true },
+    });
+    const warnedStudentIds = new Set(existingWarnings.map((w) => w.studentId));
+
     // Sonuçları zenginleştir
     const enrichedRecords = createdRecords.map((r) => {
       const prevCount = prevCounts.get(r.studentId) || 0;
+      const requiresDiscipline = warnedStudentIds.has(r.studentId);
       return {
         id: r.id,
         studentId: r.studentId,
@@ -113,7 +122,8 @@ export class ViolationsService {
         matchedBy: r.matchedBy,
         confidence: r.confidence,
         previousViolations: prevCount,
-        suggestWarning: prevCount >= 1, // 2. veya daha fazla ihlal → uyarı öner
+        suggestWarning: prevCount >= 2, // 3. veya daha fazla ihlal → uyarı öner
+        requiresDiscipline,             // Daha önce yazılı uyarı almış → disiplin süreci
       };
     });
 
@@ -130,7 +140,8 @@ export class ViolationsService {
         totalLines: lines.length,
         matchedCount: enrichedRecords.length,
         unmatchedCount: unmatched.length,
-        repeatOffenders: enrichedRecords.filter((r) => r.suggestWarning).length,
+        repeatOffenders: enrichedRecords.filter((r) => r.suggestWarning && !r.requiresDiscipline).length,
+        disciplineRequired: enrichedRecords.filter((r) => r.requiresDiscipline).length,
       },
     };
   }
@@ -206,12 +217,20 @@ export class ViolationsService {
         },
       });
 
+      // Yazılı uyarı kontrolü
+      const behaviorCodeAdd = VIOLATION_TO_BEHAVIOR[data.type] || 'M164_1_B';
+      const existingWarningAdd = await prisma.writtenWarning.findFirst({
+        where: { studentId: data.studentId, behaviorCode: behaviorCodeAdd },
+        select: { id: true },
+      });
+
       return {
         ...record,
         matchedBy: 'MANUAL',
         confidence: 100,
         previousViolations: prevCount,
-        suggestWarning: prevCount >= 1,
+        suggestWarning: prevCount >= 2,
+        requiresDiscipline: !!existingWarningAdd,
       };
     } catch (error: any) {
       if (error.code === 'P2002') {
@@ -230,7 +249,7 @@ export class ViolationsService {
       prisma.violationUpload.findMany({
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { violationDate: 'desc' },
         include: {
           _count: { select: { records: true } },
           records: {
@@ -273,16 +292,28 @@ export class ViolationsService {
       throw new AppError('Upload kaydı bulunamadı.', 404);
     }
 
-    // Her öğrenci için geçmiş ihlal sayısını hesapla
+    // Her öğrenci için geçmiş ihlal sayısını hesapla (mevcut yüklemeyi dışla)
     const studentIds = upload.records.map((r) => r.studentId);
-    const prevCounts = await getBulkViolationCounts(studentIds, upload.type);
+    const prevCounts = await getBulkViolationCounts(studentIds, upload.type, upload.id);
+
+    // Bu yükleme tipine karşılık gelen davranış kodu
+    const behaviorCode = VIOLATION_TO_BEHAVIOR[upload.type] || 'M164_1_B';
+
+    // Bu öğrencilerden hangilerinin ilgili davranış koduna ait uyarısı var?
+    const existingWarnings = await prisma.writtenWarning.findMany({
+      where: { studentId: { in: studentIds }, behaviorCode },
+      select: { studentId: true },
+    });
+    const warnedStudentIds = new Set(existingWarnings.map((w) => w.studentId));
 
     const enrichedRecords = upload.records.map((r) => {
       const prevCount = prevCounts.get(r.studentId) || 0;
       return {
         ...r,
         previousViolations: prevCount,
-        suggestWarning: prevCount >= 1,
+        suggestWarning: prevCount >= 2,
+        hasWarning: warnedStudentIds.has(r.studentId),
+        requiresDiscipline: warnedStudentIds.has(r.studentId),
       };
     });
 
@@ -296,10 +327,17 @@ export class ViolationsService {
    * Tüm ihlal istatistiklerini getir.
    */
   async getStats() {
-    const [totalUploads, totalViolations, confirmedViolations] = await Promise.all([
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 6);
+
+    const [totalUploads, totalViolations, confirmedViolations, todayCount, weekCount] = await Promise.all([
       prisma.violationUpload.count(),
       prisma.dailyViolation.count(),
       prisma.dailyViolation.count({ where: { isConfirmed: true } }),
+      prisma.dailyViolation.count({ where: { violationDate: { gte: todayStart } } }),
+      prisma.dailyViolation.count({ where: { violationDate: { gte: weekStart } } }),
     ]);
 
     // En çok ihlaili öğrenciler
@@ -323,6 +361,8 @@ export class ViolationsService {
     return {
       totalUploads,
       totalViolations,
+      todayCount,
+      weekCount,
       confirmedViolations,
       topOffenders: topOffenders.map((t) => ({
         student: studentMap.get(t.studentId),
@@ -332,10 +372,69 @@ export class ViolationsService {
   }
 
   /**
+   * Öğrencinin tüm ihlal geçmişini getir.
+   */
+  async getStudentHistory(studentId: string) {
+    const [student, violations, existingWarnings] = await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+        select: { fullName: true, className: true, schoolNumber: true },
+      }),
+      prisma.dailyViolation.findMany({
+        where: { studentId },
+        include: {
+          upload: { select: { type: true, description: true, violationDate: true, createdAt: true } },
+        },
+        orderBy: { violationDate: 'desc' },
+      }),
+      prisma.writtenWarning.findMany({
+        where: { studentId },
+        select: { id: true, behaviorCode: true, issuedAt: true, warningNumber: true },
+        orderBy: { issuedAt: 'desc' },
+      }),
+    ]);
+
+    if (!student) throw new AppError('Öğrenci bulunamadı.', 404);
+
+    // Her ihlal tipi için onaylı ihlal sayısını hesapla
+    const confirmedViolations = violations.filter((v) => v.isConfirmed);
+    const violationsByType: Record<string, number> = {};
+    for (const v of confirmedViolations) {
+      violationsByType[v.type] = (violationsByType[v.type] || 0) + 1;
+    }
+
+    // Mevcut uyarıların davranış kodları
+    const warnedBehaviorCodes = new Set(existingWarnings.map((w) => w.behaviorCode));
+
+    // Tür bazında uyarı önerileri
+    const warningSuggestions = Object.entries(violationsByType)
+      .filter(([, count]) => count >= 2)
+      .map(([type, count]) => {
+        const behaviorCode = VIOLATION_TO_BEHAVIOR[type] || 'M164_1_B';
+        return {
+          type,
+          confirmedCount: count,
+          behaviorCode,
+          hasWarning: warnedBehaviorCodes.has(behaviorCode),
+        };
+      });
+
+    return {
+      student,
+      violations,
+      total: violations.length,
+      confirmed: confirmedViolations.length,
+      violationsByType,
+      warningSuggestions,
+      existingWarnings,
+    };
+  }
+
+  /**
    * Belirli tipdeki davranış kodunu döndürür (uyarı oluşturmak için).
    */
   getBehaviorCodeForType(type: string): string {
-    return VIOLATION_TO_BEHAVIOR[type] || 'GENEL_KURAL_IHLAL';
+    return VIOLATION_TO_BEHAVIOR[type] || 'M164_1_B';
   }
 
   getViolationLabel(type: string): string {
@@ -450,8 +549,17 @@ export class ViolationsService {
     const studentIds = createdRecords.map((r) => r.studentId);
     const prevCounts = await getBulkViolationCounts(studentIds, data.type);
 
+    // 7. Yazılı uyarı almış öğrencileri bul
+    const behaviorCodeManual = VIOLATION_TO_BEHAVIOR[data.type] || 'M164_1_B';
+    const existingWarningsManual = await prisma.writtenWarning.findMany({
+      where: { studentId: { in: studentIds }, behaviorCode: behaviorCodeManual },
+      select: { studentId: true },
+    });
+    const warnedStudentIdsManual = new Set(existingWarningsManual.map((w) => w.studentId));
+
     const enrichedRecords = createdRecords.map((r) => {
       const prevCount = prevCounts.get(r.studentId) || 0;
+      const requiresDiscipline = warnedStudentIdsManual.has(r.studentId);
       return {
         id: r.id,
         studentId: r.studentId,
@@ -460,7 +568,8 @@ export class ViolationsService {
         matchedBy: r.matchedBy,
         confidence: r.confidence,
         previousViolations: prevCount,
-        suggestWarning: prevCount >= 1,
+        suggestWarning: prevCount >= 2,
+        requiresDiscipline,
       };
     });
 
@@ -477,7 +586,8 @@ export class ViolationsService {
         totalLines: parsedLines.length,
         matchedCount: enrichedRecords.length,
         unmatchedCount: unmatched.length,
-        repeatOffenders: enrichedRecords.filter((r) => r.suggestWarning).length,
+        repeatOffenders: enrichedRecords.filter((r) => r.suggestWarning && !r.requiresDiscipline).length,
+        disciplineRequired: enrichedRecords.filter((r) => r.requiresDiscipline).length,
       },
     };
   }

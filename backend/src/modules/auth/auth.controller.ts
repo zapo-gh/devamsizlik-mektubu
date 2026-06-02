@@ -10,7 +10,7 @@ const loginSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Mevcut şifre gereklidir.'),
-  newPassword: z.string().min(6, 'Yeni şifre en az 6 karakter olmalıdır.'),
+  newPassword: z.string().min(8, 'Yeni şifre en az 8 karakter olmalıdır.'),
 });
 
 export class AuthController {
@@ -21,7 +21,8 @@ export class AuthController {
         throw new AppError(parsed.error.errors[0].message, 400);
       }
 
-      const result = await authService.login(parsed.data.username, parsed.data.password);
+      const rememberMe = req.body.rememberMe === true;
+      const result = await authService.login(parsed.data.username, parsed.data.password, rememberMe);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

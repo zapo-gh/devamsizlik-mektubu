@@ -1,5 +1,6 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import api from '../../services/api';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface Student {
   id: string;
@@ -13,25 +14,31 @@ interface AbsenteeismRecord {
   id: string;
   studentId: string;
   warningNumber: number;
+  isBep: boolean;
   viewedByParent: boolean;
+  waSentAt?: string | null;
   createdAt: string;
+  excusedDays?: number | null;
+  unexcusedDays?: number | null;
   student: { fullName: string; className: string; schoolNumber: string };
-  _count: { otpCodes: number };
-}
-
-interface OtpResult {
-  otp: { code: string; expiresAt: string };
-  whatsappLink: string;
-  token: string;
-  studentName: string;
 }
 
 export default function AbsenteeismPage() {
+  const { confirm, alert, confirmModal } = useConfirm();
   const [records, setRecords] = useState<AbsenteeismRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showOtpModal, setShowOtpModal] = useState(false);
+
+  // Liste arama — değişince sayfa 1'e sıfırla
+  const [listSearch, setListSearch] = useState('');
+  const prevSearchRef = useRef('');
+  useEffect(() => {
+    if (listSearch !== prevSearchRef.current) {
+      prevSearchRef.current = listSearch;
+      setPage(1);
+    }
+  }, [listSearch]);
 
   // Upload form
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -42,39 +49,75 @@ export default function AbsenteeismPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [isBep, setIsBep] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Modal açılınca arama input'una fokuslan
+  useEffect(() => {
+    if (showUploadModal) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 80);
+      return () => clearTimeout(t);
+    }
+  }, [showUploadModal]);
 
   // Pagination
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<{ total: number; totalPages: number } | null>(null);
 
-  // OTP generation
-  const [selectedRecordId, setSelectedRecordId] = useState('');
-  const [parentPhone, setParentPhone] = useState('');
-  const [recordParents, setRecordParents] = useState<{ id: string; fullName: string; phone: string }[]>([]);
-  const [otpResult, setOtpResult] = useState<OtpResult | null>(null);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError] = useState('');
+  // WhatsApp otomatik gönderim
+  const [waConnected, setWaConnected] = useState(false);
+  const [waSendLoading, setWaSendLoading] = useState('');
 
-  // Direct send (no OTP/link)
-  const [showDirectModal, setShowDirectModal] = useState(false);
-  const [directRecord, setDirectRecord] = useState<AbsenteeismRecord | null>(null);
-  const [directParentPhone, setDirectParentPhone] = useState('');
-  const [directRecordParents, setDirectRecordParents] = useState<{ id: string; fullName: string; phone: string }[]>([]);
-  const [directDownloading, setDirectDownloading] = useState(false);
+  // WhatsApp önizleme modal
+  const [showWaModal, setShowWaModal] = useState(false);
+  const [waRecord, setWaRecord] = useState<AbsenteeismRecord | null>(null);
+  const [waExcusedDays, setWaExcusedDays] = useState('');
+  const [waUnexcusedDays, setWaUnexcusedDays] = useState('');
+  const [waPreviewData, setWaPreviewData] = useState<{
+    messages: { parent: string; phone: string; message: string }[];
+    hasPreviewImage: boolean;
+  } | null>(null);
+  const [waPreviewLoading, setWaPreviewLoading] = useState(false);
+  const [waPreviewError, setWaPreviewError] = useState('');
+  const [waSelectedParents, setWaSelectedParents] = useState<Set<string>>(new Set());
+
+  // Kırpma alanı seçimi (0–100 yüzde değerleri)
+  const [cropTop, setCropTop] = useState(0);
+  const [cropBottom, setCropBottom] = useState(50);
+  const [fullPageImage, setFullPageImage] = useState<string | null>(null);
+  const [fullPageLoading, setFullPageLoading] = useState(false);
+  const cropContainerRef = useRef<HTMLDivElement>(null);
+  const cropDragRef = useRef<'top' | 'bottom' | null>(null);
+  const cropTopRef = useRef(0);
+  const cropBottomRef = useRef(50);
 
   useEffect(() => {
     loadData();
-  }, [page]);
+    api.get('/whatsapp/status').then(r => setWaConnected(r.data.data.status === 'connected')).catch(() => {});
+  }, [page, listSearch]);
+
+  // Öğrenci listesini yalnızca modal açıldığında yükle (performans)
+  useEffect(() => {
+    if (showUploadModal && students.length === 0) {
+      api.get('/students?limit=2000').then(r => setStudents(r.data.data.students)).catch(() => {});
+    }
+  }, [showUploadModal]);
 
   const loadData = async () => {
     try {
-      const [recordsRes, studentsRes] = await Promise.all([
-        api.get(`/absenteeism?limit=20&page=${page}`),
-        api.get('/students?limit=2000'),
-      ]);
+      const isSearch = !!listSearch.trim();
+      const searchParam = isSearch
+        ? `&search=${encodeURIComponent(listSearch.trim())}&limit=1000`
+        : `&limit=20&page=${page}`;
+      const recordsRes = await api.get(`/absenteeism?${searchParam}`);
       setRecords(recordsRes.data.data.records);
-      setPagination(recordsRes.data.data.pagination);
-      setStudents(studentsRes.data.data.students);
+      // Arama aktifken sayfalama durumunu sıfırla
+      if (isSearch) {
+        setPagination(null);
+      } else {
+        setPagination(recordsRes.data.data.pagination);
+      }
     } catch (error) {
       console.error('Load error:', error);
     } finally {
@@ -94,6 +137,7 @@ export default function AbsenteeismPage() {
       formData.append('pdf', pdfFile);
       formData.append('studentId', selectedStudentId);
       formData.append('warningNumber', String(warningNumber));
+      formData.append('isBep', String(isBep));
 
       await api.post('/absenteeism', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -114,6 +158,7 @@ export default function AbsenteeismPage() {
     setStudentSearch('');
     setWarningNumber(1);
     setPdfFile(null);
+    setIsBep(false);
     setUploadError('');
   };
 
@@ -129,141 +174,133 @@ export default function AbsenteeismPage() {
     }
   };
 
-  const openOtpModal = (recordId: string) => {
-    setSelectedRecordId(recordId);
-    setOtpResult(null);
-    setOtpError('');
-    setParentPhone('');
-
-    // Find the record and its student's parents
-    const record = records.find((r) => r.id === recordId);
-    if (record) {
-      const student = students.find((s) => s.id === record.studentId);
-      if (student && student.parents.length > 0) {
-        setRecordParents(student.parents);
-        setParentPhone(student.parents[0].phone); // Auto-select first parent
-      } else {
-        setRecordParents([]);
-      }
-    } else {
-      setRecordParents([]);
-    }
-
-    setShowOtpModal(true);
-  };
-
-  const handleGenerateOtp = async (e: FormEvent) => {
-    e.preventDefault();
-    setOtpError('');
-    setOtpLoading(true);
-
-    try {
-      // Find parent name for the selected phone
-      const selectedParent = recordParents.find((p) => p.phone === parentPhone);
-      const res = await api.post(`/absenteeism/${selectedRecordId}/generate-otp`, {
-        parentPhone,
-        parentName: selectedParent?.fullName || '',
-      });
-      const data = res.data.data;
-      // Rebuild WhatsApp link using current browser origin so link is always correct
-      const veliLink = `${window.location.origin}/veli/${data.token}`;
-      const parentLabel = selectedParent?.fullName ? `Sayın ${selectedParent.fullName},` : 'Sayın Veli,';
-      // Calculate expiry duration from server response
-      const expiresAt = new Date(data.otp.expiresAt);
-      const diffMs = expiresAt.getTime() - Date.now();
-      const diffMins = Math.round(diffMs / 60000);
-      const expiryText = diffMins >= 1440 ? `${Math.round(diffMins / 1440)} gün` : diffMins >= 60 ? `${Math.round(diffMins / 60)} saat` : `${diffMins} dakika`;
-      const msg = `${parentLabel}\n\nOgrencinizin devamsizlik bildirimi sisteme yuklenmistir.\n\nSifre: ${data.otp.code}\n\nAsagidaki baglantiya tiklayarak devamsizlik mektubunu goruntuleyebilirsiniz:\n\n${veliLink}\n\n* Sifre ${expiryText} gecerlidir.`;
-      let cleanPhone = parentPhone.replace(/\D/g, '');
-      if (cleanPhone.startsWith('0')) {
-        cleanPhone = '90' + cleanPhone.slice(1);
-      } else if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) {
-        cleanPhone = '90' + cleanPhone;
-      }
-      data.whatsappLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
-      setOtpResult(data);
-    } catch (err: any) {
-      setOtpError(err.response?.data?.message || 'OTP oluşturulamadı.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Devamsızlık kaydını silmek istediğinize emin misiniz?')) return;
+    if (!await confirm('Devamsızlık kaydını silmek istediğinize emin misiniz?')) return;
 
     try {
       await api.delete(`/absenteeism/${id}`);
       loadData();
-    } catch (error) {
-      console.error('Delete failed:', error);
-    }
-  };
-
-  const openDirectModal = (recordId: string) => {
-    const record = records.find((r) => r.id === recordId);
-    if (!record) return;
-    setDirectRecord(record);
-    const student = students.find((s) => s.id === record.studentId);
-    if (student && student.parents.length > 0) {
-      setDirectRecordParents(student.parents);
-      setDirectParentPhone(student.parents[0].phone);
-    } else {
-      setDirectRecordParents([]);
-      setDirectParentPhone('');
-    }
-    setShowDirectModal(true);
-  };
-
-  const handleDownloadFile = async () => {
-    if (!directRecord) return;
-    setDirectDownloading(true);
-    try {
-      const response = await api.get(`/absenteeism/${directRecord.id}/pdf`, { responseType: 'blob' });
-      const contentType = response.headers['content-type'] || 'image/jpeg';
-      const blob = new Blob([response.data], { type: contentType });
-      const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg';
-      const fileName = `devamsizlik_${directRecord.student.fullName.replace(/\s+/g, '_')}_${directRecord.warningNumber}uyari.${ext}`;
-
-      // Web Share API ile dosya + mesaj birlikte paylaş (mobil/modern tarayıcı)
-      const selectedParent = directRecordParents.find((p) => p.phone === directParentPhone);
-      const parentLabel = selectedParent?.fullName ? `Sayın ${selectedParent.fullName},` : 'Sayın Veli,';
-      const msg = `${parentLabel}\n\nÖğrenciniz ${directRecord.student.fullName}'nın ${directRecord.warningNumber}. devamsızlık bildirimi ektedir.\n\nSaygılarımızla,\nOkul Yönetimi`;
-
-      if (navigator.canShare && navigator.share) {
-        const file = new File([blob], fileName, { type: contentType });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text: msg });
-          return;
-        }
-      }
-
-      // Fallback: dosyayı indir
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => window.URL.revokeObjectURL(url), 30000);
     } catch (err: any) {
-      if (err?.name !== 'AbortError') alert('Dosya paylaşma başarısız.');
-    } finally {
-      setDirectDownloading(false);
+      await alert(err.response?.data?.message || 'Silme işlemi başarısız.');
     }
   };
 
-  const getDirectWhatsAppLink = () => {
-    if (!directRecord || !directParentPhone) return '#';
-    const selectedParent = directRecordParents.find((p) => p.phone === directParentPhone);
-    const parentLabel = selectedParent?.fullName ? `Sayın ${selectedParent.fullName},` : 'Sayın Veli,';
-    const msg = `${parentLabel}\n\nÖğrenciniz ${directRecord.student.fullName}'nın ${directRecord.warningNumber}. devamsızlık bildirimi ektedir.\n\nSaygılarımızla,\nOkul Yönetimi`;
-    let cleanPhone = directParentPhone.replace(/\D/g, '');
-    if (cleanPhone.startsWith('0')) cleanPhone = '90' + cleanPhone.slice(1);
-    else if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) cleanPhone = '90' + cleanPhone;
-    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+  const handleWaPreviewOpen = async (record: AbsenteeismRecord) => {
+    setWaRecord(record);
+    setWaExcusedDays(record.excusedDays != null ? String(record.excusedDays) : '');
+    setWaUnexcusedDays(record.unexcusedDays != null ? String(record.unexcusedDays) : '');
+    setWaPreviewData(null);
+    setWaPreviewError('');
+    setShowWaModal(true);
+    // Kırpma alanını sıfırla
+    setCropTop(0);
+    setCropBottom(50);
+    cropTopRef.current = 0;
+    cropBottomRef.current = 50;
+    setFullPageImage(null);
+    // Otomatik önizle
+    try {
+      setWaPreviewLoading(true);
+      const res = await api.post(`/whatsapp/preview/absenteeism/${record.id}`, {
+        excusedDays: record.excusedDays != null ? record.excusedDays : '',
+        unexcusedDays: record.unexcusedDays != null ? record.unexcusedDays : '',
+      });
+      setWaPreviewData(res.data.data);
+      setWaSelectedParents(new Set((res.data.data.messages as { phone: string }[]).map((m) => m.phone)));
+      // Görsel önizleme varsa tam sayfayı da yükle
+      if (res.data.data.hasPreviewImage) {
+        setFullPageLoading(true);
+        api.get(`/whatsapp/full-image/absenteeism/${record.id}`)
+          .then(imgRes => setFullPageImage(imgRes.data.data.image))
+          .catch(() => {})
+          .finally(() => setFullPageLoading(false));
+      }
+    } catch (err: any) {
+      setWaPreviewError(err.response?.data?.message || 'Önizleme yüklenemedi.');
+    } finally {
+      setWaPreviewLoading(false);
+    }
   };
+
+  const handleWaPreviewRefresh = async () => {
+    if (!waRecord) return;
+    setWaPreviewLoading(true);
+    setWaPreviewError('');
+    try {
+      const res = await api.post(`/whatsapp/preview/absenteeism/${waRecord.id}`, {
+        excusedDays: waExcusedDays,
+        unexcusedDays: waUnexcusedDays,
+      });
+      setWaPreviewData(res.data.data);
+      // Güncel veli listesiyle seçili telefonları senkronize et (M-6)
+      setWaSelectedParents(new Set((res.data.data.messages as { phone: string }[]).map((m) => m.phone)));
+    } catch (err: any) {
+      setWaPreviewError(err.response?.data?.message || 'Önizleme yüklenemedi.');
+    } finally {
+      setWaPreviewLoading(false);
+    }
+  };
+
+  const handleCropMouseDown = (type: 'top' | 'bottom') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    cropDragRef.current = type;
+    const onMove = (me: MouseEvent) => {
+      if (!cropContainerRef.current || !cropDragRef.current) return;
+      const rect = cropContainerRef.current.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(100, (me.clientY - rect.top) / rect.height * 100));
+      if (cropDragRef.current === 'top') {
+        const newTop = Math.min(pct, cropBottomRef.current - 5);
+        cropTopRef.current = newTop;
+        setCropTop(newTop);
+      } else {
+        const newBottom = Math.max(pct, cropTopRef.current + 5);
+        cropBottomRef.current = newBottom;
+        setCropBottom(newBottom);
+      }
+    };
+    const onUp = () => {
+      cropDragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  const handleWaSend = async () => {
+    if (!waRecord) return;
+    const recordId = waRecord.id;  // stale closure'dan koru
+    setWaSendLoading(recordId);
+    try {
+      const res = await api.post(`/whatsapp/send/absenteeism/${waRecord.id}`, {
+        excusedDays: waExcusedDays,
+        unexcusedDays: waUnexcusedDays,
+        selectedPhones: Array.from(waSelectedParents),
+        cropTop: waPreviewData?.hasPreviewImage ? cropTop : undefined,
+        cropBottom: waPreviewData?.hasPreviewImage ? cropBottom : undefined,
+      });
+      const results = res.data.data.results as { parent: string; phone: string; ok: boolean; error?: string }[];
+      const failed = results.filter(r => !r.ok);
+      setShowWaModal(false);
+      if (results.some((r: any) => r.ok)) {
+        // Gönderilen kaydı lokal state'te güncelle → buton hemen pasif
+        setRecords(prev => prev.map(rec =>
+          rec.id === recordId ? { ...rec, waSentAt: new Date().toISOString() } : rec
+        ));
+      }
+      if (failed.length === 0) {
+        await alert(`✅ Mesaj ve dosya ${results.length} veliye başarıyla gönderildi.`);
+      } else {
+        const msg = failed.map(r => `${r.parent}: ${r.error}`).join('\n');
+        await alert(`⚠️ ${results.length - failed.length} gönderildi, ${failed.length} başarısız:\n${msg}`);
+      }
+    } catch (err: any) {
+      await alert(err.response?.data?.message || 'Gönderim başarısız.');
+    } finally {
+      setWaSendLoading('');
+    }
+  };
+
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('tr-TR', {
@@ -286,7 +323,10 @@ export default function AbsenteeismPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>Devamsızlık Yönetimi</h1>
+        <div>
+          <h1 className="page-title">✉️ Devamsızlık Mektubu Gönderimi</h1>
+          <p className="page-subtitle">Öğrenci devamsızlık mektuplarını yönetin ve gönderin</p>
+        </div>
         <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>
           + Devamsızlık Mektubu Ekle
         </button>
@@ -294,6 +334,15 @@ export default function AbsenteeismPage() {
 
       {/* Records Table */}
       <div className="card">
+        <div style={{ marginBottom: 16 }}>
+          <input
+            type="text"
+            placeholder="Öğrenci ara (ad, numara, sınıf)..."
+            value={listSearch}
+            onChange={e => { setListSearch(e.target.value); setPage(1); }}
+            style={{ width: '100%', maxWidth: 400, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 14 }}
+          />
+        </div>
         <div className="table-container">
           <table>
             <thead>
@@ -307,17 +356,27 @@ export default function AbsenteeismPage() {
               </tr>
             </thead>
             <tbody>
-              {records.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                    Henüz devamsızlık kaydı yok.
-                  </td>
-                </tr>
-              ) : (
-                records.map((r) => (
+              {(() => {
+                const unsent = records.filter(r => !r.waSentAt);
+                const sent   = records.filter(r =>  r.waSentAt);
+
+                if (records.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                        {listSearch ? 'Arama sonucu bulunamadı.' : 'Henüz devamsızlık kaydı yok.'}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                const renderRow = (r: AbsenteeismRecord) => (
                   <tr key={r.id}>
                     <td>
                       <strong>{r.student.fullName}</strong>
+                      {r.isBep && (
+                        <span className="badge" style={{ background: '#ede9fe', color: '#6d28d9', fontSize: 10, marginLeft: 6, verticalAlign: 'middle' }}>BEP</span>
+                      )}
                       <br />
                       <small style={{ color: 'var(--text-muted)' }}>
                         {r.student.schoolNumber}
@@ -337,30 +396,34 @@ export default function AbsenteeismPage() {
                       </span>
                     </td>
                     <td>
-                      <span
-                        className={`badge ${
-                          r.viewedByParent ? 'badge-success' : 'badge-warning'
-                        }`}
-                      >
-                        {r.viewedByParent ? 'Görüntülendi' : 'Bekliyor'}
-                      </span>
+                      {r.waSentAt ? (
+                        <span className="badge" style={{ background: '#dcfce7', color: '#15803d' }}>
+                          📱 WA Gönderildi
+                        </span>
+                      ) : (
+                        <span className="badge badge-warning">Gönderilmedi</span>
+                      )}
                     </td>
                     <td>{formatDate(r.createdAt)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button
-                          className="btn btn-whatsapp btn-sm"
-                          onClick={() => openOtpModal(r.id)}
-                        >
-                          📱 OTP & Link
-                        </button>
-                        <button
-                          className="btn btn-sm"
-                          style={{ background: '#25d366', color: '#fff', border: 'none', cursor: 'pointer' }}
-                          onClick={() => openDirectModal(r.id)}
-                        >
-                          📎 Direkt Gönder
-                        </button>
+                        {waConnected && (
+                          <button
+                            className="btn btn-sm"
+                            style={{
+                              background: r.waSentAt ? '#86efac' : '#16a34a',
+                              color: r.waSentAt ? '#14532d' : '#fff',
+                              border: 'none',
+                              cursor: r.waSentAt ? 'default' : 'pointer',
+                              opacity: r.waSentAt ? 0.7 : 1,
+                            }}
+                            onClick={() => !r.waSentAt && handleWaPreviewOpen(r)}
+                            disabled={waSendLoading === r.id || !!r.waSentAt}
+                            title={r.waSentAt ? `Gönderildi: ${formatDate(r.waSentAt)}` : "PDF'i WhatsApp'tan otomatik gönder"}
+                          >
+                            {waSendLoading === r.id ? '...' : r.waSentAt ? '✅ Gönderildi' : '📱 Otomatik Gönder'}
+                          </button>
+                        )}
                         <button
                           className="btn btn-outline btn-sm"
                           onClick={async () => {
@@ -373,19 +436,26 @@ export default function AbsenteeismPage() {
                               a.href = url;
                               a.target = '_blank';
                               a.rel = 'noopener';
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
+                              document.body.appendChild(a); a.click(); document.body.removeChild(a);
                               setTimeout(() => window.URL.revokeObjectURL(url), 30000);
-                            } catch {
-                              alert('PDF görüntüleme başarısız.');
+                            } catch (err: any) {
+                              let msg = err?.message || 'Bilinmeyen hata';
+                              if (err?.response?.data instanceof Blob) {
+                                try {
+                                  const text = await err.response.data.text();
+                                  const json = JSON.parse(text);
+                                  msg = json?.message || msg;
+                                } catch { /* json parse failed, use original msg */ }
+                              }
+                              await alert(`Mektup açılamadı: ${msg}`);
                             }
                           }}
                         >
-                          Devamsızlık Mektubu Görüntüle
+                          📄 Mektubu Gör
                         </button>
                         <button
-                          className="btn btn-danger btn-sm"
+                          className="btn btn-outline btn-sm"
+                          style={{ color: '#ef4444', borderColor: '#fca5a5' }}
                           onClick={() => handleDelete(r.id)}
                         >
                           Sil
@@ -393,8 +463,33 @@ export default function AbsenteeismPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+
+                return (
+                  <>
+                    {unsent.length > 0 && (
+                      <>
+                        <tr>
+                          <td colSpan={6} style={{ background: '#fefce8', color: '#854d0e', fontWeight: 600, fontSize: 12, padding: '6px 12px', borderBottom: '1px solid #fde68a' }}>
+                            📨 Gönderilmeyenler ({unsent.length})
+                          </td>
+                        </tr>
+                        {unsent.map(renderRow)}
+                      </>
+                    )}
+                    {sent.length > 0 && (
+                      <>
+                        <tr>
+                          <td colSpan={6} style={{ background: '#f0fdf4', color: '#166534', fontWeight: 600, fontSize: 12, padding: '6px 12px', borderBottom: '1px solid #bbf7d0', borderTop: unsent.length > 0 ? '2px solid #d1d5db' : undefined }}>
+                            ✅ Gönderilenler ({sent.length})
+                          </td>
+                        </tr>
+                        {sent.map(renderRow)}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>
@@ -425,8 +520,8 @@ export default function AbsenteeismPage() {
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="modal-overlay" onClick={() => setShowUploadModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={() => setShowUploadModal(false)}>
+          <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
             <h2>Devamsızlık Mektubu Ekle</h2>
 
             {uploadError && <div className="alert alert-error">{uploadError}</div>}
@@ -435,6 +530,7 @@ export default function AbsenteeismPage() {
               <div className="form-group" style={{ position: 'relative' }}>
                 <label>Öğrenci</label>
                 <input
+                  ref={searchInputRef}
                   type="text"
                   value={studentSearch}
                   onChange={(e) => {
@@ -463,9 +559,9 @@ export default function AbsenteeismPage() {
                   }}>
                     {students
                       .filter((s) => {
-                        const q = studentSearch.toLowerCase();
+                        const q = studentSearch.toLocaleLowerCase('tr-TR');
                         return (
-                          s.fullName.toLowerCase().includes(q) ||
+                          s.fullName.toLocaleLowerCase('tr-TR').includes(q) ||
                           s.schoolNumber.toLowerCase().includes(q)
                         );
                       })
@@ -495,8 +591,8 @@ export default function AbsenteeismPage() {
                         </div>
                       ))}
                     {students.filter((s) => {
-                      const q = studentSearch.toLowerCase();
-                      return s.fullName.toLowerCase().includes(q) || s.schoolNumber.toLowerCase().includes(q);
+                      const q = studentSearch.toLocaleLowerCase('tr-TR');
+                      return s.fullName.toLocaleLowerCase('tr-TR').includes(q) || s.schoolNumber.toLowerCase().includes(q);
                     }).length === 0 && (
                       <div style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 14 }}>
                         Sonuç bulunamadı.
@@ -561,6 +657,25 @@ export default function AbsenteeismPage() {
                 </small>
               </div>
 
+              <div className="form-group">
+                <label
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isBep}
+                    onChange={(e) => setIsBep(e.target.checked)}
+                    style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>
+                    BEP Öğrencisi
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    (Bireysel Eğitim Planı — özel devamsızlık sınırları uygulanır)
+                  </span>
+                </label>
+              </div>
+
               <div className="modal-actions">
                 <button
                   type="button"
@@ -578,275 +693,225 @@ export default function AbsenteeismPage() {
         </div>
       )}
 
-      {/* OTP & WhatsApp Modal */}
-      {showOtpModal && (
-        <div className="modal-overlay" onClick={() => setShowOtpModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>OTP Oluştur & WhatsApp Mesajı</h2>
+      {/* WhatsApp Önizleme & Gönderim Modali */}
+      {showWaModal && waRecord && (
+        <div className="modal-overlay" onMouseDown={() => setShowWaModal(false)}>
+          <div className="modal" style={{ maxWidth: 600 }} onMouseDown={(e) => e.stopPropagation()}>
+            <h2>📱 WhatsApp Mesaj Önizleme</h2>
 
-            {otpError && <div className="alert alert-error">{otpError}</div>}
+            <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--surface-2, #f8fafc)', borderRadius: 8, fontSize: 13 }}>
+              <strong>{waRecord.student.fullName}</strong>
+              <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>{waRecord.student.className}</span>
+              <span style={{ marginLeft: 12 }}>— {waRecord.warningNumber}. Uyarı</span>
+            </div>
 
-            {!otpResult ? (
-              <form onSubmit={handleGenerateOtp}>
-                {recordParents.length > 0 ? (
-                  <div className="form-group">
-                    <label>Veli Seçin</label>
-                    {recordParents.map((p, idx) => (
-                      <label
-                        key={p.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          padding: '10px 14px',
-                          marginBottom: 8,
-                          background: parentPhone === p.phone ? '#eff6ff' : '#f8fafc',
-                          border: parentPhone === p.phone ? '2px solid var(--primary)' : '1px solid var(--border)',
-                          borderRadius: 'var(--radius)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="parentPhone"
-                          value={p.phone}
-                          checked={parentPhone === p.phone}
-                          onChange={() => setParentPhone(p.phone)}
-                          style={{ accentColor: 'var(--primary)' }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>
-                            {idx + 1}. Veli — {p.fullName}
-                          </div>
-                          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                            📞 {p.phone}
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="form-group">
-                    <label>Veli Telefon Numarası</label>
-                    <div className="alert alert-warning" style={{ marginBottom: 12, fontSize: 13 }}>
-                      ⚠️ Bu öğrenciye ait kayıtlı veli bilgisi bulunamadı. Lütfen telefon numarasını manuel giriniz.
-                    </div>
-                    <input
-                      type="tel"
-                      value={parentPhone}
-                      onChange={(e) => setParentPhone(e.target.value)}
-                      placeholder="905551234567"
-                      required
-                    />
-                    <small style={{ color: 'var(--text-muted)' }}>
-                      Ülke kodu ile birlikte giriniz (ör: 905551234567)
-                    </small>
-                  </div>
-                )}
-
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={() => setShowOtpModal(false)}
-                  >
-                    İptal
-                  </button>
-                  <button type="submit" className="btn btn-primary" disabled={otpLoading}>
-                    {otpLoading ? <span className="spinner" /> : 'OTP Oluştur'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div>
-                <div className="alert alert-success">
-                  OTP başarıyla oluşturuldu!
-                </div>
-
-                <div className="card" style={{ marginBottom: 16 }}>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>Öğrenci:</strong> {otpResult.studentName}
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>OTP Kodu:</strong>{' '}
-                    <span
-                      style={{
-                        fontSize: 24,
-                        fontWeight: 'bold',
-                        color: 'var(--primary)',
-                        letterSpacing: 4,
-                      }}
-                    >
-                      {otpResult.otp.code}
-                    </span>
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>Son Geçerlilik:</strong>{' '}
-                    {formatDate(otpResult.otp.expiresAt)}
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: 12 }}>
-                  <strong>Veli Linki:</strong>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={`${window.location.origin}/veli/${otpResult.token}`}
-                      style={{ flex: 1, fontSize: 12, padding: '8px 10px' }}
-                      onClick={(e) => (e.target as HTMLInputElement).select()}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/veli/${otpResult.token}`);
-                        alert('Link kopyalandı!');
-                      }}
-                      style={{ whiteSpace: 'nowrap' }}
-                    >
-                      Kopyala
-                    </button>
-                  </div>
-                </div>
-
-                <a
-                  href={otpResult.whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-whatsapp"
-                  style={{ width: '100%', marginBottom: 8 }}
-                >
-                  📱 WhatsApp Mesajını Hazırla
-                </a>
-
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-                  WhatsApp Web açılacak. Mesajı manuel olarak gönderin.
-                </p>
-
-                <div className="modal-actions">
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => setShowOtpModal(false)}
-                  >
-                    Kapat
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Direct Send Modal */}
-      {showDirectModal && directRecord && (
-        <div className="modal-overlay" onClick={() => setShowDirectModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>📎 Direkt WhatsApp Gönder</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-              Tek butonla dosyayı ve mesajı doğrudan WhatsApp'a gönderir. Link veya şifre gerekmez.
-            </p>
-
-            {/* Parent selection */}
-            {directRecordParents.length > 0 ? (
-              <div className="form-group">
-                <label>Veli Seçin</label>
-                {directRecordParents.map((p, idx) => (
-                  <label
-                    key={p.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: '10px 14px',
-                      marginBottom: 8,
-                      background: directParentPhone === p.phone ? '#eff6ff' : '#f8fafc',
-                      border: directParentPhone === p.phone ? '2px solid var(--primary)' : '1px solid var(--border)',
-                      borderRadius: 'var(--radius)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="directParentPhone"
-                      value={p.phone}
-                      checked={directParentPhone === p.phone}
-                      onChange={() => setDirectParentPhone(p.phone)}
-                      style={{ accentColor: 'var(--primary)' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>
-                        {idx + 1}. Veli — {p.fullName}
-                      </div>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>📞 {p.phone}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div className="form-group">
-                <label>Veli Telefon Numarası</label>
-                <div className="alert alert-warning" style={{ marginBottom: 12, fontSize: 13 }}>
-                  ⚠️ Kayıtlı veli bulunamadı. Telefon numarasını manuel girin.
-                </div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label style={{ fontSize: 13 }}>Özürlü Gün</label>
                 <input
-                  type="tel"
-                  value={directParentPhone}
-                  onChange={(e) => setDirectParentPhone(e.target.value)}
-                  placeholder="905551234567"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={waExcusedDays}
+                  onChange={(e) => setWaExcusedDays(e.target.value)}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }}
                 />
               </div>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label style={{ fontSize: 13 }}>Özürsüz Gün</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={waUnexcusedDays}
+                  onChange={(e) => setWaUnexcusedDays(e.target.value)}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={handleWaPreviewRefresh}
+                  disabled={waPreviewLoading}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {waPreviewLoading ? '...' : '🔄 Önizle'}
+                </button>
+              </div>
+            </div>
+
+            {waPreviewError && (
+              <div className="alert alert-error" style={{ marginBottom: 12 }}>{waPreviewError}</div>
             )}
 
-            {/* Message preview */}
-            <div className="form-group">
-              <label>Gönderilecek Mesaj</label>
-              <div style={{
-                background: '#f0fdf4',
-                border: '1px solid #86efac',
-                borderRadius: 'var(--radius)',
-                padding: '12px 14px',
-                fontSize: 13,
-                whiteSpace: 'pre-wrap',
-                color: '#166534',
-              }}>
-                {(() => {
-                  const p = directRecordParents.find((x) => x.phone === directParentPhone);
-                  const label = p?.fullName ? `Sayın ${p.fullName},` : 'Sayın Veli,';
-                  return `${label}\n\nÖğrenciniz ${directRecord.student.fullName}'nın ${directRecord.warningNumber}. devamsızlık bildirimi ektedir.\n\nSaygılarımızla,\nOkul Yönetimi`;
-                })()}
-              </div>
-              <small style={{ color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
-                Mesajla birlikte indirdiğiniz dosyayı WhatsApp'ta ekli olarak gönderin.
-              </small>
-            </div>
+            {waPreviewLoading && !waPreviewData && (
+              <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner spinner-dark" /></div>
+            )}
 
-            {/* Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button
-                className="btn btn-whatsapp"
-                onClick={handleDownloadFile}
-                disabled={directDownloading}
-                style={{ width: '100%' }}
-              >
-                {directDownloading ? <span className="spinner" /> : '📤 Dosyayı WhatsApp ile Gönder'}
-              </button>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
-                {typeof navigator !== 'undefined' && typeof navigator.canShare === 'function'
-                  ? 'Paylaşım ekranı açılır — WhatsApp\'ı seçin, dosya ve mesaj hazır gelir.'
-                  : 'Dosya indirilecek. WhatsApp\'ı açıp dosyayı ekleyerek gönderin.'}
-              </p>
-            </div>
+            {waPreviewData && (
+              <>
+                <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{waPreviewData.hasPreviewImage ? '🖼 Görsel önizleme ile gönderilecek' : '📄 PDF belgesi olarak gönderilecek'}</span>
+                  {waPreviewData.messages.length > 1 && (
+                    <span>
+                      <button
+                        style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: 12, padding: 0, marginRight: 8 }}
+                        onClick={() => setWaSelectedParents(new Set(waPreviewData.messages.map(m => m.phone)))}
+                      >Tümünü seç</button>
+                      <button
+                        style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: 12, padding: 0 }}
+                        onClick={() => setWaSelectedParents(new Set())}
+                      >Kaldır</button>
+                    </span>
+                  )}
+                </div>
+
+                {/* Kırpma alanı seçimi — yalnızca PDF'den görsel üretildiyse göster */}
+                {waPreviewData.hasPreviewImage && (
+                  <div style={{ marginBottom: 16, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                    <div style={{ padding: '8px 12px', background: '#f1f5f9', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 600, color: '#334155' }}>
+                      ✂️ WhatsApp'a gönderilecek kırpma alanını seçin
+                      <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
+                        (mavi çizgileri yukarı/aşağı sürükleyin)
+                      </span>
+                    </div>
+                    {fullPageLoading && (
+                      <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner spinner-dark" /></div>
+                    )}
+                    {!fullPageLoading && fullPageImage && (
+                      <div
+                        ref={cropContainerRef}
+                        style={{ position: 'relative', userSelect: 'none', lineHeight: 0 }}
+                      >
+                        <img
+                          src={`data:image/jpeg;base64,${fullPageImage}`}
+                          alt="PDF önizleme"
+                          style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'contain' }}
+                          draggable={false}
+                        />
+                        {/* Üst karartma (seçim dışı) */}
+                        <div style={{
+                          position: 'absolute', top: 0, left: 0, right: 0,
+                          height: `${cropTop}%`,
+                          background: 'rgba(0,0,0,0.55)',
+                          pointerEvents: 'none',
+                        }} />
+                        {/* Alt karartma (seçim dışı) */}
+                        <div style={{
+                          position: 'absolute', top: `${cropBottom}%`, left: 0, right: 0, bottom: 0,
+                          background: 'rgba(0,0,0,0.55)',
+                          pointerEvents: 'none',
+                        }} />
+                        {/* Seçili alan kenarlığı */}
+                        <div style={{
+                          position: 'absolute',
+                          top: `${cropTop}%`,
+                          left: 0,
+                          right: 0,
+                          height: `${cropBottom - cropTop}%`,
+                          border: '2px solid #2563eb',
+                          boxSizing: 'border-box',
+                          pointerEvents: 'none',
+                        }} />
+                        {/* Üst sürükleme kolu */}
+                        <div
+                          onMouseDown={handleCropMouseDown('top')}
+                          style={{
+                            position: 'absolute',
+                            top: `calc(${cropTop}% - 3px)`,
+                            left: 0, right: 0,
+                            height: 6,
+                            background: '#2563eb',
+                            cursor: 'ns-resize',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 2,
+                          }}
+                        >
+                          <div style={{ background: '#2563eb', color: '#fff', fontSize: 10, padding: '1px 8px', borderRadius: 4, pointerEvents: 'none' }}>
+                            ↕ Üst Sınır — %{Math.round(cropTop)}
+                          </div>
+                        </div>
+                        {/* Alt sürükleme kolu */}
+                        <div
+                          onMouseDown={handleCropMouseDown('bottom')}
+                          style={{
+                            position: 'absolute',
+                            top: `calc(${cropBottom}% - 3px)`,
+                            left: 0, right: 0,
+                            height: 6,
+                            background: '#2563eb',
+                            cursor: 'ns-resize',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 2,
+                          }}
+                        >
+                          <div style={{ background: '#2563eb', color: '#fff', fontSize: 10, padding: '1px 8px', borderRadius: 4, pointerEvents: 'none' }}>
+                            ↕ Alt Sınır — %{Math.round(cropBottom)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {waPreviewData.messages.map((m, i) => (
+                  <div key={i} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <input
+                        type="checkbox"
+                        id={`wa-parent-${i}`}
+                        checked={waSelectedParents.has(m.phone)}
+                        onChange={(e) => {
+                          setWaSelectedParents(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(m.phone); else next.delete(m.phone);
+                            return next;
+                          });
+                        }}
+                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#16a34a', flexShrink: 0 }}
+                      />
+                      <label htmlFor={`wa-parent-${i}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', cursor: 'pointer', margin: 0 }}>
+                        {m.parent} · {m.phone}
+                      </label>
+                    </div>
+                    <pre style={{
+                      background: '#e7fbe9',
+                      border: '1px solid #c3e6cb',
+                      borderRadius: 8,
+                      padding: '12px 14px',
+                      fontSize: 13,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      maxHeight: 280,
+                      overflowY: 'auto',
+                      fontFamily: 'inherit',
+                      margin: 0,
+                    }}>
+                      {m.message}
+                    </pre>
+                  </div>
+                ))}
+              </>
+            )}
 
             <div className="modal-actions" style={{ marginTop: 16 }}>
-              <button className="btn btn-outline" onClick={() => setShowDirectModal(false)}>
-                Kapat
+              <button className="btn btn-outline" onClick={() => setShowWaModal(false)}>İptal</button>
+              <button
+                className="btn btn-primary"
+                style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                onClick={handleWaSend}
+                disabled={!!waSendLoading || !waPreviewData || waSelectedParents.size === 0}
+              >
+                {waSendLoading ? <span className="spinner" /> : '📱 Gönder'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {confirmModal}
     </div>
   );
 }
+

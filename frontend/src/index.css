@@ -5,11 +5,11 @@
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
-  --bg: #f8fafc;
+  --bg: #eef2f7;
   --surface: #ffffff;
   --text: #1e293b;
   --text-muted: #64748b;
-  --border: #e2e8f0;
+  --border: #d1d9e0;
   --radius: 8px;
 }
 
@@ -26,6 +26,11 @@ body {
   line-height: 1.6;
 }
 
+#root {
+  isolation: isolate;
+  min-height: 100vh;
+}
+
 a {
   color: var(--primary);
   text-decoration: none;
@@ -38,59 +43,130 @@ a {
 }
 
 .sidebar {
-  width: 260px;
-  background: var(--text);
+  width: 252px;
+  min-width: 252px;
+  background: #0f172a;
   color: white;
-  padding: 24px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid rgba(255,255,255,0.06);
 }
 
 .sidebar-header {
-  padding: 0 24px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 16px;
+  padding: 20px 20px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.sidebar-header h2 {
-  font-size: 18px;
-  font-weight: 600;
+.sidebar-logo {
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.sidebar-header p {
-  font-size: 12px;
-  opacity: 0.7;
-  margin-top: 4px;
+.sidebar-logo-text h2 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sidebar-logo-text p {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 1px;
+  font-weight: 400;
 }
 
 .sidebar-nav {
   flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0 8px;
+  gap: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.sidebar-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  padding: 14px 10px 6px;
+  user-select: none;
+}
+
+.sidebar-group-label:first-child {
+  padding-top: 4px;
 }
 
 .sidebar-nav a {
-  color: rgba(255, 255, 255, 0.8);
-  padding: 12px 16px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  transition: all 0.2s;
+  color: rgba(255,255,255,0.62);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  transition: background 0.13s, color 0.13s;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  line-height: 1.3;
+  margin-bottom: 1px;
 }
 
-.sidebar-nav a:hover,
+.sidebar-nav a .nav-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.sidebar-nav a:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.9);
+}
+
+.sidebar-nav a:hover .nav-icon {
+  opacity: 1;
+}
+
 .sidebar-nav a.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(96,165,250,0.16);
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.sidebar-nav a.active .nav-icon {
+  opacity: 1;
 }
 
 .sidebar-footer {
-  padding: 16px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
 
 .main-content {
@@ -104,20 +180,36 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e8f0fe 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  padding: 20px 24px;
   margin-bottom: 24px;
 }
 
-.page-header h1 {
-  font-size: 24px;
+.page-header h1,
+.page-title {
+  font-size: 20px;
   font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 3px 0 0;
 }
 
 .card {
-  background: var(--surface);
+  background: #f8fafd;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   padding: 24px;
   margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
 
 .card-grid {
@@ -168,16 +260,32 @@ table th {
   font-size: 13px;
   text-transform: uppercase;
   color: var(--text-muted);
-  background: #f1f5f9;
+  background: #e8edf2;
+}
+
+table tbody tr:nth-child(even) {
+  background: #f7f9fb;
 }
 
 table tbody tr:hover {
-  background: #f8fafc;
+  background: #edf2f7;
 }
 
 /* === Forms === */
 .form-group {
   margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.card-body {
+  padding: 16px 24px;
 }
 
 .form-group label {
@@ -190,13 +298,17 @@ table tbody tr:hover {
 
 .form-group input,
 .form-group select,
-.form-group textarea {
+.form-group textarea,
+.form-control {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 14px;
-  transition: border-color 0.2s;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input[type="radio"],
@@ -206,10 +318,15 @@ table tbody tr:hover {
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-control:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-control::placeholder {
+  color: var(--text-muted);
 }
 
 .form-row {
@@ -482,13 +599,13 @@ table tbody tr:hover {
 .class-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: 4px;
+  padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 20px;
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -516,11 +633,11 @@ table tbody tr:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  font-size: 11px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
   font-weight: 600;
   background: rgba(0, 0, 0, 0.08);
   color: inherit;

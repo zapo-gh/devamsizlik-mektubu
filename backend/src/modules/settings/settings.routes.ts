@@ -4,6 +4,9 @@ import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware'
 
 const router = Router();
 
+// GET /api/settings/backup - download SQLite database as backup
+router.get('/backup', authMiddleware, adminOnly, settingsController.backup);
+
 // GET /api/settings - get school settings
 router.get('/', authMiddleware, adminOnly, settingsController.get);
 

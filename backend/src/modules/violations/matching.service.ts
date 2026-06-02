@@ -263,7 +263,8 @@ export async function getPreviousViolationCount(
  */
 export async function getBulkViolationCounts(
   studentIds: string[],
-  type: string
+  type: string,
+  excludeUploadId?: string
 ): Promise<Map<string, number>> {
   const results = await prisma.dailyViolation.groupBy({
     by: ['studentId'],
@@ -271,6 +272,7 @@ export async function getBulkViolationCounts(
       studentId: { in: studentIds },
       type: type as any,
       isConfirmed: true,
+      ...(excludeUploadId ? { uploadId: { not: excludeUploadId } } : {}),
     },
     _count: { id: true },
   });

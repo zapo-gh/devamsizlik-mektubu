@@ -3,43 +3,37 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  PARENT
-}
-
-enum StudentStatus {
-  ACTIVE
-  INACTIVE
-}
+// SQLite enum desteklemediği için String kullanılır (değerler: ADMIN, PARENT)
+// (değerler: ACTIVE, INACTIVE)
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String
-  role      Role     @default(PARENT)
-  createdAt DateTime @default(now())
+  id                 String   @id @default(uuid())
+  username           String   @unique
+  password           String
+  role               String   @default("PARENT")
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
 
   parent Parent?
 }
 
 model Student {
-  id           String        @id @default(uuid())
-  schoolNumber String        @unique
+  id           String   @id @default(uuid())
+  schoolNumber String   @unique
   fullName     String
   className    String
-  status       StudentStatus @default(ACTIVE)
-  createdAt    DateTime      @default(now())
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
 
-  parents         Parent[]         @relation("StudentParents")
-  absenteeisms    Absenteeism[]
-  writtenWarnings WrittenWarning[]
-  dailyViolations DailyViolation[]
+  parents              Parent[]             @relation("StudentParents")
+  absenteeisms         Absenteeism[]
+  writtenWarnings      WrittenWarning[]
+  dailyViolations      DailyViolation[]
+  gradeReportStudents  GradeReportStudent[]
 }
 
 model Parent {
@@ -55,48 +49,39 @@ model Parent {
 }
 
 model Absenteeism {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   studentId      String
-  warningNumber  Int      @default(1)
+  warningNumber  Int       @default(1)
+  isBep          Boolean   @default(false)
   pdfPath        String
-  createdAt      DateTime @default(now())
-  viewedByParent Boolean  @default(false)
+  previewPath    String?
+  excusedDays    Float?
+  unexcusedDays  Float?
+  createdAt      DateTime  @default(now())
+  viewedByParent Boolean   @default(false)
+  waSentAt       DateTime?
 
   student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  otpCodes OTP[]
 
   @@index([studentId])
 }
 
-model OTP {
-  id             String   @id @default(uuid())
-  absenteeismId  String
-  parentPhone    String
-  codeHash       String
-  token          String   @unique @default(uuid())
-  expiresAt      DateTime
-  isUsed         Boolean  @default(false)
-  attemptCount   Int      @default(0)
-  createdAt      DateTime @default(now())
-
-  absenteeism Absenteeism @relation(fields: [absenteeismId], references: [id], onDelete: Cascade)
-
-  @@index([absenteeismId])
-  @@index([parentPhone])
-  @@index([token])
-}
 
 model WrittenWarning {
-  id            String   @id @default(uuid())
-  studentId     String
-  warningNumber Int      @default(1)
-  behaviorCode  String
-  behaviorText  String
-  description   String?
-  pdfPath       String
-  issuedBy      String   @default("Okul Yönetimi")
-  issuedAt      DateTime @default(now())
-  createdAt     DateTime @default(now())
+  id                  String    @id @default(uuid())
+  studentId           String
+  warningNumber       Int       @default(1)
+  behaviorCode        String
+  behaviorText        String
+  description         String?
+  guidanceNote        String?
+  classTeacherName    String?
+  schoolCounselorName String?
+  pdfPath             String
+  issuedBy            String    @default("Okul Yönetimi")
+  issuedAt            DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  waSentAt            DateTime?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -104,16 +89,11 @@ model WrittenWarning {
 }
 
 // ── Günlük İhlal Takip Sistemi ──────────────────────
-
-enum ViolationType {
-  KIYAFET      // Kıyafet / Makyaj kontrolü
-  TOREN_GEC    // Tören geç kalma
-  DIGER        // Diğer
-}
+// ViolationType değerleri: KIYAFET, TOREN_GEC, DIGER
 
 model ViolationUpload {
-  id          String        @id @default(uuid())
-  type        ViolationType
+  id          String  @id @default(uuid())
+  type        String
   description String?
   imagePath   String
   ocrRawText  String?
@@ -125,10 +105,10 @@ model ViolationUpload {
 }
 
 model DailyViolation {
-  id              String        @id @default(uuid())
+  id              String   @id @default(uuid())
   studentId       String
   uploadId        String
-  type            ViolationType
+  type            String
   violationDate   DateTime      @default(now())
   matchedBy       String        @default("OCR")   // OCR, MANUAL
   isConfirmed     Boolean       @default(false)
@@ -150,5 +130,55 @@ model SchoolSettings {
   id             String   @id @default("singleton")
   schoolName     String   @default("")
   principalName  String   @default("")
+  waTemplate1    String?  @default("")
+  waTemplate2    String?  @default("")
+  waTemplate3    String?  @default("")
   updatedAt      DateTime @updatedAt
+}
+
+// ── Personel ───────────────────────────────────────
+// role değerleri: MUDUR_YARDIMCISI | REHBER_OGRETMEN | SINIF_REHBER_OGRETMEN
+
+model Staff {
+  id        String   @id @default(uuid())
+  name      String
+  role      String
+  className String?  // Sadece SINIF_REHBER_OGRETMEN için (örn: "10-A")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([role])
+}
+
+// ── Karne / Akademik Başarısızlık Bildirimi ────────
+
+model GradeReport {
+  id          String   @id @default(uuid())
+  className   String
+  schoolYear  String
+  meetingDate DateTime @default(now())
+  karneText   String?  // ham çıkarılan metin (debug)
+  uploadedAt  DateTime @default(now())
+  archived    Boolean  @default(false)
+
+  students GradeReportStudent[]
+}
+
+model GradeReportStudent {
+  id             String   @id @default(uuid())
+  reportId       String
+  studentId      String?  // DB'de eşleşen öğrenci (null = eşleşme yok)
+  fullName       String   // karneden okunan isim
+  className      String
+  tcKimlikNo     String?
+  schoolNumber   String?
+  failedSubjects String   // JSON: [{subject:string, grade:number}]
+  pdfPath        String?  // üretilen PDF yolu
+  createdAt      DateTime @default(now())
+
+  report  GradeReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  student Student?    @relation(fields: [studentId], references: [id])
+
+  @@index([reportId])
+  @@index([studentId])
 }

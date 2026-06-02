@@ -5,7 +5,7 @@ import { config } from '../shared/config';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
 
 export class AuthService {
-  async login(username: string, password: string) {
+  async login(username: string, password: string, rememberMe = false) {
     const user = await prisma.user.findUnique({ where: { username } });
 
     if (!user) {
@@ -17,10 +17,11 @@ export class AuthService {
       throw new AppError('Geçersiz kullanıcı adı veya şifre.', 401);
     }
 
+    const expiresIn = rememberMe ? '30d' : config.jwt.expiresIn;
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+      { expiresIn } as jwt.SignOptions
     );
 
     return {
@@ -29,6 +30,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -61,7 +63,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, mustChangePassword: false },
     });
 
     return { message: 'Şifre başarıyla güncellendi.' };

@@ -1,69 +1,139 @@
-# Devamsızlık Mektubu Sistemi
+# OkulDesk
 
-Okul içi devamsızlık mektubu yönetim ve veli bilgilendirme sistemi.
+Okul yönetimi için geliştirilmiş masaüstü uygulaması. Devamsızlık takibi, yazılı uyarı yönetimi, kıyafet/tören ihlali kaydı, karne bazlı akademik başarısızlık bildirimi ve WhatsApp üzerinden veli bilgilendirmesi tek çatı altında sunar.
+
+## Genel Bakış
+
+OkulDesk, **Electron** tabanlı bir masaüstü uygulamasıdır. Kurulum gerektirmeksizin Windows'ta tek `.exe` ile çalışır; internete ihtiyaç duymaz. Tüm veriler yerel SQLite veritabanında saklanır.
+
+```
+Electron (shell)
+  └── Express.js (backend, port 4000)
+        └── SQLite (Prisma ORM, better-sqlite3)
+  └── React + Vite (frontend, backend üzerinden statik servis)
+```
 
 ## Özellikler
 
-- **Admin paneli:** Öğrenci yönetimi, devamsızlık mektubu yükleme (PDF/JPG/PNG), OTP oluşturma
-- **WhatsApp bildirim:** Veli bağlantı ve şifre gönderimi (manuel WhatsApp mesajı)
-- **Veli portalı:** Benzersiz kısa token bağlantısı + 4 haneli OTP ile mektup görüntüleme/indirme
-- **Güvenli OTP sistemi:** bcrypt hash, 24 saat geçerlilik, maksimum 3 deneme hakkı
-- **Uyarı numarası takibi:** Her öğrenci için 1-5 arası otomatik uyarı numarası
-- **Excel toplu aktarım:** Öğrenci ve veli bilgilerini Excel ile içe aktarma
-- **Sınıf bazlı tab navigasyonu:** Öğrenci listesinde sınıflara göre gruplama
-- **Mobil uyumlu:** Veli portalı mobil-first tasarım, admin panelinde hamburger menü
-- **JWT kimlik doğrulama:** Rol tabanlı erişim (Admin/Veli)
-- **Docker ile kolay dağıtım:** PostgreSQL, Backend, Frontend, Nginx, SSL (Let's Encrypt)
+### Öğrenci Yönetimi
+- Öğrenci ekleme, düzenleme, pasife alma
+- Veli bilgisi (ad, telefon) tanımlama — öğrenci başına birden fazla veli
+- Excel ile toplu içe aktarma (öğrenci + veli)
+- Sınıf bazlı listeleme ve filtreleme
 
-## Hızlı Başlangıç (Geliştirme)
+### Devamsızlık Takibi
+- PDF/JPG/PNG formatında devamsızlık mektubu yükleme
+- Otomatik PDF önizleme üretme (MuPDF)
+- Mazeretli / mazaretsiz gün girişi, BEP öğrenci işareti
+- Her öğrenci için 1–5 arası otomatik uyarı numarası sıralaması
+- WhatsApp ile veliye bildirim
+- Gönderildi / Gönderilmedi istatistiği
+
+### Yazılı Uyarı Yönetimi
+- Davranış kodu ve metni seçerek uyarı kaydı oluşturma
+- Rehber öğretmen notu, sınıf rehber öğretmeni ve okul danışmanı alanları
+- PDFKit ile otomatik yazılı uyarı belgesi üretimi
+- İndir / Görüntüle; dosya adında öğrenci adı (`yazili-uyari-{n}-{Ad-Soyad}.pdf`)
+- WhatsApp ile veliye bildirim
+
+### Günlük İhlal Takibi (Kıyafet / Tören / Diğer)
+- Fotoğraf yükleme + Tesseract.js OCR ile otomatik öğrenci eşleştirme
+- Manuel eşleştirme ve onaylama
+- Eşleşen öğrencilere toplu yazılı uyarı oluşturma
+- İhlal istatistikleri
+
+### Karne / Akademik Başarısızlık Bildirimi
+- Karne fotoğrafından OCR ile öğrenci ve zayıf ders bilgisi çıkarma
+- Otomatik PDF bildirimi üretimi
+- Sınıf, öğretim yılı ve toplantı tarihi yönetimi
+
+### Personel Yönetimi
+- Müdür yardımcısı, rehber öğretmen, sınıf rehber öğretmeni kayıtları
+- Sınıf ataması (sınıf rehber öğretmenleri için)
+
+### WhatsApp Entegrasyonu
+- Baileys kütüphanesi ile WhatsApp Web bağlantısı (QR kod)
+- Devamsızlık ve yazılı uyarı için seçili velilere mesaj gönderimi
+- Özelleştirilebilir mesaj şablonları (3 adet)
+- Bağlantı durumu göstergesi
+
+### Veli Bildirim Portalı
+- Devamsızlık PDF'ini görüntüleme ve indirme için veli erişim sayfası
+
+### Gösterge Paneli
+- Aktif öğrenci, personel, devamsızlık, yazılı uyarı ve onaylı ihlal sayıları
+- Devamsızlık gönderim durumu (Gönderildi / Gönderilmedi / Toplam)
+- WhatsApp bağlantı durumu
+
+### Ayarlar
+- Okul adı ve müdür adı
+- Özelleştirilebilir WhatsApp mesaj şablonları
+
+## Teknik Yığın
+
+| Katman | Teknoloji |
+|--------|-----------|
+| Masaüstü kabuğu | Electron 28 |
+| Backend | Node.js 20 + Express 4 + TypeScript |
+| Veritabanı | SQLite (Prisma ORM 5, better-sqlite3) |
+| Frontend | React 18 + TypeScript + Vite 5 |
+| PDF üretimi | PDFKit |
+| PDF önizleme | MuPDF (mupdf npm) |
+| OCR | Tesseract.js 7 |
+| WhatsApp | @whiskeysockets/baileys |
+| Kimlik doğrulama | JWT (HS256) + bcrypt |
+| Doğrulama | Zod |
+| Güvenlik | Helmet, CORS (yalnızca localhost), express-rate-limit |
+
+## Kurulum ve Geliştirme
 
 ### Gereksinimler
 
 - Node.js 20+
-- PostgreSQL 16+
-- npm veya yarn
+- npm 9+
 
-### Backend
-
-```bash
-cd backend
-cp .env.example .env      # .env dosyasını düzenleyin
-npm install
-npx prisma migrate dev    # Veritabanı oluştur
-npx prisma db seed        # Örnek veri
-npm run dev               # http://localhost:4000
-```
-
-### Frontend
+### Bağımlılıkları Yükleme
 
 ```bash
-cd frontend
-npm install
-npm run dev               # http://localhost:5173
+npm run install:all
 ```
+
+### Geliştirme Modunda Çalıştırma
+
+```bash
+# Backend (ts-node-dev, port 4000)
+cd backend && npm run dev
+
+# Frontend (Vite dev server, port 5173)
+cd frontend && npm run dev
+```
+
+### Electron Uygulaması Olarak Çalıştırma
+
+```bash
+npm run electron:start
+```
+
+Bu komut sırasıyla şunları yapar:
+1. Backend TypeScript'i derler (`tsc`)
+2. Prisma Client üretir
+3. Frontend'i Vite ile üretim modunda derler (`backend/dist/public/` hedefine)
+4. Electron'u başlatır
 
 ### Varsayılan Giriş
 
-- **Admin:** `admin` / `admin123`
+- **Kullanıcı adı:** `admin`
+- **Şifre:** `admin123`
 
-## Docker ile Çalıştırma
-
-```bash
-cp .env.example .env      # .env dosyasını düzenleyin
-docker-compose up -d --build
-```
-
-Sistem `http://localhost` adresinde çalışır.
-
-### Seed (Docker)
+## Dağıtılabilir Paket Üretme (Windows)
 
 ```bash
-docker-compose exec backend npx prisma db seed
+npm run dist
 ```
 
----
+`dist-electron/` klasöründe `OkulDesk Setup x.x.x.exe` kurulum dosyası oluşturulur.
 
-## VPS Dağıtım Rehberi (Ubuntu 22.04)
+## VPS / Sunucu Dağıtımı
 
 ### 1. Sunucu Hazırlığı
 
@@ -92,178 +162,98 @@ sudo ufw enable
 git clone <repo-url> /opt/devamsizlik
 cd /opt/devamsizlik
 
-# Veya SCP ile
-scp -r . user@sunucu-ip:/opt/devamsizlik
-```
+OkulDesk bir **masaüstü uygulamasıdır**; doğrudan sunucu üzerine kurulmak üzere tasarlanmamıştır. Sunucu ortamı gerekiyorsa `docker-compose.yml` ve `nginx/` klasöründeki yapılandırmalar referans olarak bulunmaktadır; ancak aktif olarak bakımı yapılmamaktadır.
 
-### 3. Ortam Değişkenlerini Ayarlama
+## Veritabanı
 
-```bash
-cd /opt/devamsizlik
-cp .env.example .env
-nano .env
-```
+- **Konum:** `%APPDATA%\OkulDesk\database.db` (Windows)
+- **Motor:** SQLite (`better-sqlite3`)
+- **Şema yönetimi:** Prisma migrations kullanılmaz; `backend/src/modules/shared/utils/initDb.ts` her başlatmada `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ADD COLUMN` ile tabloları oluşturur ve mevcut veritabanlarını günceller.
+- **Yedek almak için** dosyayı kopyalamanız yeterlidir.
 
-`.env` dosyasını doldurun:
-```
-DB_PASSWORD=guclu-veritabani-sifresi
-JWT_SECRET=en-az-64-karakter-rastgele-bir-anahtar
-FRONTEND_DOMAIN=https://yourdomain.com
-CORS_ORIGIN=https://yourdomain.com
-```
+## JWT Güvenliği
 
-### 4. SSL Sertifikası (Let's Encrypt)
-
-```bash
-# İlk sertifika alma (nginx çalışmadan önce)
-mkdir -p nginx/ssl
-
-# Geçici nginx ayağa kaldır (HTTP only)
-docker compose up -d frontend backend db
-
-# Certbot ile sertifika al
-docker compose --profile production run --rm certbot certonly \
-  --webroot --webroot-path=/var/www/certbot \
-  -d yourdomain.com \
-  --email your@email.com \
-  --agree-tos --no-eff-email
-
-# HTTPS nginx'i başlat
-docker compose --profile production up -d
-```
-
-### 5. nginx.conf Düzenleme
-
-`nginx/nginx.conf` dosyasında `yourdomain.com` yerine kendi alan adınızı yazın.
-
-### 6. Sistemi Başlatma
-
-```bash
-cd /opt/devamsizlik
-docker compose --profile production up -d --build
-```
-
-### 7. Veritabanı Seed
-
-```bash
-docker compose exec backend npx prisma db seed
-```
-
-### 8. SSL Sertifika Yenileme (Cron)
-
-```bash
-# Crontab ekle
-sudo crontab -e
-
-# Her ay sertifika yenile
-0 3 1 * * cd /opt/devamsizlik && docker compose --profile production run --rm certbot renew && docker compose --profile production restart nginx
-```
-
-### 9. Loglar
-
-```bash
-# Tüm servisler
-docker compose logs -f
-
-# Sadece backend
-docker compose logs -f backend
-
-# Sadece veritabanı
-docker compose logs -f db
-```
-
-### 10. Yedekleme
-
-```bash
-# Veritabanı yedeği
-docker compose exec db pg_dump -U postgres devamsizlik_db > backup_$(date +%Y%m%d).sql
-
-# Geri yükleme
-docker compose exec -T db psql -U postgres devamsizlik_db < backup_20250228.sql
-```
-
----
-
-## API Endpoints
-
-### Auth
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| POST | `/api/auth/login` | Giriş |
-| GET | `/api/auth/profile` | Profil bilgisi |
-| PUT | `/api/auth/change-password` | Şifre değiştir |
-
-### Students (Admin)
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| GET | `/api/students` | Öğrenci listesi (sayfalama, arama) |
-| GET | `/api/students/:id` | Öğrenci detay |
-| POST | `/api/students` | Yeni öğrenci (opsiyonel veli bilgileri ile) |
-| PUT | `/api/students/:id` | Öğrenci güncelle |
-| DELETE | `/api/students/:id` | Öğrenci sil |
-| POST | `/api/students/:id/assign-parent` | Veli ata |
-| PUT | `/api/students/parents/:parentId` | Veli güncelle |
-| DELETE | `/api/students/:id/parents/:parentId` | Veli bağlantısını kaldır |
-| POST | `/api/students/import-excel` | Excel ile öğrenci aktar |
-| POST | `/api/students/import-parents` | Excel ile veli aktar |
-
-### Absenteeism (Admin)
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| GET | `/api/absenteeism` | Devamsızlık listesi |
-| GET | `/api/absenteeism/stats` | İstatistikler (görüntülenen/bekleyen) |
-| GET | `/api/absenteeism/:id` | Devamsızlık detay |
-| POST | `/api/absenteeism` | Dosya yükle - PDF/JPG/PNG (multipart) |
-| POST | `/api/absenteeism/:id/generate-otp` | OTP oluştur |
-| DELETE | `/api/absenteeism/:id` | Kayıt sil |
-| GET | `/api/absenteeism/:id/pdf` | Dosya görüntüle (auth gerekli) |
-| GET | `/api/absenteeism/:id/pdf/download` | Dosya indir (auth gerekli) |
-
-### OTP (Public)
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| POST | `/api/otp/verify` | OTP doğrula (token + kod) |
-| GET | `/api/otp/info/:token` | Token bilgisi sorgula |
-
----
+İlk çalıştırmada Electron `%APPDATA%\OkulDesk\.jwt_secret` dosyasına 48 bayt rastgele üretilmiş gizli anahtar kaydeder. Uygulama her başlatılışında bu anahtarı okur; dosya silinirse tüm aktif oturumlar geçersiz olur.
 
 ## Proje Yapısı
 
 ```
+okuldesk/
+├── electron/
+│   └── main.js               # Electron ana süreci: backend başlatma, pencere, JWT secret
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── seed.ts
+│   │   └── schema.prisma     # Veri modelleri (SQLite)
+│   ├── fonts/                # PDFKit için Times New Roman ve benzeri fontlar
 │   ├── src/
-│   │   ├── modules/
-│   │   │   ├── auth/
-│   │   │   ├── students/
-│   │   │   ├── absenteeism/
-│   │   │   ├── otp/
-│   │   │   ├── notifications/
-│   │   │   └── shared/
-│   │   ├── app.ts
-│   │   └── server.ts
-│   ├── Dockerfile
+│   │   ├── app.ts            # Express uygulaması, middleware, route kayıtları
+│   │   ├── server.ts         # HTTP sunucu başlatma, initDb çağrısı
+│   │   └── modules/
+│   │       ├── auth/         # JWT giriş, şifre değiştirme, rate-limit
+│   │       ├── students/     # Öğrenci CRUD, veli yönetimi, Excel aktarım
+│   │       ├── absenteeism/  # Devamsızlık mektubu yükleme, PDF önizleme, istatistik
+│   │       ├── warnings/     # Yazılı uyarı CRUD, PDF üretimi
+│   │       ├── violations/   # İhlal yükleme, OCR eşleştirme, onaylama
+│   │       ├── gradeReport/  # Karne OCR, akademik bildirim PDF
+│   │       ├── parentMeeting/       # Veli toplantısı takibi
+│   │       ├── parentNotification/  # Veli bildirim PDF üretimi
+│   │       ├── notifications/       # WhatsApp mesaj şablonu üretimi
+│   │       ├── whatsapp/    # Baileys bağlantısı, mesaj gönderimi
+│   │       ├── staff/       # Personel yönetimi
+│   │       ├── settings/    # Okul adı, müdür adı, WA şablonları
+│   │       └── shared/
+│   │           ├── middleware/   # auth, adminOnly, errorHandler
+│   │           ├── utils/
+│   │           │   ├── initDb.ts # SQLite şema bootstrap
+│   │           │   └── prisma.ts # Prisma istemcisi
+│   │           └── config.ts     # Ortam değişkenleri
 │   └── package.json
 ├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── pages/
-│   │   │   ├── admin/
-│   │   │   └── parent/
-│   │   ├── services/
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── Dockerfile
-│   └── package.json
-├── nginx/
-│   └── nginx.conf
-├── docker-compose.yml
+│   └── src/
+│       ├── pages/admin/      # Dashboard, öğrenci, devamsızlık, uyarı, ihlal, karne, WA...
+│       ├── components/       # Paylaşılan UI bileşenleri
+│       ├── services/api.ts   # Axios instance (JWT Bearer token)
+│       └── context/          # Auth context
+├── assets/                   # Uygulama ikonu
+├── electron/main.js
+├── package.json              # Kök: Electron + build betikleri
 └── README.md
 ```
 
+## API Uç Noktaları (Özet)
+
+Tüm `/api/*` rotaları `authMiddleware` (JWT Bearer) gerektirir; değiştirici işlemler ek olarak `adminOnly` denetiminden geçer.
+
+| Modül | Prefix |
+|-------|--------|
+| Kimlik doğrulama | `/api/auth` |
+| Öğrenciler | `/api/students` |
+| Devamsızlık | `/api/absenteeism` |
+| Yazılı Uyarı | `/api/warnings` |
+| İhlaller | `/api/violations` |
+| Karne Raporu | `/api/grade-reports` |
+| Veli Bildirimi | `/api/parent-notification` |
+| WhatsApp | `/api/whatsapp` |
+| Personel | `/api/staff` |
+| Ayarlar | `/api/settings` |
+
+## Windows SmartScreen Uyarısı
+
+Uygulama kurulum dosyası (`OkulDesk Setup x.x.x.exe`) ilk kez çalıştırıldığında Windows SmartScreen **"Bilinmeyen yayımcı"** veya **"Bilgisayarınız korundu"** uyarısı gösterebilir.
+
+Bu uyarı, kurulum dosyasının bir sertifika yetkilisinden (Code Signing Certificate) imzalanmamış olmasından kaynaklanmaktadır. Uygulama güvenlidir.
+
+### Uyarıyı Geçme
+
+1. SmartScreen uyarı ekranında **"Daha fazla bilgi"** (More info) bağlantısına tıklayın.
+2. Beliren **"Yine de çalıştır"** (Run anyway) düğmesine tıklayın.
+3. Kurulum devam edecektir.
+
+> **Sistem yöneticileri için:** Kurulum dosyasını Group Policy aracılığıyla dağıtıyorsanız, dosyayı NTFS Alternate Data Stream `Zone.Identifier` bilgisini kaldırarak imzasız çalıştırabilirsiniz:
+> ```powershell
+> Unblock-File -Path ".\OkulDesk Setup 1.0.0.exe"
+> ```
+
 ## Lisans
 
-Bu proje okul içi kullanım için geliştirilmiştir.
+Okul içi kullanım için geliştirilmiştir.

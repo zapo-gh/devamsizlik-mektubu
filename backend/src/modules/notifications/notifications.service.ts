@@ -1,56 +1,14 @@
 /**
- * WhatsApp link ve mesaj şablonu oluşturma servisi.
- * WhatsApp API kullanılmaz - admin mesajı WhatsApp Web üzerinden manuel gönderir.
+ * Türk telefon numarasını wa.me formatına normalize eder.
+ * Örn: 05551234567 → 905551234567
  */
-
-/**
- * WhatsApp Web üzerinden mesaj göndermek için URL oluşturur.
- *
- * @param parentPhone - Veli telefon numarası (ör: 905551234567)
- * @param domain - Frontend domain (ör: https://yourdomain.com)
- * @param otp - Tek kullanımlık şifre
- * @returns WhatsApp Web URL'i
- */
-export function generateWhatsAppLink(
-  parentPhone: string,
-  domain: string,
-  otp: string,
-  parentName: string = '',
-  token: string = '',
-  expiryMinutes: number = 1440
-): string {
-  let cleanPhone = parentPhone.replace(/\D/g, '');
-  // Türk numaraları için: 0 ile başlıyorsa 90 ile değiştir
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '90' + cleanPhone.slice(1);
-  }
-  // Ülke kodu yoksa ekle
-  if (!cleanPhone.startsWith('90') && cleanPhone.length === 10) {
-    cleanPhone = '90' + cleanPhone;
-  }
-
-  const message = generateMessageTemplate(domain, otp, parentName, token, expiryMinutes);
-  const encodedMessage = encodeURIComponent(message);
-
-  return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-}
-
-/**
- * Veli'ye gönderilecek mesaj şablonu
- */
-export function generateMessageTemplate(domain: string, otp: string, parentName: string = '', token: string = '', expiryMinutes: number = 1440): string {
-  const greeting = parentName ? `Sayın ${parentName},` : 'Sayın Veli,';
-  const link = token ? `${domain}/veli/${token}` : `${domain}/veli-otp`;
-  const expiryText = expiryMinutes >= 1440 ? `${Math.round(expiryMinutes / 1440)} gün` : expiryMinutes >= 60 ? `${Math.round(expiryMinutes / 60)} saat` : `${expiryMinutes} dakika`;
-  return `${greeting}
-
-Ogrencinizin devamsizlik bildirimi sisteme yuklenmistir.
-
-Sifre: ${otp}
-
-Asagidaki baglantiya tiklayarak devamsizlik mektubunu goruntuleyebilirsiniz:
-
-${link}
-
-* Sifre ${expiryText} gecerlidir.`;
+export function normalizePhone(phone: string): string {
+  let clean = phone.replace(/\D/g, '');
+  // 00 ile başlayan uluslararası prefix'i temizle
+  if (clean.startsWith('00')) clean = clean.slice(2);
+  // 0 ile başlıyorsa 90 ile değiştir
+  if (clean.startsWith('0')) clean = '90' + clean.slice(1);
+  // Ülke kodu yoksa ekle (10 haneli Türk numarası)
+  if (!clean.startsWith('90') && clean.length === 10) clean = '90' + clean;
+  return clean;
 }
