@@ -38,8 +38,16 @@ app.use(helmet({
 // Electron masaüstü modunda yalnızca localhost origin'ine izin ver
 app.use(cors({ 
   origin: (origin, callback) => {
-    // Electron içi isteklerde origin yoktur; yalnızca localhost'a izin ver
-    if (!origin || origin === 'http://127.0.0.1:4000' || origin === 'http://localhost:4000' || origin === 'http://localhost:5173') {
+    // Electron/Tauri içi isteklerde origin yoktur veya tauri:// / http://tauri.localhost olur
+    const allowed = [
+      'http://127.0.0.1:4000',
+      'http://localhost:4000',
+      'http://localhost:5173',
+      'http://localhost:1420',
+      'http://tauri.localhost',
+      'tauri://localhost'
+    ];
+    if (!origin || allowed.includes(origin) || origin.startsWith('tauri://')) {
       callback(null, true);
     } else {
       callback(new Error('CORS politikası: bu kaynaktan erişime izin verilmiyor.'));

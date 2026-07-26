@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const isTauri = Boolean(
+  (typeof window !== 'undefined' && ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__)) ||
+  (typeof window !== 'undefined' && (window.location.protocol === 'tauri:' || window.location.hostname === 'tauri.localhost'))
+);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || (isTauri ? 'http://127.0.0.1:4000/api' : '/api'),
   timeout: 120000, // 2 dakika — OCR ve PDF işlemleri uzun sürebilir
   headers: {
     'Content-Type': 'application/json',

@@ -12,10 +12,18 @@
     "build:frontend": "cd frontend && npm run build",
     "build:all": "npm run build:backend && npm run build:frontend",
 
+    "dev:frontend": "cd frontend && npm run dev",
+
     "electron:start": "npm run build:all && npx electron .",
-    "dist": "npm run build:all && npx electron-builder --win --x64"
+    "dist": "npm run build:all && npx electron-builder --win --x64",
+
+    "tauri": "tauri",
+    "tauri:dev": "npm run build:backend && npx tauri dev",
+    "tauri:start": "npm run tauri:dev",
+    "tauri:build": "npm run build:all && npx tauri build"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
     "cross-env": "^7.0.3",
     "electron": "^28.3.3",
     "electron-builder": "^24.13.3"
