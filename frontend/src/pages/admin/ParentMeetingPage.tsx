@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { FileSignature, CheckSquare, Square, Download, Users, Calendar, BookOpen, UserCheck, Search, Loader2 } from 'lucide-react';
 
 export default function ParentMeetingPage() {
   const [classes,         setClasses]         = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
-  const [meetingDate,     setMeetingDate]      = useState(new Date().toISOString().slice(0, 10));
-  const [schoolYear,      setSchoolYear]       = useState('2025-2026');
-  const [term,            setTerm]             = useState('2. DÖNEM');
-  const [includeParent,   setIncludeParent]    = useState(true);
-  const [loading,         setLoading]          = useState(false);
-  const [loadingClasses,  setLoadingClasses]   = useState(true);
-  const [error,           setError]            = useState('');
-  const [success,         setSuccess]          = useState('');
+  const [meetingDate,     setMeetingDate]     = useState(new Date().toISOString().slice(0, 10));
+  const [schoolYear,      setSchoolYear]      = useState('2025-2026');
+  const [term,            setTerm]            = useState('2. DÖNEM');
+  const [includeParent,   setIncludeParent]   = useState(true);
+  const [loading,         setLoading]         = useState(false);
+  const [loadingClasses,  setLoadingClasses]  = useState(true);
+  const [error,           setError]           = useState('');
+  const [success,         setSuccess]         = useState('');
+  const [searchTerm,      setSearchTerm]      = useState('');
 
   useEffect(() => {
     api.get<{ success: boolean; data: string[] }>('/parent-meeting/classes')
@@ -25,10 +28,12 @@ export default function ParentMeetingPage() {
       .finally(() => setLoadingClasses(false));
   }, []);
 
+  const filteredClasses = classes.filter(c => c.toLowerCase().includes(searchTerm.toLowerCase()));
+
   const toggleClass = (c: string) =>
     setSelectedClasses(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
 
-  const selectAll = () => setSelectedClasses([...classes]);
+  const selectAll = () => setSelectedClasses([...filteredClasses]);
   const clearAll  = () => setSelectedClasses([]);
 
   const handleGenerate = async () => {
@@ -57,197 +62,236 @@ export default function ParentMeetingPage() {
 
   // Sınıf gruplama: seviyeye göre (9, 10, 11, 12, diğer)
   const grouped: Record<string, string[]> = {};
-  for (const c of classes) {
+  for (const c of filteredClasses) {
     const match = c.match(/^(\d+)/);
     const key = match ? match[1] + '. Sınıf' : 'Diğer';
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(c);
   }
 
-  const allSelected  = selectedClasses.length === classes.length && classes.length > 0;
+  const allSelected  = selectedClasses.length === filteredClasses.length && filteredClasses.length > 0;
   const someSelected = selectedClasses.length > 0;
 
   return (
-    <div>
-      {/* Başlık */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">📋 Veli Toplantısı İmza Sirküsü</h1>
-          <p className="page-subtitle">Sınıf seçin, ayarları yapın ve PDF'i indirin</p>
+    <div className="space-y-6">
+      <PageHeader
+        title="Veli Toplantısı İmza Sirküsü"
+        description="Sınıf seçin, toplantı detaylarını belirleyin ve veli imza sirkülerini PDF olarak indirin."
+        icon={<FileSignature size={28} className="text-indigo-600" />}
+      />
+
+      {error && (
+        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 text-sm flex items-center gap-2">
+          <span className="font-bold">Hata:</span> {error}
         </div>
-      </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-100 text-sm flex items-center gap-2">
+          <span className="font-bold">Başarılı:</span> {success}
+        </div>
+      )}
 
-      {error   && <div className="alert alert-error"   style={{ marginBottom: 16 }}>{error}</div>}
-      {success && <div className="alert alert-success" style={{ marginBottom: 16 }}>{success}</div>}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
 
         {/* SOL: Sınıf Seçimi */}
-        <div className="card" style={{ padding: '20px 24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Sınıf Seçimi</h2>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-outline btn-sm" onClick={allSelected ? clearAll : selectAll} disabled={loadingClasses || classes.length === 0}>
-                {allSelected ? 'Seçimi Kaldır' : 'Tümünü Seç'}
-              </button>
-              {someSelected && !allSelected && (
-                <button className="btn btn-outline btn-sm" onClick={clearAll}>Temizle</button>
-              )}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+          <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Users size={20} /></div>
+              Sınıf Seçimi
+            </h2>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Sınıf Ara..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 w-full sm:w-48"
+                />
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button 
+                  onClick={allSelected ? clearAll : selectAll} 
+                  disabled={loadingClasses || filteredClasses.length === 0}
+                  className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-50 transition"
+                >
+                  {allSelected ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+                </button>
+                {someSelected && !allSelected && (
+                  <button onClick={clearAll} className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white hover:bg-gray-50 text-red-600 transition">
+                    Temizle
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {loadingClasses ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9ca3af' }}>
-              <div className="spinner spinner-dark" style={{ marginBottom: 8 }} />
-              <p style={{ margin: 0, fontSize: 13 }}>Sınıflar yükleniyor…</p>
-            </div>
-          ) : classes.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9ca3af', fontSize: 14 }}>
-              Kayıtlı sınıf bulunamadı.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {Object.entries(grouped).map(([grade, gradeClasses]) => {
-                const allGradeSelected = gradeClasses.every(c => selectedClasses.includes(c));
-                return (
-                  <div key={grade}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{grade}</span>
-                      <button
-                        className="btn btn-sm"
-                        style={{ fontSize: 11, padding: '4px 10px', background: allGradeSelected ? '#f3f4f6' : '#eff6ff', color: allGradeSelected ? 'var(--text-muted)' : 'var(--primary)', border: `1px solid ${allGradeSelected ? 'var(--border)' : '#bfdbfe'}` }}
-                        onClick={() => {
-                          if (allGradeSelected) {
-                            setSelectedClasses(prev => prev.filter(c => !gradeClasses.includes(c)));
-                          } else {
-                            setSelectedClasses(prev => [...new Set([...prev, ...gradeClasses])]);
-                          }
-                        }}
-                      >
-                        {allGradeSelected ? 'Kaldır' : 'Tümünü Seç'}
-                      </button>
+          <div className="p-6 flex-1 bg-gray-50/30">
+            {loadingClasses ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                <Loader2 className="animate-spin mb-3 text-indigo-500" size={32} />
+                <p className="text-sm font-medium">Sınıflar yükleniyor...</p>
+              </div>
+            ) : filteredClasses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-sm">
+                Kayıtlı sınıf bulunamadı.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(grouped).map(([grade, gradeClasses]) => {
+                  const allGradeSelected = gradeClasses.every(c => selectedClasses.includes(c));
+                  return (
+                    <div key={grade} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                        <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">{grade}</span>
+                        <button 
+                          onClick={() => {
+                            if (allGradeSelected) {
+                              setSelectedClasses(prev => prev.filter(c => !gradeClasses.includes(c)));
+                            } else {
+                              setSelectedClasses(prev => [...new Set([...prev, ...gradeClasses])]);
+                            }
+                          }}
+                          className={`text-xs px-3 py-1.5 rounded-md font-semibold transition-colors ${
+                            allGradeSelected 
+                              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                              : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                          }`}
+                        >
+                          {allGradeSelected ? 'Kaldır' : 'Tümünü Seç'}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2.5">
+                        {gradeClasses.map(c => {
+                          const selected = selectedClasses.includes(c);
+                          return (
+                            <button
+                              key={c}
+                              onClick={() => toggleClass(c)}
+                              className={`
+                                relative px-4 py-2.5 rounded-lg text-sm font-bold transition-all border-2
+                                ${selected 
+                                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' 
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:bg-indigo-50/50'
+                                }
+                              `}
+                            >
+                              <div className="flex items-center gap-2">
+                                {selected ? <CheckSquare size={16} className="text-indigo-600" /> : <Square size={16} className="text-gray-400" />}
+                                {c}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {gradeClasses.map(c => {
-                        const selected = selectedClasses.includes(c);
-                        return (
-                          <button
-                            key={c}
-                            onClick={() => toggleClass(c)}
-                            style={{
-                              padding: '7px 16px',
-                              borderRadius: 8,
-                              fontSize: 13,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              border: '1.5px solid #e5e7eb',
-                              outline: selected ? '2px solid #2563eb' : 'none',
-                              outlineOffset: '-1px',
-                              background: selected ? '#eff6ff' : '#f9fafb',
-                              color: selected ? '#1d4ed8' : '#374151',
-                              transition: 'background 0.15s, color 0.15s, outline 0.15s',
-                            }}
-                          >
-                            {selected && <span style={{ marginRight: 4 }}>✓</span>}{c}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* SAĞ: Ayarlar + Oluştur */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="flex flex-col gap-6">
 
           {/* Ayarlar kartı */}
-          <div className="card" style={{ padding: '20px 24px' }}>
-            <h2 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700 }}>Toplantı Bilgileri</h2>
-
-            <div className="form-group" style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 6 }}>Toplantı Tarihi</label>
-              <input type="date" className="form-control" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} />
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Calendar size={20} /></div>
+                Toplantı Bilgileri
+              </h2>
             </div>
-
-            <div className="form-group" style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 6 }}>Dönem</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['1. DÖNEM', '2. DÖNEM'].map(d => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setTerm(d)}
-                    style={{
-                      flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: term === d ? 700 : 500, cursor: 'pointer',
-                      border: term === d ? '2px solid var(--primary)' : '1.5px solid var(--border)',
-                      background: term === d ? '#eff6ff' : '#f9fafb',
-                      color: term === d ? 'var(--primary-dark)' : 'var(--text)',
-                    }}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 6 }}>Eğitim-Öğretim Yılı</label>
-              <input type="text" className="form-control" placeholder="2025-2026" value={schoolYear} onChange={e => setSchoolYear(e.target.value)} />
-            </div>
-
-            <div
-              onClick={() => setIncludeParent(p => !p)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 8,
-                border: `1.5px solid ${includeParent ? '#bfdbfe' : '#e5e7eb'}`,
-                background: includeParent ? '#eff6ff' : '#f9fafb',
-                cursor: 'pointer', userSelect: 'none', marginBottom: 4,
-              }}
-            >
-              <div style={{
-                width: 18, height: 18, borderRadius: 4, border: `2px solid ${includeParent ? '#2563eb' : '#d1d5db'}`,
-                background: includeParent ? '#2563eb' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                {includeParent && <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>✓</span>}
-              </div>
+            
+            <div className="p-6 space-y-5">
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Veli adını PDF'e ekle</div>
-                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>
-                  {includeParent ? 'Kayıtlı veli adı otomatik dolar' : 'Ad sütunu boş bırakılır'}
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Toplantı Tarihi</label>
+                <input 
+                  type="date"  
+                  value={meetingDate} 
+                  onChange={e => setMeetingDate(e.target.value)} 
+                  className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><BookOpen size={16} className="text-gray-400"/> Dönem</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['1. DÖNEM', '2. DÖNEM'].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setTerm(d)}
+                      className={`
+                        py-2.5 rounded-lg text-sm font-bold transition-all border-2
+                        ${term === d 
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' 
+                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                        }
+                      `}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div 
+                onClick={() => setIncludeParent(p => !p)}
+                className={`
+                  flex items-center gap-3 p-4 rounded-xl cursor-pointer border-2 transition-all
+                  ${includeParent ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200 bg-white hover:bg-gray-50'}
+                `}
+              >
+                <div className={`
+                  w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors
+                  ${includeParent ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-300'}
+                `}>
+                  {includeParent && <CheckSquare size={14} className="text-white fill-current" />}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5"><UserCheck size={16} className="text-gray-500"/> Veli adını PDF'e ekle</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {includeParent ? 'Kayıtlı veli adı otomatik dolar' : 'Ad sütunu boş bırakılır'}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Özet + Oluştur */}
-          <div className="card" style={{ padding: '20px 24px' }}>
-            {someSelected && (
-              <div style={{ marginBottom: 14, padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #86efac' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>Oluşturulacak:</div>
-                <div style={{ fontSize: 13, color: '#15803d', lineHeight: 1.7 }}>
-                  {selectedClasses.join(' · ')}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-6">
+              {someSelected && (
+                <div className="mb-5 p-4 bg-green-50 rounded-xl border border-green-100">
+                  <div className="text-sm font-bold text-green-800 mb-2">Oluşturulacak Sınıflar:</div>
+                  <div className="text-sm text-green-700 leading-relaxed font-medium mb-3">
+                    {selectedClasses.join(', ')}
+                  </div>
+                  <div className="text-xs font-semibold text-green-600/80 bg-green-100 inline-block px-2 py-1 rounded">
+                    {selectedClasses.length} sayfa · {term} · {schoolYear}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                  {selectedClasses.length} sayfa · {term} · {schoolYear}
-                </div>
-              </div>
-            )}
+              )}
 
-            <button
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '13px 0', fontSize: 15, fontWeight: 700, boxShadow: someSelected ? '0 4px 14px rgba(37,99,235,0.35)' : 'none' }}
-              onClick={handleGenerate}
-              disabled={loading || loadingClasses || !someSelected}
-            >
-              {loading ? '⏳ PDF oluşturuluyor…' : `📥 PDF Oluştur ve İndir${someSelected ? ` (${selectedClasses.length} sınıf)` : ''}`}
-            </button>
+              <button 
+                className="w-full py-3.5 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 shadow-sm flex justify-center items-center gap-2"
+                onClick={handleGenerate}
+                disabled={loading || loadingClasses || !someSelected}
+              >
+                {loading ? (
+                  <><Loader2 size={20} className="animate-spin" /> PDF oluşturuluyor...</>
+                ) : (
+                  <><Download size={20} /> PDF Oluştur ve İndir {someSelected && `(${selectedClasses.length})`}</>
+                )}
+              </button>
+            </div>
           </div>
-
 
         </div>
       </div>

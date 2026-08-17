@@ -40,9 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await api.post('/auth/login', { username, password, rememberMe });
     const { token: newToken, user: newUser } = response.data.data;
 
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem('token', newToken);
-    storage.setItem('user', JSON.stringify(newUser));
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    sessionStorage.setItem('token', newToken);
+    sessionStorage.setItem('user', JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   };

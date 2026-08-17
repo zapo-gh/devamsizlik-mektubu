@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personel İmza Çizelgesi</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root{
+    --ink:#1e293b;
+    --paper:#f1f5f9;
+    --line:#e2e8f0;
+    --accent:#0f766e;
+    --accent-dark:#0d5c56;
+    --accent-light:#ccfbf1;
+    --accent-mid:#99f6e4;
+    --gold:#b45309;
+    --danger:#dc2626;
+    --white:#ffffff;
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
+    --shadow:0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md:0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+    --shadow-lg:0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+    --shadow-xl:0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+    --radius:12px;
+    --radius-sm:8px;
+    --radius-lg:16px;
+    --transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(10px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity:0; transform:scale(0.95); }
+    to { opacity:1; transform:scale(1); }
+  }
+  @keyframes slideDown {
+    from { opacity:0; transform:translateY(-8px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @keyframes toast-in {
+    from { opacity:0; transform:translateX(100%) scale(0.9); }
+    to { opacity:1; transform:translateX(0) scale(1); }
+  }
+
+  .app{
+    max-width:1200px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+    animation:fadeInUp 0.5s ease-out;
+  }
+
+  /* ── Header ── */
+  header.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:linear-gradient(135deg, #0f766e 0%, #115e59 40%, #134e4a 100%);
+    padding:20px 28px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:8px;
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-xl);
+    position:relative;
+    overflow:hidden;
+  }
+  header.top::before{
+    content:'';
+    position:absolute;
+    top:-50%;right:-20%;
+    width:350px;height:350px;
+    background:radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+    border-radius:50%;
+  }
+  header.top::after{
+    content:'';
+    position:absolute;
+    bottom:-60%;left:10%;
+    width:250px;height:250px;
+    background:radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+    border-radius:50%;
+  }
+  header.top > *{ position:relative; z-index:1; }
+  header.top h1{
+    font-size:1.4rem;
+    letter-spacing:.01em;
+    margin:0;
+    color:#fff;
+    font-weight:800;
+  }
+  header.top .sub{
+    font-family:'Inter', sans-serif;
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:#99f6e4;
+    font-weight:600;
+  }
+
+  /* ── Grid ── */
+  .grid{
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap:24px;
+  }
+  @media (max-width: 860px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  /* ── Panels ── */
+  .panel{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    padding:20px 20px 22px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow-md);
+    transition:var(--transition);
+    animation:fadeInUp 0.5s ease-out both;
+  }
+  .panel:nth-child(2){ animation-delay:0.1s; }
+  .panel h2{
+    font-family:'Inter', sans-serif;
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--accent);
+    margin:0 0 16px;
+    border-bottom:2px solid var(--accent-light);
+    padding-bottom:10px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  /* ── Labels ── */
+  label{
+    font-family:'Inter', sans-serif;
+    font-size:.72rem;
+    color:#64748b;
+    display:block;
+    margin-bottom:5px;
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+
+  /* ── Inputs ── */
+  input[type=text], select{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:.88rem;
+    padding:9px 12px;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-sm);
+    background:var(--white);
+    color:var(--ink);
+    transition:var(--transition);
+  }
+  input[type=text]:focus, select:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(15,118,110,0.1);
+    outline:none;
+  }
+  input[type=text]:hover, select:hover{
+    border-color:#cbd5e1;
+  }
+  ::placeholder{
+    color:#94a3b8;
+    font-style:italic;
+    font-size:.82em;
+  }
+
+  .row2{display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;}
+  .row2 > div{flex:1; min-width:120px;}
+
+  /* ── Buttons ── */
+  button{
+    font-family:'Inter', sans-serif;
+    cursor:pointer;
+    border:none;
+    border-radius:var(--radius-sm);
+    font-size:.8rem;
+    font-weight:600;
+    padding:10px 16px;
+    background:linear-gradient(135deg, #0f766e, #115e59);
+    color:#fff;
+    transition:var(--transition);
+    position:relative;
+    overflow:hidden;
+  }
+  button:hover{
+    transform:translateY(-1px);
+    box-shadow:0 4px 12px rgba(15,118,110,0.3);
+  }
+  button:active{ transform:scale(0.97); }
+  button::after{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(circle at center, rgba(255,255,255,0.3) 0%, transparent 70%);
+    opacity:0;transition:opacity .3s;
+  }
+  button:active::after{ opacity:1; }
+
+  button.secondary{
+    background:transparent;
+    color:var(--accent);
+    border:1.5px solid var(--accent);
+  }
+  button.secondary:hover{
+    background:var(--accent-light);
+    box-shadow:0 4px 12px rgba(15,118,110,0.15);
+  }
+  button.ghost{
+    background:transparent;
+    color:#64748b;
+    border:1.5px solid var(--line);
+    padding:6px 10px;
+    font-size:.7rem;
+  }
+  button.ghost:hover{
+    border-color:#94a3b8;
+    background:#f8fafc;
+    box-shadow:none;
+    transform:none;
+  }
+  button.danger{
+    background:transparent;
+    color:var(--danger);
+    border:1.5px solid var(--danger);
+  }
+  button.danger:hover{
+    background:#fef2f2;
+    box-shadow:none;
+    transform:none;
+  }
+
+  /* ── Employee List ── */
+  .emp-list{list-style:none; margin:0; padding:0;}
+  .emp-list li{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 6px;
+    border-bottom:1px dashed var(--line);
+    font-size:.88rem;
+    transition:var(--transition);
+  }
+  .emp-list li:hover{ background:#f8fafc; border-radius:var(--radius-sm); }
+  .emp-list li:last-child{border-bottom:none;}
+  .emp-list .meta{font-size:.72rem; color:#94a3b8; font-family:'Inter',sans-serif;}
+  .emp-list .right{display:flex; gap:6px; align-items:center;}
+
+  /* ── Calendar Controls ── */
+  .cal-controls{display:flex; gap:12px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap;}
+  .cal-controls input[type=text]{
+    font-weight:600;
+    text-align:center;
+  }
+
+  /* ── Legend ── */
+  .legend{
+    display:flex; gap:16px; margin-bottom:14px; flex-wrap:wrap;
+    font-family:'Inter', sans-serif; font-size:.72rem; color:#64748b;
+  }
+  .legend span{display:inline-flex; align-items:center; gap:6px; font-weight:500;}
+  .swatch{width:14px; height:14px; border-radius:4px; display:inline-block; border:1.5px solid var(--line);}
+  .sw-holiday{background:#fee2e2; border-color:#fca5a5;}
+  .sw-leave{background:#fef3c7; border-color:#fcd34d;}
+  .sw-work{background:#fff; border-color:#e2e8f0;}
+
+  /* ── Calendar Grid ── */
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:6px;
+  }
+  .cal-grid .dow{
+    text-align:center;
+    font-family:'Inter', sans-serif;
+    font-size:.68rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:#94a3b8;
+    padding-bottom:6px;
+    font-weight:700;
+  }
+  .day-cell{
+    aspect-ratio:1;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius-sm);
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+    font-size:.82rem;
+    color:var(--ink);
+    user-select:none;
+    position:relative;
+    min-height:48px;
+    transition:var(--transition);
+    font-weight:600;
+  }
+  .day-cell:hover{
+    border-color:var(--accent);
+    transform:translateY(-2px);
+    box-shadow:var(--shadow-md);
+  }
+  .day-cell.empty{visibility:hidden; cursor:default;}
+  .day-cell.empty:hover{transform:none; box-shadow:none;}
+  .day-cell.holiday{background:#fee2e2; border-color:#fca5a5;}
+  .day-cell.holiday:hover{border-color:#f87171;}
+  .day-cell.leave{background:#fef3c7; border-color:#fcd34d;}
+  .day-cell.leave:hover{border-color:#f59e0b;}
+  .day-cell .tag{
+    font-size:.52rem;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-top:2px;
+    color:#92400e;
+    font-weight:700;
+  }
+  .day-cell.leave .tag{color:#92400e;}
+  .day-cell.holiday .tag{color:#991b1b;}
+
+  .hint{
+    font-family:'Inter', sans-serif;
+    font-size:.72rem;
+    color:#94a3b8;
+    margin:0 0 14px;
+    font-weight:500;
+  }
+
+  /* ── Type Management ── */
+  .type-manage{margin:6px 0 16px;}
+  .type-chips{
+    display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 12px;
+  }
+  .type-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--accent-light); border:1.5px solid #99f6e4; border-radius:20px;
+    padding:5px 8px 5px 12px;
+    font-family:'Inter', sans-serif; font-size:.72rem;
+    font-weight:500;
+    transition:var(--transition);
+  }
+  .type-chip:hover{ border-color:var(--accent); }
+  .type-chip b{color:var(--accent-dark);}
+  .type-chip .x{cursor:pointer; color:#94a3b8; font-weight:700; padding:0 4px; transition:var(--transition);}
+  .type-chip .x:hover{color:var(--danger);}
+  .new-type-row{display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;}
+  .new-type-row input{font-size:.82rem; padding:8px 10px;}
+  .new-type-row input.abbr{width:90px; flex:none;}
+
+  /* ── Day Modal ── */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(15,23,42,0.5);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; padding:18px;
+  }
+  .modal-box{
+    background:#fff; border-radius:var(--radius-lg); max-width:400px; width:100%;
+    box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden;
+    animation:scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px 20px; border-bottom:1px solid var(--line);
+    font-family:'Inter',sans-serif; font-weight:700; font-size:.88rem;
+    color:var(--accent);
+    background:var(--accent-light);
+  }
+  .modal-close{
+    background:transparent; color:#64748b; border:none; font-size:1.1rem;
+    padding:4px 8px; border-radius:var(--radius-sm);
+    transition:var(--transition);
+  }
+  .modal-close:hover{ background:rgba(0,0,0,0.05); color:var(--ink); }
+  .modal-list{max-height:64vh; overflow-y:auto; padding:12px;}
+  .modal-item{
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    background:#fff; color:var(--ink); border:1.5px solid var(--line);
+    border-radius:var(--radius-sm); padding:11px 14px; margin-bottom:6px; text-align:left;
+    font-family:'Inter',sans-serif; font-size:.84rem; cursor:pointer;
+    font-weight:500; transition:var(--transition);
+  }
+  .modal-item:hover{background:var(--accent-light); border-color:#99f6e4;}
+  .modal-item.active{border-color:var(--accent); background:var(--accent-light); font-weight:700;}
+  .modal-item.disabled{color:#94a3b8; cursor:default;}
+  .modal-item.disabled:hover{background:#fff; border-color:var(--line);}
+  .modal-item .check{color:var(--accent); font-weight:700;}
+
+  /* ── PRINT OUTPUT ── */
+  #printArea{
+    position:absolute;
+    top:0; left:0;
+    width:0; height:0;
+    overflow:hidden;
+    opacity:0;
+    pointer-events:none;
+  }
+  .sheet{
+    background:#fff;
+    padding:36px 30px;
+    margin:0 auto 30px;
+    border:1px solid #ccc;
+    width:718px;
+    max-width:718px;
+  }
+  .sheet-head{text-align:center; margin-bottom:6px;}
+  .sheet-head .school-line{
+    font-family:'Inter', sans-serif;
+    font-size:.78rem; letter-spacing:.08em; text-transform:uppercase;
+    color:#555; margin-bottom:4px;
+  }
+  .sheet-head h2{font-size:1.18rem; margin:2px 0 2px; letter-spacing:.02em;}
+  .sheet-head .period{font-family:'Inter', sans-serif; font-size:.84rem; color:#444;}
+  .director-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-family:'Inter', sans-serif; font-size:.8rem;
+    margin:10px 0 8px; padding:6px 4px;
+    border-top:1px solid var(--ink); border-bottom:1px solid var(--ink);
+  }
+  .sig-line-inline{display:inline-block; min-width:90px; border-bottom:1px solid var(--ink); margin-left:4px;}
+  .emp-info{
+    display:flex; justify-content:space-between;
+    font-family:'Inter', sans-serif; font-size:.85rem;
+    margin:0 0 10px; padding:4px 2px;
+  }
+  table.sign-table{
+    width:100%; border-collapse:collapse; table-layout:fixed;
+    font-family:'Inter', sans-serif; font-size:.78rem;
+  }
+  table.sign-table.small{font-size:.66rem;}
+  table.sign-table.tiny{font-size:.56rem;}
+  table.sign-table th, table.sign-table td{
+    border:1px solid #888; padding:3px 4px; text-align:center;
+    overflow:hidden; word-break:break-word;
+  }
+  table.sign-table th{
+    background:var(--accent-light); font-weight:700; font-size:.72rem;
+    text-transform:uppercase; letter-spacing:.02em;
+  }
+  table.sign-table.small th{font-size:.62rem;}
+  table.sign-table.tiny th{font-size:.54rem;}
+  .emp-sub{font-weight:400; font-size:.85em; text-transform:none; color:#555;}
+  table.sign-table td.day-num{font-weight:700; width:18px;}
+  table.sign-table td.day-name{width:90px; color:#333; white-space:nowrap;}
+  table.sign-table tr.weekend td{background:#f6f4ef;}
+  table.sign-table tr.holiday td.status{font-weight:700; color:#991b1b;}
+  table.sign-table td.status.leave{font-weight:700; color:#92400e;}
+  table.sign-table td.status{font-style:italic; color:#666;}
+  .print-legend{
+    margin-top:8px; font-family:'Inter', sans-serif;
+    font-size:.66rem; color:#666; border-top:1px dotted var(--line); padding-top:6px;
+  }
+
+  @media print{
+    body{background:#fff; margin:0;}
+    .app > *:not(#printArea){display:none !important;}
+    .modal-backdrop{display:none !important;}
+    #printArea{
+      position:static; width:auto; height:auto;
+      overflow:visible; opacity:1; pointer-events:auto;
+    }
+    .sheet{
+      border:none; margin:0 auto; box-shadow:none;
+      width:auto; max-width:190mm;
+      padding:8mm 6mm;
+      page-break-after:always; break-after:page;
+      page-break-inside:avoid;
+    }
+    .sheet:last-child{page-break-after:auto;}
+  }
+  @page{ margin:10mm; }
+
+  /* ── Sticky Footer Actions ── */
+  .float-actions{
+    position:sticky; bottom:0;
+    background:linear-gradient(to top, var(--paper) 75%, transparent);
+    padding:18px 0 6px;
+    display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+  }
+  .status-msg{
+    font-family:'Inter', sans-serif; font-size:.74rem;
+    color:var(--accent); align-self:center; margin-right:auto;
+    font-weight:600;
+    animation:slideDown 0.3s ease-out;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:20px;}
+  ::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
+
+  /* ── Checkbox/Radio ── */
+  input[type=checkbox], input[type=radio]{
+    accent-color:var(--accent);
+    width:15px;height:15px;cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div><h1><i class="fa-solid fa-clipboard-list" style="margin-right:8px;font-size:1.1em;"></i>İmza Çizelgesi Hazırlayıcı</h1></div>
+    <div class="sub">Okul Personeli Devam Çizelgesi</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT COLUMN: school info + employees -->
+    <div>
+      <div class="panel">
+        <h2><i class="fa-solid fa-building" style="font-size:.85em;"></i> Kurum Bilgisi</h2>
+        <div class="row2">
+          <div>
+            <label for="schoolName">Okul / Kurum Adı</label>
+            <input type="text" id="schoolName" placeholder="Örn. Atatürk İlkokulu">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="directorName">Okul Müdürü Adı Soyadı</label>
+            <input type="text" id="directorName" placeholder="Örn. Ahmet Yıldız">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2><i class="fa-solid fa-users" style="font-size:.85em;"></i> Personel Listesi</h2>
+        <div class="row2">
+          <div>
+            <label for="empName">Ad Soyad</label>
+            <input type="text" id="empName" placeholder="Ad Soyad">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="empTitleSel">Görevi</label>
+            <select id="empTitleSel">
+              <option value="Geçici İşçi">Geçici İşçi</option>
+              <option value="Sürekli İşçi">Sürekli İşçi</option>
+              <option value="Hizmetli">Hizmetli</option>
+              <option value="Güvenlik">Güvenlik</option>
+              <option value="Memur">Memur</option>
+              <option value="DIGER">Diğer (belirtin)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2" id="empTitleCustomRow" style="display:none;">
+          <div>
+            <label for="empTitleCustom">Görevi (özel)</label>
+            <input type="text" id="empTitleCustom" placeholder="Örn. Şoför">
+          </div>
+        </div>
+        <button id="addEmpBtn" style="width:100%; margin-bottom:16px;"><i class="fa-solid fa-user-plus" style="margin-right:6px;"></i>+ Personel Ekle</button>
+        <ul class="emp-list" id="empList"></ul>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: calendar editor -->
+    <div>
+      <div class="panel" style="animation-delay:0.15s;">
+        <h2><i class="fa-solid fa-calendar-days" style="font-size:.85em;"></i> Dönem ve Takvim İşaretleme</h2>
+        <div class="cal-controls">
+          <div><label for="monthSel">Ay</label><input type="text" id="monthSel" placeholder="Örn: Ocak"></div>
+          <div><label for="yearSel">Yıl</label><input type="text" id="yearSel" placeholder="Örn: 2030"></div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label for="calTarget">Takvimde Düzenlenen</label>
+            <select id="calTarget"></select>
+          </div>
+        </div>
+
+        <div class="type-manage">
+          <button class="ghost" id="toggleTypeManageBtn" type="button"><i class="fa-solid fa-gear" style="margin-right:4px;"></i>İzin Türlerini Düzenle</button>
+          <div id="typeManageBox" style="display:none;">
+            <div class="type-chips" id="typeChips"></div>
+            <div class="new-type-row">
+              <input type="text" id="newTypeLabel" placeholder="Yeni izin türü adı (örn. Evlilik İzni)">
+              <input type="text" id="newTypeAbbr" class="abbr" placeholder="Kıs. (Eİ)" maxlength="5">
+              <button id="addTypeBtn" type="button">Ekle</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="hint"><i class="fa-solid fa-circle-info" style="margin-right:4px;"></i>Bir güne tıklayınca o gün için tatil/izin seçeneklerinin listesi açılır.</p>
+
+        <div class="legend">
+          <span><span class="swatch sw-work"></span> Çalışma günü</span>
+          <span><span class="swatch sw-holiday"></span> Tatil</span>
+          <span><span class="swatch sw-leave"></span> İzinli (seçili personel)</span>
+        </div>
+
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <p class="hint" style="margin-top:-4px;"><i class="fa-solid fa-info-circle" style="margin-right:4px;"></i>2-6 personel tek A4 sayfasında yan yana hazırlanır (6'dan fazla personelde ek sayfalar otomatik eklenir).</p>
+
+      <div class="float-actions">
+        <span class="status-msg" id="statusMsg"></span>
+        <button class="secondary" id="exportDataBtn"><i class="fa-solid fa-download" style="margin-right:4px;"></i>Dışa Aktar</button>
+        <button class="secondary" id="importDataBtn"><i class="fa-solid fa-upload" style="margin-right:4px;"></i>İçe Aktar</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;">
+        <button class="secondary" id="resetBtn"><i class="fa-solid fa-rotate-left" style="margin-right:4px;"></i>Bu Ayı Sıfırla</button>
+        <button class="secondary" id="exportExcelBtn"><i class="fa-solid fa-file-excel" style="margin-right:4px;"></i>Excel İndir</button>
+        <button class="secondary" id="exportWordBtn"><i class="fa-solid fa-file-word" style="margin-right:4px;"></i>Word İndir</button>
+        <button class="secondary" id="exportPdfBtn"><i class="fa-solid fa-file-pdf" style="margin-right:4px;"></i>PDF İndir</button>
+        <button id="generateBtn"><i class="fa-solid fa-print" style="margin-right:4px;"></i>Yazdır</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="printArea"></div>
+</div>
+
+<div class="modal-backdrop" id="dayModalBackdrop" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="dayModalTitle"></span>
+      <button class="modal-close" id="dayModalCloseBtn" type="button">✕</button>
+    </div>
+    <div class="modal-list" id="dayModalList"></div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+const DOW = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
+const DOW_FULL = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const MAX_PER_PAGE = 6;
+
+const DEFAULT_LEAVE_TYPES = [
+  { code:'YI',    label:'Yıllık İzin',     abbr:'Yİ' },
+  { code:'MI',    label:'Mazeret İzni',    abbr:'Mİ' },
+  { code:'SI',    label:'Sağlık İzni',     abbr:'Sİ' },
+  { code:'RI',    label:'Refakat İzni',    abbr:'Rİ' },
+  { code:'EI',    label:'Evlilik İzni',    abbr:'Eİ' },
+  { code:'BI',    label:'Babalık İzni',    abbr:'Bİ' },
+  { code:'OI',    label:'Ölüm İzni',       abbr:'Öİ' },
+  { code:'DI',    label:'Doğum İzni',      abbr:'Dİ' },
+  { code:'UI',    label:'Ücretsiz İzin',   abbr:'Üİ' },
+  { code:'DIGER', label:'Diğer',           abbr:'Dğ' }
+];
+
+const HOLIDAY_TYPES = [
+  { code:'resmi',  label:'Resmî Tatil',    abbr:'RT',  color:'#fee2e2', borderColor:'#fca5a5' },
+  { code:'bayram', label:'Bayram Tatili',  abbr:'BT',  color:'#ede9fe', borderColor:'#c4b5fd' },
+  { code:'idari',  label:'İdari İzin',     abbr:'İİ',  color:'#dbeafe', borderColor:'#93c5fd' },
+  { code:'okul',   label:'Okul Tatili',    abbr:'OT',  color:'#dcfce7', borderColor:'#86efac' },
+];
+
+let employees = [];           // [{id, name, title}]
+let periods = {};             // { "YYYY-M": { holidays:[{day,type},...], leaves:{ empId: { day: leaveTypeCode } } } }
+let leaveTypes = [];          // [{code,label,abbr}]
+let calTarget = 'ALL';        // 'ALL' or employee id
+
+const now = new Date();
+let curYear = now.getFullYear();
+let curMonth = now.getMonth(); // 0-indexed
+
+function periodKey(y, m){ return y + '-' + m; }
+
+function getPeriod(y, m){
+  const k = periodKey(y, m);
+  if(!periods[k]) periods[k] = { holidays: [], leaves: {} };
+  if(!periods[k].leaves) periods[k].leaves = {};
+  if(!periods[k].holidays) periods[k].holidays = [];
+  // migrate old number-array holidays -> [{day,type}] objects
+  periods[k].holidays = periods[k].holidays.map(h =>
+    (typeof h === 'number') ? { day: h, type: 'resmi' } : h
+  );
+  // migrate old array-based leave format -> object keyed by day -> type code
+  Object.keys(periods[k].leaves).forEach(eid=>{
+    if(Array.isArray(periods[k].leaves[eid])){
+      const obj = {};
+      periods[k].leaves[eid].forEach(day=>{ obj[day] = (leaveTypes[0] ? leaveTypes[0].code : 'YI'); });
+      periods[k].leaves[eid] = obj;
+    }
+  });
+  return periods[k];
+}
+
+function findHolidayForDay(period, day){
+  return period.holidays.find(h => h.day === day) || null;
+}
+function findHolidayType(code){ return HOLIDAY_TYPES.find(t=>t.code===code); }
+function findType(code){ return leaveTypes.find(t=>t.code===code); }
+
+function migrateLeaveTypes(){
+  const hasSRI = leaveTypes.some(t=>t.code==='SRI');
+  const hasSI = leaveTypes.some(t=>t.code==='SI');
+  const hasRI = leaveTypes.some(t=>t.code==='RI');
+  if(hasSRI && !hasSI && !hasRI){
+    const idx = leaveTypes.findIndex(t=>t.code==='SRI');
+    leaveTypes.splice(idx, 1,
+      { code:'SI', label:'Sağlık İzni', abbr:'Sİ' },
+      { code:'RI', label:'Refakat İzni', abbr:'Rİ' }
+    );
+    Object.keys(periods).forEach(pk=>{
+      const p = periods[pk];
+      if(p && p.leaves){
+        Object.keys(p.leaves).forEach(eid=>{
+          if(Array.isArray(p.leaves[eid])) return; // handled by getPeriod migration on access
+          Object.keys(p.leaves[eid]).forEach(day=>{
+            if(p.leaves[eid][day]==='SRI') p.leaves[eid][day] = 'SI';
+          });
+        });
+      }
+    });
+    saveLeaveTypes();
+    savePeriods();
+  }
+}
+
+async function loadAll(){
+  // Employees
+  try{
+    const e = await window.storage.get('employees');
+    employees = e ? JSON.parse(e.value) : [];
+  }catch(err){ employees = []; }
+  if(!employees.length){
+    try{ const ls = localStorage.getItem('isci_employees'); if(ls) employees = JSON.parse(ls); }catch(e){}
+  }
+  // Periods
+  try{
+    const p = await window.storage.get('periods');
+    periods = p ? JSON.parse(p.value) : {};
+  }catch(err){ periods = {}; }
+  if(!Object.keys(periods).length){
+    try{ const ls = localStorage.getItem('isci_periods'); if(ls) periods = JSON.parse(ls); }catch(e){}
+  }
+  // School name
+  try{
+    const s = await window.storage.get('schoolName');
+    if(s) document.getElementById('schoolName').value = s.value;
+  }catch(err){}
+  if(!document.getElementById('schoolName').value){
+    try{ const ls = localStorage.getItem('isci_schoolName'); if(ls) document.getElementById('schoolName').value = ls; }catch(e){}
+  }
+  // Director name
+  try{
+    const dn = await window.storage.get('directorName');
+    if(dn) document.getElementById('directorName').value = dn.value;
+  }catch(err){}
+  if(!document.getElementById('directorName').value){
+    try{ const ls = localStorage.getItem('isci_directorName'); if(ls) document.getElementById('directorName').value = ls; }catch(e){}
+  }
+  // Leave types
+  try{
+    const lt = await window.storage.get('leaveTypes');
+    leaveTypes = lt ? JSON.parse(lt.value) : JSON.parse(JSON.stringify(DEFAULT_LEAVE_TYPES));
+    if(!Array.isArray(leaveTypes) || leaveTypes.length===0) leaveTypes = JSON.parse(JSON.stringify(DEFAULT_LEAVE_TYPES));
+  }catch(err){ leaveTypes = JSON.parse(JSON.stringify(DEFAULT_LEAVE_TYPES)); }
+  if(!leaveTypes.length || leaveTypes.length===0){
+    try{ const ls = localStorage.getItem('isci_leaveTypes'); if(ls) { const parsed = JSON.parse(ls); if(Array.isArray(parsed) && parsed.length) leaveTypes = parsed; } }catch(e){}
+  }
+  migrateLeaveTypes();
+}
+
+async function saveEmployees(){
+  const val = JSON.stringify(employees);
+  try{ await window.storage.set('employees', val); }catch(e){}
+  try{ localStorage.setItem('isci_employees', val); }catch(e){}
+}
+async function savePeriods(){
+  const val = JSON.stringify(periods);
+  try{ await window.storage.set('periods', val); }catch(e){}
+  try{ localStorage.setItem('isci_periods', val); }catch(e){}
+}
+async function saveSchoolName(){
+  const val = document.getElementById('schoolName').value;
+  try{ await window.storage.set('schoolName', val); }catch(e){}
+  try{ localStorage.setItem('isci_schoolName', val); }catch(e){}
+}
+async function saveDirectorName(){
+  const val = document.getElementById('directorName').value;
+  try{ await window.storage.set('directorName', val); }catch(e){}
+  try{ localStorage.setItem('isci_directorName', val); }catch(e){}
+}
+async function saveLeaveTypes(){
+  const val = JSON.stringify(leaveTypes);
+  try{ await window.storage.set('leaveTypes', val); }catch(e){}
+  try{ localStorage.setItem('isci_leaveTypes', val); }catch(e){}
+}
+
+function flashStatus(msg, isErr){
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.style.color = isErr ? '#dc2626' : '#0f766e';
+  setTimeout(()=>{ if(el.textContent===msg) el.textContent=''; }, 2500);
+}
+
+function uid(){ return 'e' + Math.random().toString(36).slice(2,9); }
+
+// "01.03.2026 Cuma" formatında tarih üretir
+function formatDate(year, month, day, dowIdx){
+  const dd = String(day).padStart(2,'0');
+  const mm = String(month+1).padStart(2,'0');
+  return `${dd}.${mm}.${year} ${DOW_FULL[dowIdx]}`;
+}
+// PDF (ASCII-safe) versiyonu
+function formatDateASCII(year, month, day, dowIdx){
+  const dd = String(day).padStart(2,'0');
+  const mm = String(month+1).padStart(2,'0');
+  return `${dd}.${mm}.${year} ${turkceAsciiYukle(DOW_FULL[dowIdx])}`;
+}
+
+function escapeHtml(s){
+  return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderEmpList(){
+  const ul = document.getElementById('empList');
+  ul.innerHTML = '';
+  if(employees.length===0){
+    ul.innerHTML = '<li style="color:#94a3b8; font-style:italic;">Henüz personel eklenmedi.</li>';
+  }
+  employees.forEach(emp=>{
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${escapeHtml(emp.name)} <span class="meta">— ${escapeHtml(emp.title||'')}</span></span>`;
+    const right = document.createElement('span');
+    right.className = 'right';
+    const delBtn = document.createElement('button');
+    delBtn.className = 'ghost';
+    delBtn.textContent = 'Sil';
+    delBtn.onclick = ()=>{
+      employees = employees.filter(x=>x.id!==emp.id);
+      saveEmployees();
+      renderEmpList();
+      renderCalTargetSelect();
+      renderCalendar();
+    };
+    right.appendChild(delBtn);
+    li.appendChild(right);
+    ul.appendChild(li);
+  });
+}
+
+function renderCalTargetSelect(){
+  const sel = document.getElementById('calTarget');
+  const prev = calTarget;
+  sel.innerHTML = '';
+  const allOpt = document.createElement('option');
+  allOpt.value = 'ALL';
+  allOpt.textContent = '🏫 Tüm Personel (Resmî Tatil)';
+  sel.appendChild(allOpt);
+  employees.forEach(emp=>{
+    const opt = document.createElement('option');
+    opt.value = emp.id;
+    opt.textContent = emp.name;
+    sel.appendChild(opt);
+  });
+  if([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+  else sel.value = 'ALL';
+  calTarget = sel.value;
+}
+
+function renderTypeChips(){
+  const box = document.getElementById('typeChips');
+  box.innerHTML = '';
+  leaveTypes.forEach(t=>{
+    const chip = document.createElement('span');
+    chip.className = 'type-chip';
+    chip.innerHTML = `${escapeHtml(t.label)} <b>${escapeHtml(t.abbr)}</b>`;
+    const x = document.createElement('span');
+    x.className = 'x';
+    x.textContent = '×';
+    x.title = 'Bu türü sil';
+    x.onclick = ()=>{
+      if(leaveTypes.length<=1){ flashStatus('En az bir izin türü kalmalı.', true); return; }
+      leaveTypes = leaveTypes.filter(x2=>x2.code!==t.code);
+      saveLeaveTypes();
+      renderTypeChips();
+      renderCalendar();
+    };
+    chip.appendChild(x);
+    box.appendChild(chip);
+  });
+}
+
+function makeAbbrFromLabel(label){
+  const words = label.trim().split(/\s+/).filter(Boolean);
+  let abbr = words.map(w=>w[0]).join('').toUpperCase();
+  if(abbr.length>4) abbr = abbr.slice(0,4);
+  return abbr || 'İZ';
+}
+
+function populateMonthYear(){
+  const mSel = document.getElementById('monthSel');
+  const ySel = document.getElementById('yearSel');
+  mSel.value = MONTHS[curMonth];
+  ySel.value = curYear;
+}
+
+function isWeekend(y, m, day){
+  const d = new Date(y, m, day).getDay();
+  return d===0 || d===6;
+}
+
+function renderCalendar(){
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  DOW.forEach(d=>{
+    const el = document.createElement('div');
+    el.className = 'dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDow = (new Date(curYear, curMonth, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(curYear, curMonth+1, 0).getDate();
+  const period = getPeriod(curYear, curMonth);
+
+  for(let i=0;i<firstDow;i++){
+    const el = document.createElement('div');
+    el.className = 'day-cell empty';
+    grid.appendChild(el);
+  }
+
+  for(let day=1; day<=daysInMonth; day++){
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    const weekend = isWeekend(curYear, curMonth, day);
+    const holidayEntry = findHolidayForDay(period, day);
+    const isOfficialHoliday = !!holidayEntry;
+    const isGlobalHoliday = weekend || isOfficialHoliday;
+    const ht = holidayEntry ? findHolidayType(holidayEntry.type) : null;
+
+    let tag = '';
+    if(calTarget !== 'ALL'){
+      const code = (period.leaves[calTarget]||{})[day];
+      if(code){
+        cell.classList.add('leave');
+        const t = findType(code);
+        tag = t ? t.abbr : code;
+      } else if(isGlobalHoliday){
+        if(weekend){ cell.classList.add('holiday'); tag = 'H.sonu'; }
+        else if(ht){ cell.style.background = ht.color; cell.style.borderColor = ht.borderColor; tag = ht.abbr; }
+      }
+    } else if(isGlobalHoliday){
+      if(weekend){ cell.classList.add('holiday'); tag = 'H.sonu'; }
+      else if(ht){ cell.style.background = ht.color; cell.style.borderColor = ht.borderColor; tag = ht.abbr; }
+    }
+
+    cell.innerHTML = `<div>${day}</div>${tag ? `<div class="tag">${escapeHtml(tag)}</div>` : ''}`;
+    cell.onclick = ()=> openDayPopup(day, weekend);
+    grid.appendChild(cell);
+  }
+}
+
+function addPopupItem(list, label, active, disabled, onClick){
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'modal-item' + (active?' active':'') + (disabled?' disabled':'');
+  btn.innerHTML = `<span>${escapeHtml(label)}</span>${active?'<span class="check">✓</span>':''}`;
+  if(!disabled) btn.onclick = onClick;
+  list.appendChild(btn);
+}
+
+function openDayPopup(day, weekend){
+  const period = getPeriod(curYear, curMonth);
+  const title = document.getElementById('dayModalTitle');
+  const list = document.getElementById('dayModalList');
+  list.innerHTML = '';
+  const dateLabel = `${day} ${MONTHS[curMonth]} ${curYear}`;
+
+  if(calTarget === 'ALL'){
+    // ── Tüm Personel modu: sadece tatil işareti ──
+    title.textContent = `${dateLabel} — Tüm Personel`;
+    const existingHoliday = findHolidayForDay(period, day);
+    if(weekend){
+      addPopupItem(list, 'Hafta Sonu (otomatik tatil)', true, true);
+    } else {
+      addPopupItem(list, 'Çalışma Günü', !existingHoliday, false, ()=>{
+        period.holidays = period.holidays.filter(h => h.day !== day);
+        savePeriods(); renderCalendar(); closeDayPopup();
+      });
+      HOLIDAY_TYPES.forEach(ht=>{
+        const isActive = existingHoliday && existingHoliday.type === ht.code;
+        addPopupItem(list, `${ht.label} (${ht.abbr})`, isActive, false, ()=>{
+          period.holidays = period.holidays.filter(h => h.day !== day);
+          period.holidays.push({ day, type: ht.code });
+          savePeriods(); renderCalendar(); closeDayPopup();
+        });
+      });
+    }
+  } else {
+    // ── Personel modu: hem tatil hem izin seçenekleri ──
+    const emp = employees.find(e=>e.id===calTarget);
+    title.textContent = `${dateLabel} — ${emp ? emp.name : ''}`;
+    const existingHoliday = findHolidayForDay(period, day);
+    const currentLeaveCode = (period.leaves[calTarget]||{})[day];
+
+    if(weekend){
+      // Hafta sonu: sadece bilgi, değiştirilemez
+      addPopupItem(list, 'Hafta Sonu (otomatik tatil)', true, true);
+      return document.getElementById('dayModalBackdrop').style.display = 'flex';
+    }
+
+    // Grup başlığı yardımcısı
+    function addGroupHeader(text){
+      list.insertAdjacentHTML('beforeend',
+        `<div style="font-family:'Inter',sans-serif; font-size:.68rem; text-transform:uppercase;
+         letter-spacing:.08em; color:#94a3b8; padding:10px 14px 4px; border-top:1px solid #e2e8f0; margin-top:4px; font-weight:600;">${text}</div>`);
+    }
+
+    // — Çalışma günü (her şeyi temizle)
+    const isDayFree = !existingHoliday && !currentLeaveCode;
+    addPopupItem(list, 'Çalışma Günü', isDayFree, false, ()=>{
+      period.holidays = period.holidays.filter(h => h.day !== day);
+      if(period.leaves[calTarget]) delete period.leaves[calTarget][day];
+      savePeriods(); renderCalendar(); closeDayPopup();
+    });
+
+    // — Tatil seçenekleri
+    addGroupHeader('Tatil');
+    HOLIDAY_TYPES.forEach(ht=>{
+      const isActive = existingHoliday && existingHoliday.type === ht.code;
+      addPopupItem(list, `${ht.label} (${ht.abbr})`, isActive, false, ()=>{
+        // Tatil seç → kişinin izni bu günden kaldırılır, tatil eklenir
+        period.holidays = period.holidays.filter(h => h.day !== day);
+        period.holidays.push({ day, type: ht.code });
+        if(period.leaves[calTarget]) delete period.leaves[calTarget][day];
+        savePeriods(); renderCalendar(); closeDayPopup();
+      });
+    });
+
+    // — İzin seçenekleri
+    addGroupHeader('İzin');
+    leaveTypes.forEach(t=>{
+      const isActive = !existingHoliday && currentLeaveCode === t.code;
+      addPopupItem(list, `${t.label} (${t.abbr})`, isActive, false, ()=>{
+        // İzin seç → o günün tatilini kaldır (izin tatille çakışmaz), izni ata
+        period.holidays = period.holidays.filter(h => h.day !== day);
+        if(!period.leaves[calTarget]) period.leaves[calTarget] = {};
+        period.leaves[calTarget][day] = t.code;
+        savePeriods(); renderCalendar(); closeDayPopup();
+      });
+    });
+  }
+  document.getElementById('dayModalBackdrop').style.display = 'flex';
+}
+
+function closeDayPopup(){
+  document.getElementById('dayModalBackdrop').style.display = 'none';
+}
+
+/* ---------- Shared month/day computation ---------- */
+
+function computeMonthData(){
+  const daysInMonth = new Date(curYear, curMonth+1, 0).getDate();
+  const period = getPeriod(curYear, curMonth);
+  const days = [];
+  for(let day=1; day<=daysInMonth; day++){
+    const dowIdx = (new Date(curYear, curMonth, day).getDay() + 6) % 7;
+    const weekend = dowIdx===5 || dowIdx===6;
+    const holidayEntry = findHolidayForDay(period, day);
+    const isOfficialHoliday = !!holidayEntry;
+    const isGlobalHoliday = weekend || isOfficialHoliday;
+    const holidayType = weekend ? 'weekend' : (holidayEntry ? holidayEntry.type : null);
+    days.push({ day, dowIdx, weekend, isOfficialHoliday, isGlobalHoliday, holidayType });
+  }
+  return { daysInMonth, days, period };
+}
+
+function computePageGroups(){
+  const groups = [];
+  for(let i=0;i<employees.length;i+=MAX_PER_PAGE){
+    groups.push(employees.slice(i, i+MAX_PER_PAGE));
+  }
+  return groups;
+}
+
+function holidayLabel(d){
+  if(d.weekend) return 'HAFTA SONU';
+  const ht = d.holidayType ? findHolidayType(d.holidayType) : null;
+  return ht ? ht.label.toUpperCase() : 'TATİL';
+}
+
+function renderSingleEmployeeTable(emp, monthData){
+  let rows = ''; const usedCodes = {};
+  monthData.days.forEach(d=>{
+    let rowClass='', statusCell='', cells='';
+    if(d.isGlobalHoliday){
+      rowClass = 'holiday' + (d.weekend?' weekend':'');
+      statusCell = `<td colspan="2" class="status">${holidayLabel(d)}</td>`;
+    } else {
+      const code = (monthData.period.leaves[emp.id]||{})[d.day];
+      if(code){
+        usedCodes[code]=true;
+        const t = findType(code); const abbr = t?t.abbr:code;
+        rowClass='leave';
+        statusCell = `<td colspan="2" class="status leave">${escapeHtml(abbr)}</td>`;
+      } else {
+        cells = '<td></td><td></td>';
+      }
+    }
+    rows += `<tr class="${rowClass}"><td class="day-name" colspan="2">${formatDate(curYear,curMonth,d.day,d.dowIdx)}</td>${statusCell||cells}</tr>`;
+  });
+  const legendItems = leaveTypes.filter(t=>usedCodes[t.code]).map(t=>`<strong>${escapeHtml(t.abbr)}</strong>: ${escapeHtml(t.label)}`);
+  const legend = legendItems.length ? `<div class="print-legend">${legendItems.join(' &nbsp;·&nbsp; ')}</div>` : '';
+  const html = `<table class="sign-table"><thead><tr><th colspan="2">Tarih</th><th>Giriş İmza</th><th>Çıkış İmza</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return { html, legend };
+}
+
+function renderCombinedTable(group, monthData){
+  const usedCodes = {};
+  const sizeClass = group.length>=5 ? 'tiny' : (group.length>=3 ? 'small' : '');
+  const head1 = '<th colspan="2">Tarih</th>' + group.map(e=>`<th colspan="2">${escapeHtml(e.name)}<div class="emp-sub">${escapeHtml(e.title||'')}</div></th>`).join('');
+  const head2 = '<th colspan="2">Tarih</th>' + group.map(()=>'<th>Giriş</th><th>Çıkış</th>').join('');
+
+  let rows = '';
+  monthData.days.forEach(d=>{
+    if(d.isGlobalHoliday){
+      rows += `<tr class="holiday ${d.weekend?'weekend':''}"><td class="day-name" colspan="2">${formatDate(curYear,curMonth,d.day,d.dowIdx)}</td><td colspan="${group.length*2}" class="status">${holidayLabel(d)}</td></tr>`;
+    } else {
+      let cells = '';
+      group.forEach(emp=>{
+        const code = (monthData.period.leaves[emp.id]||{})[d.day];
+        if(code){
+          usedCodes[code]=true;
+          const t = findType(code); const abbr = t?t.abbr:code;
+          cells += `<td colspan="2" class="status leave">${escapeHtml(abbr)}</td>`;
+        } else {
+          cells += '<td></td><td></td>';
+        }
+      });
+      rows += `<tr><td class="day-name" colspan="2">${formatDate(curYear,curMonth,d.day,d.dowIdx)}</td>${cells}</tr>`;
+    }
+  });
+
+  const legendItems = leaveTypes.filter(t=>usedCodes[t.code]).map(t=>`<strong>${escapeHtml(t.abbr)}</strong>: ${escapeHtml(t.label)}`);
+  const legend = legendItems.length ? `<div class="print-legend">${legendItems.join(' &nbsp;·&nbsp; ')}</div>` : '';
+  const html = `<table class="sign-table ${sizeClass}"><thead><tr>${head1}</tr><tr>${head2}</tr></thead><tbody>${rows}</tbody></table>`;
+  return { html, legend };
+}
+
+function renderGroupSheetOuterHTML(group, monthData){
+  const schoolName = document.getElementById('schoolName').value.trim() || 'KURUM ADI';
+  const directorName = document.getElementById('directorName').value.trim();
+
+  let innerHtml, legendHtml, empInfoHtml='';
+  if(group.length===1){
+    const r = renderSingleEmployeeTable(group[0], monthData);
+    innerHtml = r.html; legendHtml = r.legend;
+    empInfoHtml = `<div class="emp-info"><span><strong>Ad Soyad:</strong> ${escapeHtml(group[0].name)}</span><span><strong>Görevi:</strong> ${escapeHtml(group[0].title||'-')}</span></div>`;
+  } else {
+    const r = renderCombinedTable(group, monthData);
+    innerHtml = r.html; legendHtml = r.legend;
+  }
+
+  return `<div class="sheet">
+    <div class="sheet-head">
+      <div class="school-line">${escapeHtml(schoolName)}</div>
+      <h2>PERSONEL DEVAM VE İMZA ÇİZELGESİ</h2>
+      <div class="period">${MONTHS[curMonth]} ${curYear}</div>
+    </div>
+    <div class="director-row">
+      <span>Okul Müdürü: <strong>${escapeHtml(directorName||'—')}</strong></span>
+      <span>İmza:<span class="sig-line-inline">&nbsp;</span></span>
+    </div>
+    ${empInfoHtml}
+    ${innerHtml}
+    ${legendHtml}
+  </div>`;
+}
+
+function buildPrintSheets(){
+  if(employees.length===0){ flashStatus('Lütfen önce personel ekleyin.', true); return false; }
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = '';
+  const monthData = computeMonthData();
+  const groups = computePageGroups();
+  groups.forEach(g=>{
+    printArea.insertAdjacentHTML('beforeend', renderGroupSheetOuterHTML(g, monthData));
+  });
+  return true;
+}
+
+/* ---------- Exports ---------- */
+
+function pdfStatusLabel(d){
+  if(d.weekend) return 'HAFTA SONU';
+  if(d.holidayType){
+    const ht = findHolidayType(d.holidayType);
+    if(ht) return turkceAsciiYukle(ht.label).toUpperCase();
+  }
+  return 'TATIL';
+}
+
+async function exportPDF(){
+  if(employees.length===0){ flashStatus('Lütfen önce personel ekleyin.', true); return; }
+  if(!window.jspdf || !window.jspdf.jsPDF){ flashStatus('PDF kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.', true); return; }
+  flashStatus('PDF hazırlanıyor…');
+  await new Promise(r=>setTimeout(r, 30));
+
+  const { jsPDF } = window.jspdf;
+  const monthData = computeMonthData();
+  const groups = computePageGroups();
+  const schoolName = document.getElementById('schoolName').value.trim() || 'KURUM ADI';
+  const directorName = document.getElementById('directorName').value.trim();
+
+  let pdf = null;
+
+  groups.forEach((group, gi)=>{
+    const orientation = group.length===1 ? 'portrait' : 'landscape';
+    if(!pdf){ pdf = new jsPDF({ orientation, unit:'mm', format:'a4' }); }
+    else { pdf.addPage('a4', orientation); }
+
+    const pageW = orientation==='landscape' ? 297 : 210;
+    let y = 12;
+
+    pdf.setFont('helvetica','bold');
+    pdf.setFontSize(8.5);
+    pdf.text(turkceAsciiYukle(schoolName).toUpperCase(), pageW/2, y, { align:'center' });
+    y += 6;
+    pdf.setFontSize(13);
+    pdf.text('PERSONEL DEVAM VE IMZA CIZELGESI', pageW/2, y, { align:'center' });
+    y += 6;
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(10);
+    pdf.text(`${turkceAsciiYukle(MONTHS[curMonth])} ${curYear}`, pageW/2, y, { align:'center' });
+    y += 7;
+
+    pdf.setDrawColor(40,40,40);
+    pdf.setLineWidth(0.3);
+    pdf.line(10, y, pageW-10, y);
+    y += 5;
+    pdf.setFontSize(9);
+    pdf.text(`Okul Muduru: ${directorName ? turkceAsciiYukle(directorName) : '-'}`, 10, y);
+    pdf.text('Imza: ____________________', pageW-10, y, { align:'right' });
+    y += 3;
+    pdf.line(10, y, pageW-10, y);
+    y += 6;
+
+    let head, body, usedCodes = {};
+
+    // ── Akıllı etiket: Tarih sütunu genişliğine göre tam ad veya kısaltma ──
+    // Tarih sütunu (birleşik): tek personelde 46mm, çokluda 38mm.
+    const colTarih = group.length===1 ? 46 : 38;
+    const availW = pageW - 20 - colTarih;
+    const perEmpColW = availW / group.length;
+    const estFontPt = group.length===1 ? 9 : 7;
+    const charWidthMm = estFontPt * 0.52 * 0.3528;
+    const maxCharsInCell = Math.floor(perEmpColW / charWidthMm);
+
+    // Etiket seç: tam ise tam ad, sığmıyorsa kısaltma
+    function smartLeaveLabel(code){
+      const t = findType(code);
+      if(!t) return turkceAsciiYukle(code);
+      const full = turkceAsciiYukle(t.label);
+      return full.length <= maxCharsInCell ? full : turkceAsciiYukle(t.abbr);
+    }
+    function smartHolidayLabel(d){
+      if(d.weekend) return 'HAFTA SONU';
+      const ht = d.holidayType ? findHolidayType(d.holidayType) : null;
+      if(!ht) return 'TATIL';
+      const full = turkceAsciiYukle(ht.label).toUpperCase();
+      return full.length <= maxCharsInCell ? full : turkceAsciiYukle(ht.abbr).toUpperCase();
+    }
+
+    if(group.length===1){
+      const emp = group[0];
+      pdf.setFontSize(9.5);
+      pdf.text(`Ad Soyad: ${turkceAsciiYukle(emp.name)}`, 10, y);
+      pdf.text(`Gorevi: ${turkceAsciiYukle(emp.title||'-')}`, pageW-10, y, { align:'right' });
+      y += 4;
+
+      head = [['Tarih','Giris Imza','Cikis Imza']];
+      body = monthData.days.map(d=>{
+        const tarih = formatDateASCII(curYear, curMonth, d.day, d.dowIdx);
+        if(d.isGlobalHoliday){
+          return [tarih, { content: smartHolidayLabel(d), colSpan:2, styles:{ fontStyle:'bold', halign:'center' } }];
+        }
+        const code = (monthData.period.leaves[emp.id]||{})[d.day];
+        if(code){
+          usedCodes[code]=true;
+          return [tarih, { content: smartLeaveLabel(code), colSpan:2, styles:{ fontStyle:'bold', halign:'center' } }];
+        }
+        return [tarih, '', ''];
+      });
+    } else {
+      head = [
+        [{content:'Tarih', rowSpan:2}, ...group.flatMap(e=>[{content: turkceAsciiYukle(e.name)+'\n'+turkceAsciiYukle(e.title||''), colSpan:2, styles:{halign:'center'}}])],
+        group.flatMap(()=>['Giris','Cikis'])
+      ];
+      body = monthData.days.map(d=>{
+        const tarih = formatDateASCII(curYear, curMonth, d.day, d.dowIdx);
+        if(d.isGlobalHoliday){
+          return [tarih, { content: smartHolidayLabel(d), colSpan: group.length*2, styles:{ fontStyle:'bold', halign:'center' } }];
+        }
+        const row = [tarih];
+        group.forEach(emp=>{
+          const code = (monthData.period.leaves[emp.id]||{})[d.day];
+          if(code){
+            usedCodes[code]=true;
+            row.push({ content: smartLeaveLabel(code), colSpan:2, styles:{ fontStyle:'bold', halign:'center' } });
+          } else {
+            row.push(''); row.push('');
+          }
+        });
+        return row;
+      });
+    }
+
+    // Single-employee portrait: fill the full page height so each row is tall
+    // and comfortable for handwritten signatures.
+    // Multi-employee landscape: prioritise fitting all days on one page (the
+    // available height is much shorter — A4 landscape is only 210mm — so we
+    // must shrink rows instead of expanding them).
+    const pageH = orientation==='landscape' ? 210 : 297;
+    const bottomReserve = 14;
+    const availableForTable = pageH - y - bottomReserve;
+    const totalRows = body.length + head.length;
+
+    let cellPad, fontPt;
+    if(group.length === 1){
+      // Full-page fill: 35% of each row to padding, 65% to text
+      const targetRowHeightMm = availableForTable / totalRows;
+      cellPad = Math.max(0.8, targetRowHeightMm * 0.35 / 2);
+      fontPt = Math.max(5.5, Math.min(((targetRowHeightMm * 0.65) / 0.3528) * 0.88, 12));
+    } else {
+      // Safe-fit: keep everything on one page; 0.88 guards against autoTable slop
+      const maxRowHeightMm = availableForTable / totalRows;
+      cellPad = group.length>=5 ? 0.9 : 1.0;
+      fontPt = ((maxRowHeightMm - cellPad*2) / 0.3528) / 1.15 * 0.88;
+      fontPt = Math.max(5.5, Math.min(fontPt, 7.5));
+    }
+
+    pdf.autoTable({
+      head, body,
+      startY: y,
+      margin:{ left:10, right:10, bottom: 12 },
+      styles:{ font:'helvetica', fontSize: fontPt, cellPadding:cellPad, halign:'center', valign:'middle', lineColor:[120,120,120], lineWidth:0.12, overflow:'hidden' },
+      headStyles:{ fillColor:[231,239,233], textColor:[30,40,35], fontStyle:'bold' },
+      columnStyles:{ 0:{cellWidth: group.length===1 ? 46 : 38, halign:'left'} },
+      didParseCell: function(data){
+        if(data.row.section==='body' && Array.isArray(data.row.raw)){
+          const dayIdx = monthData.days[data.row.index];
+          if(dayIdx && dayIdx.isGlobalHoliday){
+            data.cell.styles.fillColor = dayIdx.weekend ? [246,244,239] : [240,217,210];
+          }
+        }
+      }
+    });
+
+    let finalY = pdf.lastAutoTable.finalY + 5;
+    const legendCodes = leaveTypes.filter(t=>usedCodes[t.code]);
+    if(legendCodes.length){
+      pdf.setFontSize(7);
+      pdf.setTextColor(90,90,90);
+      const legendText = legendCodes.map(t=>`${turkceAsciiYukle(t.abbr)}: ${turkceAsciiYukle(t.label)}`).join('   ·   ');
+      pdf.text(legendText, 10, finalY);
+      pdf.setTextColor(0,0,0);
+    }
+  });
+
+  if(pdf){
+    pdf.save(`imza-cizelgesi-${MONTHS[curMonth]}-${curYear}.pdf`);
+    flashStatus('PDF indirildi.');
+  }
+}
+
+// jsPDF's base font (helvetica) lacks Turkish dotted/dotless letters and diacritics;
+// map them to closest ASCII equivalents so the PDF renders cleanly instead of showing boxes/garbage.
+function turkceAsciiYukle(s){
+  if(!s) return '';
+  const map = { 'ı':'i','İ':'I','ş':'s','Ş':'S','ğ':'g','Ğ':'G','ü':'u','Ü':'U','ö':'o','Ö':'O','ç':'c','Ç':'C','î':'i','Î':'I','â':'a','Â':'A','û':'u','Û':'U' };
+  return s.toString().replace(/[ışŞğĞüÜöÖçÇİîÎâÂûÛ]/g, ch => map[ch] !== undefined ? map[ch] : ch);
+}
+
+function renderGroupSheetWordHTML(group, monthData){
+  const schoolName = document.getElementById('schoolName').value.trim() || 'KURUM ADI';
+  const directorName = document.getElementById('directorName').value.trim();
+
+  let innerHtml, legendHtml, empInfoHtml='';
+  if(group.length===1){
+    const r = renderSingleEmployeeTable(group[0], monthData);
+    innerHtml = r.html; legendHtml = r.legend;
+    empInfoHtml = `<table class="info-table"><tr>
+      <td class="info-cell"><strong>Ad Soyad:</strong> ${escapeHtml(group[0].name)}</td>
+      <td class="info-cell" style="text-align:right;"><strong>Görevi:</strong> ${escapeHtml(group[0].title||'-')}</td>
+    </tr></table>`;
+  } else {
+    const r = renderCombinedTable(group, monthData);
+    innerHtml = r.html; legendHtml = r.legend;
+  }
+
+  return `<div class="sheet">
+    <div class="school-line">${escapeHtml(schoolName)}</div>
+    <h2>PERSONEL DEVAM VE İMZA ÇİZELGESİ</h2>
+    <div class="period">${MONTHS[curMonth]} ${curYear}</div>
+    <table class="info-table director-table"><tr>
+      <td class="info-cell"><strong>Okul Müdürü:</strong> ${escapeHtml(directorName||'—')}</td>
+      <td class="info-cell" style="text-align:right;">İmza: ______________________</td>
+    </tr></table>
+    ${empInfoHtml}
+    ${innerHtml}
+    ${legendHtml}
+  </div>`;
+}
+
+function exportWord(){
+  if(employees.length===0){ flashStatus('Lütfen önce personel ekleyin.', true); return; }
+  const monthData = computeMonthData();
+  const groups = computePageGroups();
+  let bodyHtml = '';
+  groups.forEach((g,i)=>{
+    bodyHtml += renderGroupSheetWordHTML(g, monthData);
+    if(i < groups.length-1) bodyHtml += '<br clear="all" style="page-break-before:always;">';
+  });
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset="utf-8"><title>İmza Çizelgesi</title>
+  <style>
+    body{font-family:Calibri, Arial, sans-serif;}
+    table{border-collapse:collapse; width:100%; margin-bottom:10px;}
+    td, th{border:1px solid #888; padding:3px 5px; font-size:10px; text-align:center;}
+    th{background:#ccfbf1;}
+    h2{font-size:16px; text-align:center; margin:4px 0;}
+    .school-line{text-align:center; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#555;}
+    .period{text-align:center; font-size:12px; color:#444; margin-bottom:8px;}
+    .info-table, .info-table td{border:none; padding:2px 0;}
+    .director-table{border-top:1px solid #000; border-bottom:1px solid #000; margin:8px 0;}
+    .director-table td{border:none; font-size:11px; padding:4px 0;}
+    .info-table.info-table td.info-cell{font-size:11px;}
+    .print-legend{font-size:9px; color:#666; margin-top:4px;}
+  </style></head>
+  <body>${bodyHtml}</body></html>`;
+  const blob = new Blob(['\ufeff', html], { type:'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `imza-cizelgesi-${MONTHS[curMonth]}-${curYear}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashStatus('Word dosyası indirildi.');
+}
+
+function exportExcel(){
+  if(employees.length===0){ flashStatus('Lütfen önce personel ekleyin.', true); return; }
+  if(!window.XLSX){ flashStatus('Excel kütüphanesi yüklenemedi.', true); return; }
+  const monthData = computeMonthData();
+  const groups = computePageGroups();
+  const wb = XLSX.utils.book_new();
+  const schoolName = document.getElementById('schoolName').value.trim() || 'KURUM ADI';
+  const directorName = document.getElementById('directorName').value.trim();
+
+  groups.forEach((group, gi)=>{
+    const aoa = [];
+    const merges = [];
+    const totalCols = group.length===1 ? 3 : (1 + group.length*2);
+
+    aoa.push([schoolName]);
+    merges.push({ s:{r:0,c:0}, e:{r:0,c:totalCols-1} });
+    aoa.push(['PERSONEL DEVAM VE İMZA ÇİZELGESİ']);
+    merges.push({ s:{r:1,c:0}, e:{r:1,c:totalCols-1} });
+    aoa.push([`${MONTHS[curMonth]} ${curYear}`]);
+    merges.push({ s:{r:2,c:0}, e:{r:2,c:totalCols-1} });
+    aoa.push([`Okul Müdürü: ${directorName || '-'}`]);
+    merges.push({ s:{r:3,c:0}, e:{r:3,c:totalCols-1} });
+    aoa.push([]);
+
+    let headerRowIdx;
+    if(group.length===1){
+      const emp = group[0];
+      aoa.push([`Ad Soyad: ${emp.name}`, `Görevi: ${emp.title||'-'}`, '']);
+      const empInfoRow = aoa.length-1;
+      merges.push({ s:{r:empInfoRow,c:0}, e:{r:empInfoRow,c:2} });
+
+      headerRowIdx = aoa.length;
+      aoa.push(['Tarih','Giriş','Çıkış']);
+      monthData.days.forEach(d=>{
+        const rowIdx = aoa.length;
+        const tarih = formatDate(curYear, curMonth, d.day, d.dowIdx);
+        if(d.isGlobalHoliday){
+          aoa.push([tarih, holidayLabel(d), '']);
+          merges.push({ s:{r:rowIdx,c:1}, e:{r:rowIdx,c:2} });
+        } else {
+          const code = (monthData.period.leaves[emp.id]||{})[d.day];
+          if(code){
+            const t = findType(code);
+            aoa.push([tarih, t?t.label:code, '']);
+            merges.push({ s:{r:rowIdx,c:1}, e:{r:rowIdx,c:2} });
+          } else {
+            aoa.push([tarih, '', '']);
+          }
+        }
+      });
+    } else {
+      headerRowIdx = aoa.length;
+      const headRow1 = ['Tarih'];
+      group.forEach(e=>{ headRow1.push(e.name); headRow1.push(''); });
+      aoa.push(headRow1);
+      merges.push({ s:{r:headerRowIdx,c:0}, e:{r:headerRowIdx+1,c:0} });
+      group.forEach((e,i)=>{
+        const col = 1 + i*2;
+        merges.push({ s:{r:headerRowIdx,c:col}, e:{r:headerRowIdx,c:col+1} });
+      });
+      const headRow2 = [''];
+      group.forEach(()=>{ headRow2.push('Giriş'); headRow2.push('Çıkış'); });
+      aoa.push(headRow2);
+
+      monthData.days.forEach(d=>{
+        const rowIdx = aoa.length;
+        const tarih = formatDate(curYear, curMonth, d.day, d.dowIdx);
+        const row = [tarih];
+        if(d.isGlobalHoliday){
+          row.push(holidayLabel(d));
+          for(let k=1;k<group.length*2;k++) row.push('');
+          merges.push({ s:{r:rowIdx,c:1}, e:{r:rowIdx,c:totalCols-1} });
+        } else {
+          group.forEach(emp=>{
+            const code = (monthData.period.leaves[emp.id]||{})[d.day];
+            if(code){
+              const t = findType(code);
+              row.push(t?t.label:code); row.push('');
+            } else { row.push(''); row.push(''); }
+          });
+        }
+        aoa.push(row);
+      });
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = merges;
+    const cols = [{wch:20}]; // Tarih sütunu geniş
+    for(let i=0;i<(totalCols-1)/2;i++){ cols.push({wch:12}); cols.push({wch:12}); }
+    ws['!cols'] = cols;
+    XLSX.utils.book_append_sheet(wb, ws, `Sayfa ${gi+1}`);
+  });
+
+  XLSX.writeFile(wb, `imza-cizelgesi-${MONTHS[curMonth]}-${curYear}.xlsx`);
+  flashStatus('Excel dosyası indirildi.');
+}
+
+/* ---------- Event wiring ---------- */
+
+document.getElementById('empTitleSel').addEventListener('change', (e)=>{
+  document.getElementById('empTitleCustomRow').style.display = e.target.value==='DIGER' ? 'flex' : 'none';
+});
+
+document.getElementById('addEmpBtn').onclick = ()=>{
+  const nameEl = document.getElementById('empName');
+  const titleSel = document.getElementById('empTitleSel');
+  const titleCustomEl = document.getElementById('empTitleCustom');
+  const name = nameEl.value.trim();
+  if(!name){ flashStatus('Ad Soyad girin.', true); return; }
+  let title = titleSel.value;
+  if(title==='DIGER'){
+    title = titleCustomEl.value.trim();
+    if(!title){ flashStatus('Lütfen görev adını yazın.', true); return; }
+  }
+  employees.push({ id: uid(), name, title });
+  nameEl.value=''; titleCustomEl.value='';
+  titleSel.value='Geçici İşçi';
+  document.getElementById('empTitleCustomRow').style.display='none';
+  saveEmployees();
+  renderEmpList();
+  renderCalTargetSelect();
+  renderCalendar();
+  flashStatus('Personel eklendi.');
+};
+
+document.getElementById('schoolName').addEventListener('change', saveSchoolName);
+document.getElementById('directorName').addEventListener('change', saveDirectorName);
+
+document.getElementById('monthSel').onchange = (e)=>{
+  const idx = MONTHS.findIndex(m => m.toLowerCase() === e.target.value.trim().toLowerCase());
+  if(idx >= 0) curMonth = idx;
+  else {
+    const num = parseInt(e.target.value);
+    if(!isNaN(num) && num >= 1 && num <= 12) curMonth = num - 1;
+  }
+  e.target.value = MONTHS[curMonth];
+  renderCalendar();
+};
+document.getElementById('yearSel').onchange = (e)=>{
+  const y = parseInt(e.target.value);
+  if(!isNaN(y) && y > 0) curYear = y;
+  e.target.value = curYear;
+  renderCalendar();
+};
+document.getElementById('calTarget').onchange = (e)=>{ calTarget = e.target.value; renderCalendar(); };
+
+document.getElementById('toggleTypeManageBtn').onclick = ()=>{
+  const box = document.getElementById('typeManageBox');
+  box.style.display = box.style.display==='none' ? 'block' : 'none';
+};
+
+document.getElementById('addTypeBtn').onclick = ()=>{
+  const labelEl = document.getElementById('newTypeLabel');
+  const abbrEl = document.getElementById('newTypeAbbr');
+  const label = labelEl.value.trim();
+  if(!label){ flashStatus('İzin türü adı girin.', true); return; }
+  const abbr = abbrEl.value.trim() || makeAbbrFromLabel(label);
+  const code = 'C' + Math.random().toString(36).slice(2,7).toUpperCase();
+  leaveTypes.push({ code, label, abbr });
+  saveLeaveTypes();
+  labelEl.value=''; abbrEl.value='';
+  renderTypeChips();
+  flashStatus('İzin türü eklendi.');
+};
+
+document.getElementById('dayModalCloseBtn').onclick = closeDayPopup;
+document.getElementById('dayModalBackdrop').onclick = (e)=>{
+  if(e.target.id==='dayModalBackdrop') closeDayPopup();
+};
+
+document.getElementById('resetBtn').onclick = ()=>{
+  if(!confirm('Bu ay için tüm tatil ve izin işaretleri silinsin mi?')) return;
+  periods[periodKey(curYear, curMonth)] = { holidays: [], leaves: {} };
+  savePeriods();
+  renderCalendar();
+  flashStatus('Bu ay sıfırlandı.');
+};
+
+document.getElementById('generateBtn').onclick = ()=>{
+  const ok = buildPrintSheets();
+  if(ok) setTimeout(()=> window.print(), 80);
+};
+document.getElementById('exportPdfBtn').onclick = exportPDF;
+document.getElementById('exportWordBtn').onclick = exportWord;
+document.getElementById('exportExcelBtn').onclick = exportExcel;
+
+// ── Elektrik kesintisi koruması: sayfa kapanırken son kayıt ──
+window.addEventListener('beforeunload', ()=>{
+  try{
+    localStorage.setItem('isci_employees', JSON.stringify(employees));
+    localStorage.setItem('isci_periods', JSON.stringify(periods));
+    localStorage.setItem('isci_schoolName', document.getElementById('schoolName').value);
+    localStorage.setItem('isci_directorName', document.getElementById('directorName').value);
+    localStorage.setItem('isci_leaveTypes', JSON.stringify(leaveTypes));
+  }catch(e){}
+});
+
+// ── Periyodik otomatik kaydetme (her 30 saniyede bir) ──
+setInterval(()=>{
+  try{
+    localStorage.setItem('isci_employees', JSON.stringify(employees));
+    localStorage.setItem('isci_periods', JSON.stringify(periods));
+    localStorage.setItem('isci_schoolName', document.getElementById('schoolName').value);
+    localStorage.setItem('isci_directorName', document.getElementById('directorName').value);
+    localStorage.setItem('isci_leaveTypes', JSON.stringify(leaveTypes));
+  }catch(e){}
+}, 30000);
+
+// ── Dışa Aktar (JSON) ──
+document.getElementById('exportDataBtn').onclick = ()=>{
+  const data = {
+    employees,
+    periods,
+    leaveTypes,
+    schoolName: document.getElementById('schoolName').value,
+    directorName: document.getElementById('directorName').value
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `imza-cizelgesi-veriler_${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashStatus('Veriler dışa aktarıldı.');
+};
+
+// ── İçe Aktar (JSON) ──
+document.getElementById('importDataBtn').onclick = ()=>{
+  document.getElementById('importFileInput').click();
+};
+document.getElementById('importFileInput').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data.employees || !data.periods){
+        flashStatus('Hata: Geçersiz dosya formatı!', true);
+        return;
+      }
+      if(!confirm('Mevcut verilerin üzerine yazılacak. Emin misiniz?')) return;
+      employees = data.employees;
+      periods = data.periods;
+      if(data.leaveTypes) leaveTypes = data.leaveTypes;
+      if(data.schoolName) document.getElementById('schoolName').value = data.schoolName;
+      if(data.directorName) document.getElementById('directorName').value = data.directorName;
+      saveEmployees(); savePeriods(); saveSchoolName(); saveDirectorName(); saveLeaveTypes();
+      renderEmpList(); renderCalTargetSelect(); renderTypeChips(); renderCalendar();
+      flashStatus('Veriler başarıyla içe aktarıldı.');
+    } catch(err){
+      flashStatus('Hata: Dosya okunamadı!', true);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+(async function init(){
+  await loadAll();
+  populateMonthYear();
+  renderEmpList();
+  renderCalTargetSelect();
+  renderTypeChips();
+  renderCalendar();
+})();
+</script>
+</body>
+</html>

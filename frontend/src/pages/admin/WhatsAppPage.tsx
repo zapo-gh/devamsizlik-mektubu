@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { useConfirm } from '../../hooks/useConfirm';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { MessageCircle, Link, Unlink, QrCode, Smartphone, CheckCircle2, Info, Loader2, AlertTriangle } from 'lucide-react';
 
 type WAStatus = 'disconnected' | 'qr' | 'connecting' | 'connected';
 
@@ -11,10 +13,10 @@ interface WAState {
 }
 
 const STATUS_LABELS: Record<WAStatus, string> = {
-  disconnected: '🔴 Bağlı Değil',
-  connecting: '🟡 Bağlanıyor...',
-  qr: '📱 QR Kod Bekleniyor',
-  connected: '🟢 Bağlı',
+  disconnected: 'Bağlı Değil',
+  connecting: 'Bağlanıyor...',
+  qr: 'QR Kod Bekleniyor',
+  connected: 'Bağlı',
 };
 
 export default function WhatsAppPage() {
@@ -61,99 +63,138 @@ export default function WhatsAppPage() {
     }
   };
 
-  const statusColor: Record<WAStatus, string> = {
-    disconnected: '#fee2e2',
-    connecting: '#fef9c3',
-    qr: '#dbeafe',
-    connected: '#dcfce7',
+  const statusColors: Record<WAStatus, { bg: string, border: string, text: string, icon: React.ReactNode }> = {
+    disconnected: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: <Unlink size={24} className="text-red-500"/> },
+    connecting:   { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: <Loader2 size={24} className="text-amber-500 animate-spin"/> },
+    qr:           { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: <QrCode size={24} className="text-blue-500"/> },
+    connected:    { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: <CheckCircle2 size={24} className="text-green-500"/> },
   };
 
+  const currentTheme = statusColors[waState.status];
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">📱 WhatsApp Entegrasyonu</h1>
-          <p className="page-subtitle">Okul WhatsApp hesabı bağlanarak velilere otomatik mesaj gönderilir.</p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="WhatsApp Entegrasyonu"
+        description="Okul WhatsApp hesabını bağlayarak velilere otomatik PDF belge ve metin mesajı gönderin."
+        icon={<MessageCircle size={28} className="text-emerald-600" />}
+      />
 
       {/* Durum Kartı */}
-      <div className="card" style={{ marginBottom: 24, background: statusColor[waState.status], border: 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <div className={`rounded-xl border ${currentTheme.border} ${currentTheme.bg} p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm transition-colors duration-300`}>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white rounded-full shadow-sm">
+            {currentTheme.icon}
+          </div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{STATUS_LABELS[waState.status]}</div>
-            {waState.error && <div style={{ color: 'var(--danger)', fontSize: 13, marginTop: 4 }}>{waState.error}</div>}
+            <div className={`text-xl font-bold ${currentTheme.text}`}>{STATUS_LABELS[waState.status]}</div>
+            {waState.error && <div className="text-red-500 text-sm mt-1 font-semibold flex items-center gap-1"><AlertTriangle size={14}/> {waState.error}</div>}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(waState.status === 'disconnected') && (
-              <button
-                className="btn btn-primary"
-                onClick={handleConnect}
-                disabled={actionLoading}
-              >
-                {actionLoading ? 'Başlatılıyor...' : '🔌 Bağlan'}
-              </button>
-            )}
-            {(waState.status === 'connected') && (
-              <button
-                className="btn btn-danger"
-                onClick={handleDisconnect}
-                disabled={actionLoading}
-              >
-                {actionLoading ? '...' : '🔴 Oturumu Kapat'}
-              </button>
-            )}
-          </div>
+        </div>
+        
+        <div>
+          {(waState.status === 'disconnected') && (
+            <button 
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+              onClick={handleConnect}
+              disabled={actionLoading}
+            >
+              {actionLoading ? <><Loader2 size={18} className="animate-spin"/> Başlatılıyor...</> : <><Link size={18}/> Bağlan</>}
+            </button>
+          )}
+          {(waState.status === 'connected') && (
+            <button 
+              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+              onClick={handleDisconnect}
+              disabled={actionLoading}
+            >
+              {actionLoading ? <><Loader2 size={18} className="animate-spin"/> Bekleyin...</> : <><Unlink size={18}/> Oturumu Kapat</>}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* QR Kod */}
-      {waState.status === 'qr' && waState.qrBase64 && (
-        <div className="card" style={{ textAlign: 'center', maxWidth: 380, margin: '0 auto 24px' }}>
-          <h3 style={{ marginBottom: 8 }}>QR Kodu Okutun</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
-            Telefonunuzda WhatsApp'ı açın → Ayarlar → Bağlı Cihazlar → Cihaz Bağla
-          </p>
-          <img
-            src={waState.qrBase64}
-            alt="WhatsApp QR Kodu"
-            style={{ width: 280, height: 280, border: '2px solid var(--border)', borderRadius: 8 }}
-          />
-          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 12 }}>
-            QR kod 60 saniyede bir yenilenir.
-          </p>
-        </div>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sol Kolon: Bilgi ve Talimatlar */}
+        <div className="space-y-6">
+          {waState.status === 'disconnected' && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  <Info size={20} className="text-indigo-600" /> Nasıl Çalışır?
+                </h3>
+              </div>
+              <div className="p-6 text-sm text-gray-700">
+                <ol className="space-y-4 list-decimal list-inside">
+                  <li><strong className="text-gray-900 font-semibold">Bağlan</strong> butonuna tıklayın.</li>
+                  <li>QR kod görüntülendiğinde telefonda WhatsApp'ı açın.</li>
+                  <li><span className="bg-gray-100 px-2 py-0.5 rounded font-mono text-xs">Ayarlar → Bağlı Cihazlar → Cihaz Bağla</span> menüsünden ekrandaki QR kodu okutun.</li>
+                  <li>Bağlantı kurulduktan sonra <strong className="text-gray-900">Devamsızlık</strong> ve <strong className="text-gray-900">Yazılı Uyarılar</strong> sayfalarında "📱 WhatsApp Gönder" butonları aktif olur.</li>
+                  <li>Butona basınca ilgili belge veya mesaj <strong className="text-indigo-600 font-bold">otomatik olarak</strong> velinin telefonuna gönderilir.</li>
+                </ol>
+                <div className="mt-6 p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-800 text-xs font-medium flex gap-2">
+                  <Smartphone size={16} className="shrink-0"/>
+                  Oturum bilgisi kaydedilir. Programı kapatıp açtığınızda otomatik olarak tekrar bağlanır.
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Bağlantı talimatları */}
-      {waState.status === 'disconnected' && (
-        <div className="card">
-          <h3>Nasıl Çalışır?</h3>
-          <ol style={{ paddingLeft: 20, lineHeight: 2, color: 'var(--text)' }}>
-            <li><strong>Bağlan</strong> butonuna tıklayın.</li>
-            <li>QR kod görüntülendiğinde telefonda WhatsApp'ı açın.</li>
-            <li>Ayarlar → Bağlı Cihazlar → Cihaz Bağla ile QR kodu okutun.</li>
-            <li>Bağlantı kurulduktan sonra <strong>Devamsızlık</strong> ve <strong>Yazılı Uyarı</strong> sayfalarında "📱 WhatsApp Gönder" butonları aktif olur.</li>
-            <li>Butona basınca PDF belgesi ve mesaj <strong>otomatik olarak</strong> velinin WhatsApp'ına gönderilir.</li>
-          </ol>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8 }}>
-            Oturum bilgisi kaydedilir. Sonraki program başlatmalarında otomatik bağlanır.
-          </p>
+          {waState.status === 'connected' && (
+            <div className="bg-white rounded-xl border border-green-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-green-100 bg-green-50">
+                <h3 className="font-bold text-green-900 flex items-center gap-2">
+                  <CheckCircle2 size={20} className="text-green-600" /> Bağlantı Aktif
+                </h3>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-800 text-sm mb-4 leading-relaxed">
+                  WhatsApp hesabınız başarıyla bağlandı. <strong className="font-bold">Devamsızlık</strong> ve <strong className="font-bold">Yazılı Uyarılar</strong> sayfalarındaki
+                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-xs mx-1">
+                    <MessageCircle size={12}/> WhatsApp Gönder
+                  </span>
+                  butonunu kullanarak velilere otomatik mesaj gönderebilirsiniz.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                    <div className="font-bold text-gray-900 text-xs uppercase mb-1">Devamsızlık Mektupları</div>
+                    <div className="text-gray-500 text-xs">Mektup PDF dosyası olarak belge halinde gönderilir.</div>
+                  </div>
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                    <div className="font-bold text-gray-900 text-xs uppercase mb-1">Yazılı Uyarılar</div>
+                    <div className="text-gray-500 text-xs">Şablon dahilinde standart metin mesajı olarak gönderilir.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
 
-      {waState.status === 'connected' && (
-        <div className="card">
-          <h3>✅ Bağlantı Aktif</h3>
-          <p style={{ color: 'var(--text)' }}>
-            WhatsApp bağlı. <strong>Devamsızlık</strong> ve <strong>Yazılı Uyarılar</strong> sayfalarındaki
-            <strong> "📱 WhatsApp Gönder"</strong> butonunu kullanarak velilere otomatik mesaj gönderebilirsiniz.
-          </p>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-            Devamsızlık mektupları PDF belgesiyle, yazılı uyarılar ise metin mesajı olarak otomatik gönderilir.
-          </p>
-        </div>
-      )}
+        {/* Sağ Kolon: QR Kod (Sadece bekleniyorsa gösterilir) */}
+        {waState.status === 'qr' && waState.qrBase64 && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-500">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-full mb-4">
+              <QrCode size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">QR Kodu Okutun</h3>
+            <p className="text-gray-500 text-sm text-center mb-6 max-w-xs">
+              Telefonunuzda WhatsApp'ı açın <br/> 
+              <strong className="text-gray-700">Ayarlar → Bağlı Cihazlar → Cihaz Bağla</strong>
+            </p>
+            <div className="p-2 bg-white border-2 border-gray-100 rounded-xl shadow-sm">
+              <img 
+                className="w-64 h-64 object-contain" 
+                src={waState.qrBase64}
+                alt="WhatsApp QR Kodu"
+              />
+            </div>
+            <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-gray-400">
+              <Loader2 size={14} className="animate-spin"/> QR kod 60 saniyede bir yenilenir
+            </div>
+          </div>
+        )}
+      </div>
+
       {confirmModal}
     </div>
   );

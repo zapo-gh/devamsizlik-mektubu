@@ -34,14 +34,16 @@ model Student {
   writtenWarnings      WrittenWarning[]
   dailyViolations      DailyViolation[]
   gradeReportStudents  GradeReportStudent[]
+  clubMembers          StudentClubMember[]
 }
 
 model Parent {
   id       String @id @default(uuid())
   userId   String @unique
   fullName String
-  phone    String
-
+  phone           String
+  waConsentStatus String    @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  waConsentDate   DateTime?
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   students Student[] @relation("StudentParents")
 
@@ -130,6 +132,7 @@ model SchoolSettings {
   id             String   @id @default("singleton")
   schoolName     String   @default("")
   principalName  String   @default("")
+  academicYear   String   @default("2025-2026")
   waTemplate1    String?  @default("")
   waTemplate2    String?  @default("")
   waTemplate3    String?  @default("")
@@ -142,9 +145,15 @@ model SchoolSettings {
 model Staff {
   id        String   @id @default(uuid())
   name      String
-  role      String
-  className String?  // Sadece SINIF_REHBER_OGRETMEN için (örn: "10-A")
-  isActive  Boolean  @default(true)
+  role          String
+  className     String?  // Sadece SINIF_REHBER_OGRETMEN için (örn: "10-A")
+  tcKimlikNo    String?
+  brans         String?
+  kurumSicilNo  String?
+  emekliSicilNo String?
+  unvan         String?
+  gorev         String?
+  isActive      Boolean  @default(true)
   createdAt DateTime @default(now())
 
   @@index([role])
@@ -181,4 +190,283 @@ model GradeReportStudent {
 
   @@index([reportId])
   @@index([studentId])
+}
+
+// ----------------------------------------------------
+// İDARE YARDIMCISI 16 MODÜL VERİTABANI ALTYAPISI
+// ----------------------------------------------------
+
+model DutyStation {
+  id        String   @id @default(uuid())
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Int      @default(1)
+  assignments DutyAssignment[]
+}
+
+model DutyAssignment {
+  id           String @id @default(uuid())
+  staffId      String
+  stationId    String
+  dayOfWeek    Int
+  weekNumber   Int    @default(0)
+  academicYear String
+
+  station DutyStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+}
+
+model Supplier {
+  id            String @id @default(uuid())
+  name          String
+  taxNumber     String?
+  taxOffice     String?
+  address       String?
+  phone         String?
+  email         String?
+  iban          String?
+  contactPerson String?
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+
+  offers ProcurementOffer[]
+}
+
+model OrderLetter {
+  id            String   @id @default(uuid())
+  subject       String
+  supplierName  String
+  supplierAddress String?
+  date          String
+  deliveryDate  String
+  academicYear  String
+  items         String   // JSON [{name, quantity, unit, unitPrice, total}]
+  notes         String?
+  extraData     String?
+  createdAt     DateTime @default(now())
+}
+
+model Procurement {
+  id            String @id @default(uuid())
+  title         String
+  date          String
+  procedureType String @default("22/d")
+  estimatedCost Float  @default(0)
+  status        String @default("ONAY_BEKLIYOR")
+  academicYear  String
+  itemCount     Int    @default(0)
+  supplierCount Int    @default(0)
+  commissionMembers String? // JSON string olarak tutulabilir
+  createdAt     DateTime @default(now())
+
+  items  ProcurementItem[]
+  offers ProcurementOffer[]
+  extraData String?
+}
+
+model ProcurementItem {
+  id                 String @id @default(uuid())
+  procurementId      String
+  name               String
+  quantity           Int
+  unit               String
+  estimatedUnitPrice Float
+
+  procurement Procurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  offers      ProcurementOffer[]
+}
+
+model ProcurementOffer {
+  id            String @id @default(uuid())
+  procurementId String
+  itemId        String
+  supplierId    String
+  offeredPrice  Float
+  isWinner      Boolean @default(false)
+
+  procurement Procurement @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  item        ProcurementItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
+
+model StudentClub {
+  id               String @id @default(uuid())
+  name             String
+  description      String?
+  assignedStaffId  String?
+  assignedStaffName String?
+  meetingDay       String?
+  meetingTime      String?
+  maxMembers       Int     @default(30)
+  academicYear     String
+  isActive         Int     @default(1)
+  memberCount      Int     @default(0)
+
+  members StudentClubMember[]
+  extraData String?
+}
+
+model StudentClubMember {
+  id        String @id @default(uuid())
+  clubId    String
+  studentId String
+  role      String @default("Üye")
+
+  club StudentClub @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Extracurricular {
+  id               String @id @default(uuid())
+  branch           String
+  assignedStaffId  String?
+  assignedStaffName String?
+  schedule         String?
+  academicYear     String
+  notes            String?
+  status           String @default("ONAY_BEKLIYOR")
+  extraData        String?
+}
+
+model SocialActivity {
+  id               String @id @default(uuid())
+  name             String
+  type             String
+  description      String?
+  plannedDate      String?
+  academicYear     String
+  assignedStaffId  String?
+  assignedStaffName String?
+  status           String @default("PLAN_ASAMASINDA")
+  notes            String?
+  extraData        String?
+}
+
+model FieldTrip {
+  id                 String @id @default(uuid())
+  title              String
+  destination        String
+  date               String
+  returnDate         String?
+  purpose            String?
+  transportation     String?
+  assignedStaffId    String?
+  assignedStaffName  String?
+  participantClasses String?
+  academicYear       String
+  notes              String?
+  status             String @default("PLAN_ASAMASINDA")
+  extraData          String?
+}
+
+model BoardMeeting {
+  id               String @id @default(uuid())
+  title            String
+  date             String
+  time             String?
+  location         String?
+  academicYear     String
+  agenda           String?
+  decisions        String?
+  status           String @default("PLANLANDI")
+  extraData        String?
+}
+
+model Commission {
+  id               String @id @default(uuid())
+  name             String
+  description      String?
+  academicYear     String
+  members          String? 
+  status           String @default("AKTIF")
+  extraData        String?
+}
+
+model CommemorativeDay {
+  id               String @id @default(uuid())
+  name             String
+  startDate        String
+  endDate          String
+  assignedStaffId  String?
+  assignedStaffName String?
+  description      String?
+  academicYear     String
+  status           String @default("BEKLIYOR")
+  extraData        String?
+}
+
+model Holiday {
+  id        String @id @default(uuid())
+  name      String
+  startDate String
+  endDate   String?
+  type      String @default("RESMI_TATIL")
+  academicYear String
+  extraData    String?
+}
+
+model AnnualPlanItem {
+  id           String @id @default(uuid())
+  academicYear String
+  month        Int
+  title        String
+  description  String?
+  category     String?
+  sortOrder    Int     @default(0)
+  extraData    String?
+}
+
+model ParentAssociationMeeting {
+  id               String @id @default(uuid())
+  date             String
+  type             String @default("OLAGAN")
+  meetingNumber    Int    @default(1)
+  academicYear     String
+  notes            String?
+  decisions        String?
+  status           String @default("PLANLANDI")
+  extraData        String?
+}
+
+model ParentAssociationMember {
+  id           String @id @default(uuid())
+  fullName     String
+  role         String @default("UYE")
+  phone        String?
+  academicYear String
+  extraData    String?
+}
+
+model TravelAllowance {
+  id                String @id @default(uuid())
+  staffId           String?
+  staffName         String?
+  title             String?
+  purpose           String?
+  departurePlace    String?
+  arrivalPlace      String?
+  departureDate     String?
+  returnDate        String?
+  transportType     String?
+  transportCost     Float?
+  dailyAllowance    Float?
+  accommodationCost Float?
+  totalCost         Float?
+  academicYear      String
+  notes             String?
+  extraData         String?
+}
+
+model StaffTransfer {
+  id             String @id @default(uuid())
+  staffName      String
+  staffTitle     String?
+  tcKimlikNo     String?
+  sicilNo        String?
+  currentSchool  String?
+  newSchool      String?
+  transferDate   String
+  transferReason String?
+  academicYear   String
+  notes          String?
+  extraData      String?
 }

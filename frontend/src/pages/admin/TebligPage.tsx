@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { FileSignature, User, FileText, Calendar, Clock, PenTool, CheckSquare, Square, Download, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -34,13 +36,61 @@ export default function TebligPage() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
+  const [staffList, setStaffList] = useState<any[]>([]);
 
   useEffect(() => {
     api.get('/settings').then((res: any) => {
       const d = res.data?.data || res.data;
       if (d?.schoolName) setSchoolName(d.schoolName);
     }).catch(() => {});
+
+    api.get('/staff').then((res: any) => {
+      setStaffList(res.data?.data?.staff || []);
+    }).catch(() => {
+      setStaffList([]);
+    });
   }, []);
+
+  const handleNameChange = (val: string) => {
+    setAdiSoyadi(val);
+    const found = staffList.find(s => s.name === val);
+    if (found) {
+      if (found.tcKimlikNo) setTcKimlikNo(found.tcKimlikNo);
+      
+      const parts = [];
+      if (found.unvan) parts.push(found.unvan);
+      if (found.brans) parts.push(found.brans);
+      const unvanStr = parts.length > 0 ? parts.join(' / ') : '';
+      if (unvanStr) {
+        setUnvani(unvanStr);
+        setTebellugEdenUnvani(unvanStr);
+      }
+      setTebellugEdenAdSoyad(found.name);
+      if (schoolName) setGorevYeri(schoolName);
+    }
+  };
+
+  const handleTebligEdenChange = (val: string) => {
+    setTebligEdenAdSoyad(val);
+    const found = staffList.find(s => s.name === val);
+    if (found) {
+      const parts = [];
+      if (found.unvan) parts.push(found.unvan);
+      if (found.brans) parts.push(found.brans);
+      if (parts.length > 0) setTebligEdenUnvani(parts.join(' / '));
+    }
+  };
+
+  const handleTebellugEdenChange = (val: string) => {
+    setTebellugEdenAdSoyad(val);
+    const found = staffList.find(s => s.name === val);
+    if (found) {
+      const parts = [];
+      if (found.unvan) parts.push(found.unvan);
+      if (found.brans) parts.push(found.brans);
+      if (parts.length > 0) setTebellugEdenUnvani(parts.join(' / '));
+    }
+  };
 
   const handleGenerate = async () => {
     if (!adiSoyadi.trim()) {
@@ -91,216 +141,259 @@ export default function TebligPage() {
     }
   };
 
+  const CheckboxItem = ({ checked, onChange, label }: { checked: boolean, onChange: (v: boolean) => void, label: string }) => (
+    <label className={`
+      flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none flex-1 min-w-[200px]
+      ${checked ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'}
+    `}>
+      <div className={`
+        w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors
+        ${checked ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-300'}
+      `}>
+        {checked && <CheckSquare size={14} className="text-white fill-current" />}
+      </div>
+      <span className="text-sm font-semibold">{label}</span>
+    </label>
+  );
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Tebliğ – Tebellüğ Belgesi</h1>
-          <p className="page-subtitle">Personele yapılan tebligatı belgeleyen resmi form (PDF)</p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Tebliğ – Tebellüğ Belgesi"
+        description="Personele yapılan tebligatı belgeleyen resmi formu PDF olarak oluşturun ve indirin."
+        icon={<FileSignature size={28} className="text-indigo-600" />}
+      />
 
-      {error   && <div className="alert alert-error"   style={{ marginBottom: 16 }}>{error}</div>}
-      {success && <div className="alert alert-success" style={{ marginBottom: 16 }}>{success}</div>}
-
-      {/* Okul Bilgisi */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Okul / Kurum Adı</label>
-          <input
-            className="form-control"
-            value={schoolName}
-            onChange={e => setSchoolName(e.target.value)}
-            placeholder="Ör: Farabi Mesleki ve Teknik Anadolu Lisesi Müdürlüğü"
-          />
+      {error && (
+        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 text-sm flex items-center gap-2 shadow-sm">
+          <AlertTriangle size={18} className="shrink-0"/> <span className="font-bold">Hata:</span> {error}
         </div>
-      </div>
+      )}
+      {success && (
+        <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-100 text-sm flex items-center gap-2 shadow-sm">
+          <CheckCircle2 size={18} className="shrink-0"/> <span className="font-bold">Başarılı:</span> {success}
+        </div>
+      )}
 
       {/* Personel Bilgileri */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, color: 'var(--text)' }}>
-          Personel Bilgileri
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-          <div className="form-group">
-            <label className="form-label">
-              Adı Soyadı <span style={{ color: 'var(--danger)' }}>*</span>
-            </label>
-            <input
-              className="form-control"
-              value={adiSoyadi}
-              onChange={e => setAdiSoyadi(e.target.value)}
-              placeholder="Personelin adı ve soyadı"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">T.C. Kimlik No</label>
-            <input
-              className="form-control"
-              value={tcKimlikNo}
-              onChange={e => setTcKimlikNo(e.target.value.replace(/\D/g, '').slice(0, 11))}
-              placeholder="00000000000"
-              maxLength={11}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Unvanı / Branşı</label>
-            <input
-              className="form-control"
-              value={unvani}
-              onChange={e => setUnvani(e.target.value)}
-              placeholder="Ör: Öğretmen / Matematik"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Görev Yeri</label>
-            <input
-              className="form-control"
-              value={gorevYeri}
-              onChange={e => setGorevYeri(e.target.value)}
-              placeholder="Ör: Okul adı"
-            />
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><User size={20} /></div>
+            Personel Bilgileri
+          </h2>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Adı Soyadı <span className="text-red-500">*</span>
+              </label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={adiSoyadi}
+                onChange={e => handleNameChange(e.target.value)}
+                placeholder="Personelin adı ve soyadı"
+                list="staff-datalist"
+                autoFocus
+              />
+              <datalist id="staff-datalist">
+                {staffList.map(s => (
+                  <option key={s.id} value={s.name} />
+                ))}
+              </datalist>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">T.C. Kimlik No</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={tcKimlikNo}
+                onChange={e => setTcKimlikNo(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="00000000000"
+                maxLength={11}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Unvanı / Branşı</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={unvani}
+                onChange={e => setUnvani(e.target.value)}
+                placeholder="Ör: Öğretmen / Matematik"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Görev Yeri</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={gorevYeri}
+                onChange={e => setGorevYeri(e.target.value)}
+                placeholder="Ör: Okul adı"
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Belge Bilgileri */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, color: 'var(--text)' }}>
-          Belge Bilgileri
-        </h3>
-
-        <div className="form-group">
-          <label className="form-label">
-            Tebliğ Edilen Yazı, Onay veya Kararın Tarih ve Sayısı
-          </label>
-          <input
-            className="form-control"
-            value={tebligTarihSayi}
-            onChange={e => setTebligTarihSayi(e.target.value)}
-            placeholder="Ör: 01.05.2026 tarih, 2026/123 sayılı yazı"
-          />
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><FileText size={20} /></div>
+            Belge Bilgileri
+          </h2>
         </div>
+        
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Tebliğ Edilen Yazı, Onay veya Kararın Tarih ve Sayısı</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={tebligTarihSayi}
+                onChange={e => setTebligTarihSayi(e.target.value)}
+                placeholder="Ör: 01.05.2026 tarih, 2026/123 sayılı yazı"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Tebligatın Konusu</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={tebligatinKonusu}
+                onChange={e => setTebligatinKonusu(e.target.value)}
+                placeholder="Ör: Disiplin soruşturması başlatılması hk."
+              />
+            </div>
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Tebligatın Konusu</label>
-          <input
-            className="form-control"
-            value={tebligatinKonusu}
-            onChange={e => setTebligatinKonusu(e.target.value)}
-            placeholder="Ör: Disiplin soruşturması başlatılması hk."
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Tebliğ Edilen Evrak</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', marginTop: 8 }}>
-            {([
-              ['evrakYaziKarar',          evrakYaziKarar,          setEvrakYaziKarar,          'Yazı/Karar'],
-              ['evrakSertifika',          evrakSertifika,          setEvrakSertifika,          'Sertifika'],
-              ['evrakBasariBelgesi',      evrakBasariBelgesi,      setEvrakBasariBelgesi,      'Başarı Belgesi'],
-              ['evrakAtamaGorevlendirme', evrakAtamaGorevlendirme, setEvrakAtamaGorevlendirme, 'Atama/Görevlendirme'],
-            ] as [string, boolean, (v: boolean) => void, string][]).map(([, val, setter, label]) => (
-              <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-3">Tebliğ Edilen Evrak</label>
+            <div className="flex flex-wrap gap-3">
+              <CheckboxItem checked={evrakYaziKarar} onChange={setEvrakYaziKarar} label="Yazı/Karar" />
+              <CheckboxItem checked={evrakSertifika} onChange={setEvrakSertifika} label="Sertifika" />
+              <CheckboxItem checked={evrakBasariBelgesi} onChange={setEvrakBasariBelgesi} label="Başarı Belgesi" />
+              <CheckboxItem checked={evrakAtamaGorevlendirme} onChange={setEvrakAtamaGorevlendirme} label="Atama/Görevlendirme" />
+            </div>
+            
+            <div className="flex items-center gap-3 mt-4 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+              <label className="flex items-center gap-3 cursor-pointer text-sm font-semibold text-gray-700 shrink-0">
+                <div className={`
+                  w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors
+                  ${evrakDiger ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-300'}
+                `}>
+                  {!!evrakDiger && <CheckSquare size={14} className="text-white fill-current" />}
+                </div>
                 <input
                   type="checkbox"
-                  checked={val}
-                  onChange={e => setter(e.target.checked)}
-                  style={{ accentColor: 'var(--primary)', width: 15, height: 15 }}
+                  checked={!!evrakDiger}
+                  onChange={e => { if (!e.target.checked) setEvrakDiger(''); }}
+                  className="hidden"
                 />
-                {label}
+                Diğer:
               </label>
-            ))}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14, color: 'var(--text)', flexShrink: 0 }}>
-              <input
-                type="checkbox"
-                checked={!!evrakDiger}
-                onChange={e => { if (!e.target.checked) setEvrakDiger(''); }}
-                style={{ accentColor: 'var(--primary)', width: 15, height: 15 }}
+              <input 
+                className="w-full md:max-w-md p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={evrakDiger}
+                onChange={e => setEvrakDiger(e.target.value)}
+                placeholder="Belge adını yazın..."
               />
-              Diğer:
-            </label>
-            <input
-              className="form-control"
-              value={evrakDiger}
-              onChange={e => setEvrakDiger(e.target.value)}
-              placeholder="Belge adını yazın..."
-              style={{ maxWidth: 280 }}
-            />
+            </div>
           </div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Tebligat Tarihi</label>
-            <input
-              type="date"
-              className="form-control"
-              value={tebligatTarihi}
-              onChange={e => setTebligatTarihi(e.target.value)}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Tebligat Saati</label>
-            <input
-              type="time"
-              className="form-control"
-              value={tebligatSaati}
-              onChange={e => setTebligatSaati(e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5"><Calendar size={16} className="text-gray-400"/> Tebligat Tarihi</label>
+              <input 
+                type="date"
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={tebligatTarihi}
+                onChange={e => setTebligatTarihi(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5"><Clock size={16} className="text-gray-400"/> Tebligat Saati</label>
+              <input 
+                type="time"
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 transition-shadow"
+                value={tebligatSaati}
+                onChange={e => setTebligatSaati(e.target.value)}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       {/* İmza Bölümü */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-        <div className="card">
-          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, color: 'var(--text)' }}>
-            Tebliğ Eden
-          </h3>
-          <div className="form-group">
-            <label className="form-label">Ad Soyad</label>
-            <input className="form-control" value={tebligEdenAdSoyad} onChange={e => setTebligEdenAdSoyad(e.target.value)} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100 bg-indigo-50/50">
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <PenTool size={18} className="text-indigo-600" /> Tebliğ Eden
+            </h3>
           </div>
-          <div className="form-group">
-            <label className="form-label">Unvanı</label>
-            <input className="form-control" value={tebligEdenUnvani} onChange={e => setTebligEdenUnvani(e.target.value)} />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Tarih</label>
-            <input type="date" className="form-control" value={tebligEdenTarih} onChange={e => setTebligEdenTarih(e.target.value)} />
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Ad Soyad</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" 
+                value={tebligEdenAdSoyad} 
+                onChange={e => handleTebligEdenChange(e.target.value)} 
+                list="staff-datalist"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Unvanı</label>
+              <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" value={tebligEdenUnvani} onChange={e => setTebligEdenUnvani(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tarih</label>
+              <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" type="date" value={tebligEdenTarih} onChange={e => setTebligEdenTarih(e.target.value)} />
+            </div>
           </div>
         </div>
 
-        <div className="card">
-          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 16, color: 'var(--text)' }}>
-            Tebellüğ Eden
-          </h3>
-          <div className="form-group">
-            <label className="form-label">Ad Soyad</label>
-            <input className="form-control" value={tebellugEdenAdSoyad} onChange={e => setTebellugEdenAdSoyad(e.target.value)} />
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100 bg-amber-50/50">
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <PenTool size={18} className="text-amber-600" /> Tebellüğ Eden
+            </h3>
           </div>
-          <div className="form-group">
-            <label className="form-label">Unvanı</label>
-            <input className="form-control" value={tebellugEdenUnvani} onChange={e => setTebellugEdenUnvani(e.target.value)} />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Tarih</label>
-            <input type="date" className="form-control" value={tebellugEdenTarih} onChange={e => setTebellugEdenTarih(e.target.value)} />
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Ad Soyad</label>
+              <input 
+                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" 
+                value={tebellugEdenAdSoyad} 
+                onChange={e => handleTebellugEdenChange(e.target.value)} 
+                list="staff-datalist"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Unvanı</label>
+              <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" value={tebellugEdenUnvani} onChange={e => setTebellugEdenUnvani(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tarih</label>
+              <input className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500" type="date" value={tebellugEdenTarih} onChange={e => setTebellugEdenTarih(e.target.value)} />
+            </div>
           </div>
         </div>
       </div>
 
-      <button
-        className="btn btn-primary"
-        onClick={handleGenerate}
-        disabled={loading}
-        style={{ fontSize: 15, padding: '10px 32px' }}
-      >
-        {loading ? '⏳ Oluşturuluyor...' : '📄 Belge Oluştur (PDF)'}
-      </button>
+      <div className="pt-2 pb-8">
+        <button 
+          className="w-full md:w-auto px-8 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 shadow-md flex justify-center items-center gap-2"
+          onClick={handleGenerate}
+          disabled={loading}
+        >
+          {loading ? (
+            <><Loader2 size={20} className="animate-spin" /> PDF Oluşturuluyor...</>
+          ) : (
+            <><Download size={20} /> Belge Oluştur (PDF)</>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

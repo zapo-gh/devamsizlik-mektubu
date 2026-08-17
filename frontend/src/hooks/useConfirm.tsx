@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import toast from 'react-hot-toast';
 
 type DialogMode = 'confirm' | 'alert';
 
@@ -21,11 +22,18 @@ export function useConfirm() {
     });
   }, []);
 
-  const alert = useCallback((message: string): Promise<void> => {
-    return new Promise((resolve) => {
-      resolveRef.current = (v) => { resolve(); };
-      setState({ open: true, message, mode: 'alert' });
-    });
+  const alert = useCallback((message: string = 'İşlem Başarılı / Hata Oluştu', type?: string): Promise<void> => {
+    // Determine type by looking at keywords since legacy code often omits type
+    const lowerMsg = message.toLowerCase();
+    const isError = type === 'error' || lowerMsg.includes('hata') || lowerMsg.includes('başarısız') || lowerMsg.includes('yüklenemedi') || lowerMsg.includes('bulunamadı');
+    
+    if (isError) {
+      toast.error(message);
+    } else {
+      toast.success(message);
+    }
+    
+    return Promise.resolve();
   }, []);
 
   const handleOk = () => {

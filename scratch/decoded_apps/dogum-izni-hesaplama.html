@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EBYS Tablolu Doğum İzni Modülü</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --bg-color: #f8fafc;
+            --border: #e2e8f0;
+            --text: #1e293b;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text); padding: 20px; }
+        
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start; }
+        
+        .panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        .panel-header { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f1f5f9; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #475569; }
+        input[type="text"], input[type="date"], select {
+            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: #f8fafc;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--primary); background: white; }
+        
+        .radio-group { display: flex; gap: 15px; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 6px; }
+        .radio-label { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        
+        .checkbox-container { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        
+        /* Sağ Panel */
+        .preview-area { background: white; padding: 30px; border: 1px solid var(--border); border-radius: 8px; min-height: 400px; overflow-x: auto; box-shadow: inset 0 0 10px rgba(0,0,0,0.02); }
+        
+        textarea { width: 100%; height: 150px; padding: 15px; font-family: monospace; font-size: 13px; border: 1px solid var(--border); border-radius: 6px; background: #1e293b; color: #f8fafc; resize: vertical; margin-top: 15px; }
+        
+        .btn-copy { display: block; width: 100%; padding: 15px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-copy:hover { background: #059669; }
+        
+        .dynamic-fields { display: none; padding: 15px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 15px; }
+        .dynamic-fields.active { display: block; }
+        
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- SOL PANEL: Veri Girişi -->
+    <div class="panel">
+        <div class="panel-header">1. Personel ve İzin Bilgileri</div>
+        
+        <div class="radio-group">
+            <label class="radio-label">
+                <input type="radio" name="izinTuru" value="oncesi" checked onchange="toggleIzinTuru()"> Doğum Öncesi
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="izinTuru" value="sonrasi" onchange="toggleIzinTuru()"> Doğum Sonrası
+            </label>
+        </div>
+
+        <div class="form-group"><label>T.C. Kimlik No</label><input type="text" id="tc" value="12345678901" oninput="olustur()"></div>
+        <div class="form-group"><label>Adı Soyadı</label><input type="text" id="isim" value="Ayşe YILMAZ" oninput="olustur()"></div>
+        <div class="form-group"><label>Hizmet Sınıfı</label><input type="text" id="sinif" value="Eğitim Öğretim H.S." oninput="olustur()"></div>
+        <div class="form-group"><label>Görevi / Görev Yeri</label><input type="text" id="unvan" value="Öğretmen / Örnek Anadolu Lisesi" oninput="olustur()"></div>
+        <div class="form-group"><label>Kurum Sicil No</label><input type="text" id="sicil" value="2026-1234" oninput="olustur()"></div>
+        
+        <!-- YENİ EKLENEN KUTUCUK -->
+        <div class="form-group">
+            <label>İzne Esas Hizmet Süresi (MEBBİS)</label>
+            <input type="text" id="hizmetSuresi" value="8 Yıl 5 Ay 12 Gün" oninput="olustur()">
+        </div>
+
+        <div class="form-group"><label>İznini Geçireceği Adres</label><input type="text" id="adres" value="Merkez Mah. Atatürk Cad. No:1 İl/İlçe" oninput="olustur()"></div>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px dashed var(--border);">
+
+        <label class="checkbox-container">
+            <input type="checkbox" id="cogul" onchange="olustur()"> Çoğul Gebelik (+2 Hafta)
+        </label>
+        
+        <div class="form-group">
+            <label>Muhtemel Doğum Tarihi (MDT)</label>
+            <input type="date" id="mdt" onchange="olustur()">
+        </div>
+
+        <!-- DOĞUM ÖNCESİ ÖZEL ALANLAR -->
+        <div id="oncesiAlanlar" class="dynamic-fields active">
+            <div class="form-group">
+                <label>Çalışma Durumu (Doğum Öncesi)</label>
+                <select id="calismaDurumu" onchange="olustur()">
+                    <option value="normal">Normal İzne Ayrılacak (8/10 Hft Kala)</option>
+                    <option value="raporlu">Doğuma 2 Hafta Kalana Kadar Çalıştı</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- DOĞUM SONRASI ÖZEL ALANLAR -->
+        <div id="sonrasiAlanlar" class="dynamic-fields">
+            <div class="form-group">
+                <label>Gerçekleşen Doğum Tarihi (GDT)</label>
+                <input type="date" id="gdt" onchange="olustur()">
+            </div>
+            <div class="form-group" style="font-size: 12px; color: #0284c7;">
+                Sistem, MTD ve GTD tarihlerini karşılaştırarak doğum sonrasına aktarılacak süreyi otomatik bulacaktır.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SAĞ PANEL: Önizleme ve Kod -->
+    <div class="panel">
+        <div class="panel-header" style="display: flex; justify-content: space-between;">
+            <span>2. EBYS Görünümü ve Kaynak Kodu</span>
+            <span id="hesapBilgi" style="font-size: 13px; color: #10b981; font-weight: normal;"></span>
+        </div>
+        
+        <!-- EBYS Tablosu Görsel Önizleme -->
+        <div class="preview-area" id="previewArea"></div>
+        
+        <textarea id="sourceCode" readonly placeholder="HTML Kaynak Kodu Burada Çıkacak..."></textarea>
+        <button class="btn-copy" id="btnCopy" onclick="koduKopyala()">📋 EBYS Kaynak Kodunu Kopyala</button>
+    </div>
+</div>
+
+<script>
+    // --- GÜVENLİ TARİH FONKSİYONLARI ---
+    function parseSafeDate(dateString) {
+        if (!dateString) return null;
+        const parts = dateString.split('-'); 
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
+    }
+
+    function addSafeDays(dateObj, days) {
+        const result = new Date(dateObj.getTime());
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    function getDaysDiffSafe(d1, d2) {
+        return Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    function formatDate(date) {
+        if(!date) return "...";
+        return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    // --- ARAYÜZ YÖNETİMİ ---
+    window.onload = function() {
+        const bugun = new Date();
+        const yyyy = bugun.getFullYear();
+        const mm = String(bugun.getMonth() + 1).padStart(2, '0');
+        const dd = String(bugun.getDate()).padStart(2, '0');
+        
+        document.getElementById('mdt').value = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('gdt').value = `${yyyy}-${mm}-${dd}`;
+        olustur();
+    };
+
+    function toggleIzinTuru() {
+        const tur = document.querySelector('input[name="izinTuru"]:checked').value;
+        if(tur === 'oncesi') {
+            document.getElementById('oncesiAlanlar').classList.add('active');
+            document.getElementById('sonrasiAlanlar').classList.remove('active');
+        } else {
+            document.getElementById('oncesiAlanlar').classList.remove('active');
+            document.getElementById('sonrasiAlanlar').classList.add('active');
+        }
+        olustur();
+    }
+
+    // --- ANA HESAPLAMA VE HTML OLUŞTURMA ---
+    function olustur() {
+        const tur = document.querySelector('input[name="izinTuru"]:checked').value;
+        
+        // Form Verileri
+        const tc = document.getElementById('tc').value || '...';
+        const isim = document.getElementById('isim').value || '...';
+        const sinif = document.getElementById('sinif').value || '...';
+        const unvan = document.getElementById('unvan').value || '...';
+        const sicil = document.getElementById('sicil').value || '...';
+        const hizmetSuresi = document.getElementById('hizmetSuresi').value || '...'; // YENİ VERİ ÇEKİLDİ
+        const adres = document.getElementById('adres').value || '...';
+        const isMultiple = document.getElementById('cogul').checked;
+        
+        // Tarih Verileri
+        const mdtInput = document.getElementById('mdt').value;
+        const mdt = parseSafeDate(mdtInput);
+        if(!mdt) return;
+        
+        // HESAPLAMA DEĞİŞKENLERİ
+        const totalPreRightDays = (isMultiple ? 10 : 8) * 7; 
+        const postNatalBaseDays = 16 * 7; 
+        
+        let ayrilmaTarihi = null;
+        let baslamaTarihi = null;
+        let sureGun = 0;
+        let metinTuru = "doğum öncesi";
+        
+        if(tur === 'oncesi') {
+            const calismaDurumu = document.getElementById('calismaDurumu').value;
+            const workUntil2 = (calismaDurumu === 'raporlu');
+            
+            const earliestLeaveDate = addSafeDays(mdt, -totalPreRightDays);
+            ayrilmaTarihi = workUntil2 ? addSafeDays(mdt, -14) : earliestLeaveDate;
+            
+            sureGun = getDaysDiffSafe(mdt, ayrilmaTarihi); 
+            baslamaTarihi = addSafeDays(ayrilmaTarihi, sureGun); 
+            
+            document.getElementById('hesapBilgi').innerText = `Hesap: ${sureGun} Gün Doğum Öncesi`;
+            metinTuru = "doğum öncesi";
+
+        } else {
+            const gdtInput = document.getElementById('gdt').value;
+            const gdt = parseSafeDate(gdtInput);
+            if(!gdt) return;
+
+            const earliestLeaveDate = addSafeDays(mdt, -totalPreRightDays);
+            let usedPreDays = 0;
+            
+            if (getDaysDiffSafe(gdt, earliestLeaveDate) <= 0) {
+                usedPreDays = 0; 
+            } else if (getDaysDiffSafe(gdt, mdt) < 0) {
+                usedPreDays = getDaysDiffSafe(gdt, earliestLeaveDate); 
+            } else {
+                usedPreDays = totalPreRightDays; 
+            }
+
+            if(usedPreDays > totalPreRightDays) usedPreDays = totalPreRightDays;
+            const transferredDays = totalPreRightDays - usedPreDays;
+            
+            sureGun = postNatalBaseDays + transferredDays;
+            ayrilmaTarihi = gdt;
+            baslamaTarihi = addSafeDays(gdt, sureGun); 
+            
+            document.getElementById('hesapBilgi').innerText = `Hesap: ${sureGun} Gün Doğum Sonrası (Aktarılan: ${transferredDays})`;
+            metinTuru = "doğum sonrası";
+        }
+
+        // --- EBYS TABLO HTML (Saf, Inline CSS ile) ---
+        const ebysHtml = `
+<table border="1" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 11pt; border: 1px solid black; text-align: left;">
+    <tbody>
+        <tr>
+            <td colspan="3" style="text-align: center; font-weight: bold; padding: 10px; background-color: #f3f4f6;">PERSONEL İZİN FORMU</td>
+        </tr>
+        <tr>
+            <td rowspan="5" style="width: 25%; font-weight: bold; vertical-align: top;">Kimlik Bilgileri</td>
+            <td style="width: 25%; font-weight: bold;">T.C No</td>
+            <td style="width: 50%;">${tc}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Adı Soyadı</td>
+            <td>${isim}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Hizmet Sınıfı</td>
+            <td>${sinif}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Görevi/Görev Yeri</td>
+            <td>${unvan}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Kurum Sicil No</td>
+            <td>${sicil}</td>
+        </tr>
+        <tr>
+            <td rowspan="6" style="font-weight: bold; vertical-align: top;">İzin Türü ve Süresi</td>
+            <td style="font-weight: bold;">Mazeret İzni</td>
+            <td>[ X ] (Analık İzni: ${sureGun} Gün)</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Yıllık İzin</td>
+            <td>[ &nbsp;&nbsp; ]</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Aylıksız İzin</td>
+            <td>[ &nbsp;&nbsp; ]</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Hastalık İzni</td>
+            <td>[ &nbsp;&nbsp; ]</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Diğer İzinler</td>
+            <td>[ &nbsp;&nbsp; ]</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Yol Süresi</td>
+            <td>[ &nbsp;&nbsp; ]</td>
+        </tr>
+        <tr>
+            <td rowspan="4" style="font-weight: bold; vertical-align: top;">Ayrılma ve Başlama Tarihi</td>
+            <td style="font-weight: bold;">İzne Ayrıldığı Tarih</td>
+            <td>${formatDate(ayrilmaTarihi)}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">Göreve Başlama Tarihi</td>
+            <td>${formatDate(baslamaTarihi)}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">İzne Esas Hizmet Süresi</td>
+            <td>${hizmetSuresi}</td>
+        </tr>
+        <tr>
+            <td style="font-weight: bold;">İznini Geçireceği Adres</td>
+            <td>${adres}</td>
+        </tr>
+    </tbody>
+</table>
+<p style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; text-align: justify; margin-top: 15px;">
+    Yukarıda bilgileri verilen personelin, <strong>${metinTuru}</strong> izin kullanmak istediğine ilişkin dilekçesi ekte sunulmuştur.<br><br>
+    Makamlarınızca da uygun görülmesi halinde olurlarınıza arz ederim.
+</p>
+        `.trim();
+
+        // Çıktıları Bas
+        document.getElementById('previewArea').innerHTML = ebysHtml;
+        document.getElementById('sourceCode').value = ebysHtml;
+    }
+
+    // --- KOPYALAMA İŞLEMİ ---
+    function koduKopyala() {
+        const textarea = document.getElementById('sourceCode');
+        textarea.select();
+        textarea.setSelectionRange(0, 99999); 
+        
+        try {
+            document.execCommand('copy');
+            const btn = document.getElementById('btnCopy');
+            btn.innerText = "✅ Kopyalandı! EBYS'de 'Kaynak' Bölümüne Yapıştırın";
+            btn.style.background = "#3b82f6";
+            
+            setTimeout(() => {
+                btn.innerText = "📋 EBYS Kaynak Kodunu Kopyala";
+                btn.style.background = "#10b981";
+            }, 3000);
+        } catch (err) {
+            alert("Tarayıcınız kopyalamayı engelledi. Manuel kopyalayın.");
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import prisma from '../shared/utils/prisma';
 
 // TypeScript module:commonjs, import() → require() dönüşümünü engellemek için Function trick
 // eslint-disable-next-line @typescript-eslint/no-implied-eval
@@ -56,7 +57,7 @@ export async function initialize(): Promise<void> {
     QRCode = await _dynamicImport('qrcode');
   }
 
-  const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestWaWebVersion, makeCacheableSignalKeyStore } = Baileys as any;
+  const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestWaWebVersion, makeCacheableSignalKeyStore, Browsers } = Baileys as any;
 
   const dir = getAuthDir();
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -86,10 +87,68 @@ export async function initialize(): Promise<void> {
       keys: makeCacheableSignalKeyStore(authState.keys, logger),
     },
     printQRInTerminal: false,
-    browser: ['Devamsızlık Mektubu', 'Desktop', '1.0.0'],
+    browser: Browsers ? Browsers.ubuntu('Chrome') : ['Ubuntu', 'Chrome', '20.0.04'],
+    keepAliveIntervalMs: 20000,
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
   });
 
   socket.ev.on('creds.update', saveCreds);
+
+  socket.ev.on('messages.upsert', async (m: any) => {
+    try {
+      for (const msg of m.messages) {
+        if (!msg.message || msg.key.fromMe) continue;
+        
+        const remoteJid = msg.key.remoteJid;
+        if (!remoteJid || remoteJid.includes('@g.us')) continue;
+
+        const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.buttonsResponseMessage?.selectedDisplayText || '';
+        if (!text) continue;
+
+        const phone = remoteJid.split('@')[0];
+        let cleanPhone = phone;
+        if (cleanPhone.startsWith('90')) cleanPhone = cleanPhone.slice(2);
+
+        const upperText = text.trim().toLocaleUpperCase('tr-TR');
+        
+        let newStatus: 'ACCEPTED' | 'DECLINED' | null = null;
+        if (['EVET', 'KABUL', '1'].includes(upperText) || upperText === 'ONAYLIYORUM') {
+          newStatus = 'ACCEPTED';
+        } else if (['HAYIR', 'IPTAL', 'İPTAL', 'RET', '2'].includes(upperText) || upperText === 'REDDEDİYORUM' || upperText === 'REDDEDIYORUM') {
+          newStatus = 'DECLINED';
+        }
+
+        if (newStatus) {
+          const parents = await prisma.parent.findMany();
+          const parent = parents.find((p: any) => {
+            const pPhone = p.phone.replace(/\D/g, '');
+            return pPhone.endsWith(cleanPhone) || cleanPhone.endsWith(pPhone);
+          });
+
+          if (parent) {
+            await prisma.parent.update({
+              where: { id: parent.id },
+              data: {
+                waConsentStatus: newStatus,
+                waConsentDate: new Date()
+              }
+            });
+
+            const replyText = newStatus === 'ACCEPTED'
+              ? '✅ Okul bilgilendirme mesajları için onayınız alınmıştır. Teşekkür ederiz.'
+              : '❌ Okul bilgilendirme mesajlarını almayı reddettiniz. Size artık WhatsApp üzerinden okul bilgilendirmeleri gönderilmeyecektir.';
+
+            if (socket) {
+              await socket.sendMessage(remoteJid, { text: replyText });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error handling incoming WhatsApp message:', error);
+    }
+  });
 
   socket.ev.on('connection.update', async (update: any) => {
     const { connection, lastDisconnect, qr } = update;
@@ -156,10 +215,33 @@ function toJid(phone: string): string {
   return `${clean}@s.whatsapp.net`;
 }
 
+async function checkConsent(phone: string): Promise<void> {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const parents = await prisma.parent.findMany();
+  const parent = parents.find((p: any) => {
+    const pPhone = p.phone.replace(/\D/g, '');
+    return pPhone.endsWith(cleanPhone) || cleanPhone.endsWith(pPhone);
+  });
+
+  if (parent && parent.waConsentStatus === 'DECLINED') {
+    throw new Error('Veli WhatsApp bildirimlerini reddettiği için mesaj gönderilemedi.');
+  }
+}
+
+export async function sendConsentRequest(phone: string): Promise<void> {
+  if (!socket || state.status !== 'connected') {
+    throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
+  }
+  const jid = toJid(phone);
+  const text = `Sayın Veli, OkulDesk sistemi üzerinden devamsızlık ve okul bilgilendirmelerini WhatsApp üzerinden almak istiyorsanız lütfen bu mesaja EVET veya 1 yazarak cevap veriniz. İstemiyorsanız HAYIR veya 2 yazabilirsiniz.`;
+  await socket.sendMessage(jid, { text });
+}
+
 export async function sendTextMessage(phone: string, text: string): Promise<void> {
   if (!socket || state.status !== 'connected') {
     throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
   }
+  await checkConsent(phone);
   const jid = toJid(phone);
   await socket.sendMessage(jid, { text });
 }
@@ -176,6 +258,7 @@ export async function sendMessageWithPDF(
   if (!fs.existsSync(pdfPath)) {
     throw new Error('PDF dosyası bulunamadı.');
   }
+  await checkConsent(phone);
   const jid = toJid(phone);
   const document = fs.readFileSync(pdfPath);
   await socket.sendMessage(jid, {
@@ -197,6 +280,7 @@ export async function sendMessageWithImage(
   if (!fs.existsSync(imagePath)) {
     throw new Error('Görsel dosyası bulunamadı.');
   }
+  await checkConsent(phone);
   const jid = toJid(phone);
   const image = fs.readFileSync(imagePath);
   await socket.sendMessage(jid, {
@@ -214,6 +298,7 @@ export async function sendMessageWithImageBuffer(
   if (!socket || state.status !== 'connected') {
     throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
   }
+  await checkConsent(phone);
   const jid = toJid(phone);
   await socket.sendMessage(jid, {
     image: imageBuffer,
@@ -228,6 +313,7 @@ export const whatsappService = {
   getStatus,
   setAuthDir,
   sendTextMessage,
+  sendConsentRequest,
   sendMessageWithPDF,
   sendMessageWithImage,
   sendMessageWithImageBuffer,

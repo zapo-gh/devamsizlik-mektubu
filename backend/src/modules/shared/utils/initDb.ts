@@ -231,6 +231,7 @@ export async function initializeDatabase(): Promise<void> {
       "id"            TEXT    NOT NULL PRIMARY KEY DEFAULT 'singleton',
       "schoolName"    TEXT    NOT NULL DEFAULT '',
       "principalName" TEXT    NOT NULL DEFAULT '',
+      "academicYear"  TEXT    NOT NULL DEFAULT '2025-2026',
       "waTemplate1"   TEXT             DEFAULT '',
       "waTemplate2"   TEXT             DEFAULT '',
       "waTemplate3"   TEXT             DEFAULT '',
@@ -249,6 +250,13 @@ export async function initializeDatabase(): Promise<void> {
       );
       console.log(`✅ SchoolSettings.${col} sütunu eklendi`);
     }
+  }
+
+  if (!schoolSettingsCols.some((c) => c.name === 'academicYear')) {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "SchoolSettings" ADD COLUMN "academicYear" TEXT NOT NULL DEFAULT '2025-2026'`
+    );
+    console.log('✅ SchoolSettings.academicYear sütunu eklendi');
   }
 
   // Varsayılan SchoolSettings satırını ekle
@@ -318,4 +326,381 @@ export async function initializeDatabase(): Promise<void> {
   await prisma.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS "GradeReportStudent_studentId_idx" ON "GradeReportStudent"("studentId")`
   );
+
+  // ── Resmi Tatiller ───────────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Holiday" (
+      "id"          TEXT     NOT NULL PRIMARY KEY,
+      "name"        TEXT     NOT NULL,
+      "startDate"   TEXT     NOT NULL,
+      "endDate"     TEXT     NOT NULL,
+      "academicYear" TEXT    NOT NULL,
+      "isRecurring" INTEGER NOT NULL DEFAULT 0,
+      "createdAt"   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Nöbet Çizelgesi ─────────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "DutyStation" (
+      "id"        TEXT     NOT NULL PRIMARY KEY,
+      "name"      TEXT     NOT NULL,
+      "sortOrder" INTEGER  NOT NULL DEFAULT 0,
+      "isActive"  INTEGER  NOT NULL DEFAULT 1,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "DutyAssignment" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "staffId"      TEXT     NOT NULL,
+      "stationId"    TEXT     NOT NULL,
+      "dayOfWeek"    INTEGER  NOT NULL,
+      "weekNumber"   INTEGER  NOT NULL DEFAULT 0,
+      "academicYear" TEXT     NOT NULL,
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY ("staffId")   REFERENCES "Staff"("id")       ON DELETE CASCADE,
+      FOREIGN KEY ("stationId") REFERENCES "DutyStation"("id")  ON DELETE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "DutyAssignment_staffId_idx" ON "DutyAssignment"("staffId")`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "DutyAssignment_stationId_idx" ON "DutyAssignment"("stationId")`
+  );
+
+  // ── Öğretmenler Kurulu Toplantısı ────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "BoardMeeting" (
+      "id"            TEXT     NOT NULL PRIMARY KEY,
+      "date"          TEXT     NOT NULL,
+      "type"          TEXT     NOT NULL DEFAULT 'DONEM_BASI',
+      "meetingNumber" INTEGER  NOT NULL DEFAULT 1,
+      "academicYear"  TEXT     NOT NULL,
+      "notes"         TEXT,
+      "createdAt"     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "BoardAgendaItem" (
+      "id"          TEXT     NOT NULL PRIMARY KEY,
+      "meetingId"   TEXT     NOT NULL,
+      "orderNumber" INTEGER  NOT NULL DEFAULT 1,
+      "topic"       TEXT     NOT NULL,
+      "decision"    TEXT,
+      "explanation" TEXT,
+      "createdAt"   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY ("meetingId") REFERENCES "BoardMeeting"("id") ON DELETE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "BoardAgendaItem_meetingId_idx" ON "BoardAgendaItem"("meetingId")`
+  );
+
+  // ── Kurul ve Komisyonlar ─────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Commission" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "name"         TEXT     NOT NULL,
+      "description"  TEXT,
+      "academicYear" TEXT     NOT NULL,
+      "sortOrder"    INTEGER  NOT NULL DEFAULT 0,
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "CommissionRole" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "commissionId" TEXT     NOT NULL,
+      "roleName"     TEXT     NOT NULL,
+      "sortOrder"    INTEGER  NOT NULL DEFAULT 0,
+      FOREIGN KEY ("commissionId") REFERENCES "Commission"("id") ON DELETE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "CommissionRole_commissionId_idx" ON "CommissionRole"("commissionId")`
+  );
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "CommissionAssignment" (
+      "id"      TEXT NOT NULL PRIMARY KEY,
+      "roleId"  TEXT NOT NULL,
+      "staffId" TEXT NOT NULL,
+      FOREIGN KEY ("roleId")  REFERENCES "CommissionRole"("id") ON DELETE CASCADE,
+      FOREIGN KEY ("staffId") REFERENCES "Staff"("id")          ON DELETE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "CommissionAssignment_roleId_idx"  ON "CommissionAssignment"("roleId")`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "CommissionAssignment_staffId_idx" ON "CommissionAssignment"("staffId")`
+  );
+
+  // ── Yıllık Çalışma Planı ────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "AnnualPlanItem" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "academicYear" TEXT     NOT NULL,
+      "month"        INTEGER  NOT NULL,
+      "title"        TEXT     NOT NULL,
+      "description"  TEXT,
+      "category"     TEXT     NOT NULL DEFAULT 'IDARI',
+      "sortOrder"    INTEGER  NOT NULL DEFAULT 0,
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "AnnualPlanItem_academicYear_idx" ON "AnnualPlanItem"("academicYear")`
+  );
+
+  // ── Belirli Gün ve Haftalar ──────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "CommemorativeDay" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "name"         TEXT     NOT NULL,
+      "startDate"    TEXT     NOT NULL,
+      "endDate"      TEXT     NOT NULL,
+      "academicYear" TEXT     NOT NULL,
+      "description"  TEXT,
+      "assignedStaffId" TEXT,
+      "status"       TEXT     NOT NULL DEFAULT 'PLANLI',
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "CommemorativeDay_academicYear_idx" ON "CommemorativeDay"("academicYear")`
+  );
+
+  // ── Sosyal Etkinlik Planı ────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "SocialActivity" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "name"            TEXT     NOT NULL,
+      "type"            TEXT     NOT NULL DEFAULT 'KULTUREL',
+      "description"     TEXT,
+      "plannedDate"     TEXT,
+      "academicYear"    TEXT     NOT NULL,
+      "assignedStaffId" TEXT,
+      "status"          TEXT     NOT NULL DEFAULT 'PLANLI',
+      "notes"           TEXT,
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "SocialActivity_academicYear_idx" ON "SocialActivity"("academicYear")`
+  );
+
+  // ── Okul Aile Birliği ───────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "ParentAssociationMeeting" (
+      "id"            TEXT     NOT NULL PRIMARY KEY,
+      "date"          TEXT     NOT NULL,
+      "type"          TEXT     NOT NULL DEFAULT 'OLAGAN',
+      "meetingNumber" INTEGER  NOT NULL DEFAULT 1,
+      "academicYear"  TEXT     NOT NULL,
+      "notes"         TEXT,
+      "decisions"     TEXT,
+      "createdAt"     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "ParentAssociationMember" (
+      "id"           TEXT     NOT NULL PRIMARY KEY,
+      "fullName"     TEXT     NOT NULL,
+      "role"         TEXT     NOT NULL DEFAULT 'UYE',
+      "phone"        TEXT,
+      "academicYear" TEXT     NOT NULL,
+      "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Gezi Planı ──────────────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "FieldTrip" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "title"           TEXT     NOT NULL,
+      "destination"     TEXT     NOT NULL,
+      "date"            TEXT     NOT NULL,
+      "returnDate"      TEXT,
+      "purpose"         TEXT,
+      "transportation"  TEXT,
+      "assignedStaffId" TEXT,
+      "academicYear"    TEXT     NOT NULL,
+      "participantClasses" TEXT,
+      "notes"           TEXT,
+      "status"          TEXT     NOT NULL DEFAULT 'PLANLI',
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Ders Dışı Egzersiz Planı ────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Extracurricular" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "branch"          TEXT     NOT NULL,
+      "assignedStaffId" TEXT,
+      "schedule"        TEXT,
+      "academicYear"    TEXT     NOT NULL,
+      "notes"           TEXT,
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Yolluk Hesaplama ────────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "TravelAllowance" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "staffId"         TEXT,
+      "staffName"       TEXT     NOT NULL,
+      "title"           TEXT,
+      "purpose"         TEXT     NOT NULL,
+      "departurePlace"  TEXT     NOT NULL,
+      "arrivalPlace"    TEXT     NOT NULL,
+      "departureDate"   TEXT     NOT NULL,
+      "returnDate"      TEXT     NOT NULL,
+      "transportType"   TEXT     NOT NULL DEFAULT 'OTOBÜS',
+      "transportCost"   REAL     NOT NULL DEFAULT 0,
+      "dailyAllowance"  REAL     NOT NULL DEFAULT 0,
+      "accommodationCost" REAL   NOT NULL DEFAULT 0,
+      "totalCost"       REAL     NOT NULL DEFAULT 0,
+      "academicYear"    TEXT     NOT NULL,
+      "notes"           TEXT,
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Personel Nakil Bildirimi ────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "StaffTransfer" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "staffName"       TEXT     NOT NULL,
+      "staffTitle"      TEXT,
+      "tcKimlikNo"      TEXT,
+      "sicilNo"         TEXT,
+      "currentSchool"   TEXT,
+      "newSchool"       TEXT,
+      "transferDate"    TEXT     NOT NULL,
+      "transferReason"  TEXT,
+      "academicYear"    TEXT     NOT NULL,
+      "notes"           TEXT,
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Öğrenci Kulüpleri ───────────────────────────
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "StudentClub" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "name"            TEXT     NOT NULL,
+      "description"     TEXT,
+      "assignedStaffId" TEXT,
+      "meetingDay"      TEXT,
+      "meetingTime"     TEXT,
+      "maxMembers"      INTEGER  NOT NULL DEFAULT 30,
+      "academicYear"    TEXT     NOT NULL,
+      "isActive"        INTEGER  NOT NULL DEFAULT 1,
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "StudentClubMember" (
+      "id"        TEXT     NOT NULL PRIMARY KEY,
+      "clubId"    TEXT     NOT NULL,
+      "studentId" TEXT     NOT NULL,
+      "role"      TEXT     NOT NULL DEFAULT 'UYE',
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY ("clubId")    REFERENCES "StudentClub"("id") ON DELETE CASCADE,
+      FOREIGN KEY ("studentId") REFERENCES "Student"("id")     ON DELETE CASCADE,
+      UNIQUE("clubId", "studentId")
+    )
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "StudentClubMember_clubId_idx"    ON "StudentClubMember"("clubId")`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "StudentClubMember_studentId_idx" ON "StudentClubMember"("studentId")`
+  );
+
+  // 🏢 Tedarikçiler (Firmalar)
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Supplier" (
+      "id"            TEXT     NOT NULL PRIMARY KEY,
+      "name"          TEXT     NOT NULL,
+      "taxNumber"     TEXT,
+      "taxOffice"     TEXT,
+      "phone"         TEXT,
+      "address"       TEXT,
+      "contactPerson" TEXT,
+      "isActive"      INTEGER  NOT NULL DEFAULT 1,
+      "createdAt"     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 📝 Sipariş Mektubu
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "OrderLetter" (
+      "id"              TEXT     NOT NULL PRIMARY KEY,
+      "subject"         TEXT     NOT NULL,
+      "supplierName"    TEXT     NOT NULL,
+      "supplierAddress" TEXT,
+      "date"            TEXT     NOT NULL,
+      "deliveryDate"    TEXT     NOT NULL,
+      "academicYear"    TEXT     NOT NULL,
+      "items"           TEXT     NOT NULL,
+      "notes"           TEXT,
+      "extraData"       TEXT,
+      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 📝 Doğrudan Temin Dosyaları
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Procurement" (
+      "id"             TEXT     NOT NULL PRIMARY KEY,
+      "title"          TEXT     NOT NULL,
+      "procedureType"  TEXT     NOT NULL DEFAULT '22/d',
+      "date"           TEXT     NOT NULL,
+      "estimatedCost"  REAL     DEFAULT 0,
+      "status"         TEXT     NOT NULL DEFAULT 'BEKLIYOR',
+      "academicYear"   TEXT     NOT NULL,
+      "createdAt"      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 📦 Doğrudan Temin Kalemleri (Mal/Hizmet Listesi)
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "ProcurementItem" (
+      "id"                 TEXT NOT NULL PRIMARY KEY,
+      "procurementId"      TEXT NOT NULL,
+      "name"               TEXT NOT NULL,
+      "quantity"           REAL NOT NULL DEFAULT 1,
+      "unit"               TEXT NOT NULL DEFAULT 'Adet',
+      "estimatedUnitPrice" REAL DEFAULT 0,
+      FOREIGN KEY ("procurementId") REFERENCES "Procurement"("id") ON DELETE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ProcurementItem_procId_idx" ON "ProcurementItem"("procurementId")`);
+
+  // 💰 Firmalardan Alınan Fiyat Teklifleri
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "ProcurementOffer" (
+      "id"            TEXT NOT NULL PRIMARY KEY,
+      "procurementId" TEXT NOT NULL,
+      "supplierId"    TEXT NOT NULL,
+      "itemId"        TEXT NOT NULL,
+      "offeredPrice"  REAL NOT NULL DEFAULT 0,
+      "isWinner"      INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY ("procurementId") REFERENCES "Procurement"("id") ON DELETE CASCADE,
+      FOREIGN KEY ("supplierId")    REFERENCES "Supplier"("id") ON DELETE CASCADE,
+      FOREIGN KEY ("itemId")        REFERENCES "ProcurementItem"("id") ON DELETE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ProcurementOffer_procId_idx" ON "ProcurementOffer"("procurementId")`);
 }

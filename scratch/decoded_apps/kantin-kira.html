@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kantin Kira Hesaplama ve Sözleşmesi</title>
+    <style>
+*,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgba(59,130,246,.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.19 | MIT License | https://tailwindcss.com*/*,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}:after,:before{--tw-content:""}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:ui-sans-serif,system-ui,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.collapse{visibility:collapse}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mr-1\.5{margin-right:.375rem}.mt-1{margin-top:.25rem}.mt-16{margin-top:4rem}.mt-4{margin-top:1rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.block{display:block}.flex{display:flex}.table{display:table}.grid{display:grid}.h-12{height:3rem}.min-h-screen{min-height:100vh}.w-full{width:100%}.max-w-7xl{max-width:80rem}.border-collapse{border-collapse:collapse}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.75rem*(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem*var(--tw-space-y-reverse))}.rounded{border-radius:.25rem}.rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-r{border-right-width:1px}.border-amber-200{--tw-border-opacity:1;border-color:rgb(253 230 138/var(--tw-border-opacity,1))}.border-black{--tw-border-opacity:1;border-color:rgb(0 0 0/var(--tw-border-opacity,1))}.border-emerald-200{--tw-border-opacity:1;border-color:rgb(167 243 208/var(--tw-border-opacity,1))}.border-emerald-300{--tw-border-opacity:1;border-color:rgb(110 231 183/var(--tw-border-opacity,1))}.border-indigo-200{--tw-border-opacity:1;border-color:rgb(199 210 254/var(--tw-border-opacity,1))}.border-rose-300{--tw-border-opacity:1;border-color:rgb(253 164 175/var(--tw-border-opacity,1))}.border-slate-200{--tw-border-opacity:1;border-color:rgb(226 232 240/var(--tw-border-opacity,1))}.border-slate-300{--tw-border-opacity:1;border-color:rgb(203 213 225/var(--tw-border-opacity,1))}.bg-amber-50{--tw-bg-opacity:1;background-color:rgb(255 251 235/var(--tw-bg-opacity,1))}.bg-emerald-50{--tw-bg-opacity:1;background-color:rgb(236 253 245/var(--tw-bg-opacity,1))}.bg-indigo-50{--tw-bg-opacity:1;background-color:rgb(238 242 255/var(--tw-bg-opacity,1))}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.bg-rose-50{--tw-bg-opacity:1;background-color:rgb(255 241 242/var(--tw-bg-opacity,1))}.bg-slate-100{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.bg-slate-200{--tw-bg-opacity:1;background-color:rgb(226 232 240/var(--tw-bg-opacity,1))}.bg-slate-600{--tw-bg-opacity:1;background-color:rgb(71 85 105/var(--tw-bg-opacity,1))}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.p-2{padding:.5rem}.p-3{padding:.75rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-2{padding-top:.5rem}.pb-2,.py-2{padding-bottom:.5rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.text-justify{text-align:justify}.font-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-serif{font-family:ui-serif,Georgia,Cambria,Times New Roman,Times,serif}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.italic{font-style:italic}.leading-relaxed{line-height:1.625}.tracking-wider{letter-spacing:.05em}.text-amber-600{--tw-text-opacity:1;color:rgb(217 119 6/var(--tw-text-opacity,1))}.text-amber-800{--tw-text-opacity:1;color:rgb(146 64 14/var(--tw-text-opacity,1))}.text-black{--tw-text-opacity:1;color:rgb(0 0 0/var(--tw-text-opacity,1))}.text-emerald-600{--tw-text-opacity:1;color:rgb(5 150 105/var(--tw-text-opacity,1))}.text-emerald-700{--tw-text-opacity:1;color:rgb(4 120 87/var(--tw-text-opacity,1))}.text-emerald-800{--tw-text-opacity:1;color:rgb(6 95 70/var(--tw-text-opacity,1))}.text-emerald-900{--tw-text-opacity:1;color:rgb(6 78 59/var(--tw-text-opacity,1))}.text-indigo-400{--tw-text-opacity:1;color:rgb(129 140 248/var(--tw-text-opacity,1))}.text-indigo-600{--tw-text-opacity:1;color:rgb(79 70 229/var(--tw-text-opacity,1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202/var(--tw-text-opacity,1))}.text-indigo-800{--tw-text-opacity:1;color:rgb(55 48 163/var(--tw-text-opacity,1))}.text-indigo-900{--tw-text-opacity:1;color:rgb(49 46 129/var(--tw-text-opacity,1))}.text-rose-700{--tw-text-opacity:1;color:rgb(190 18 60/var(--tw-text-opacity,1))}.text-rose-800{--tw-text-opacity:1;color:rgb(159 18 57/var(--tw-text-opacity,1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.text-slate-600{--tw-text-opacity:1;color:rgb(71 85 105/var(--tw-text-opacity,1))}.text-slate-700{--tw-text-opacity:1;color:rgb(51 65 85/var(--tw-text-opacity,1))}.text-slate-800{--tw-text-opacity:1;color:rgb(30 41 59/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.hover\:bg-slate-50:hover{--tw-bg-opacity:1;background-color:rgb(248 250 252/var(--tw-bg-opacity,1))}.focus\:ring-1:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.focus\:ring-indigo-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(99 102 241/var(--tw-ring-opacity,1))}@media (min-width:768px){.md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
+    </style>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        .official-letter-page {
+            background: white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border: 1px solid #e2e8f0; padding: 2.5rem; max-width: 800px; margin: 0 auto; min-height: 1050px;
+        }
+        @media print {
+            html, body { background-color: white !important; color: black !important; }
+            .no-print { display: none !important; }
+            .official-letter-page {
+                padding: 0 !important; margin: 0 auto !important; box-shadow: none !important;
+                border: none !important; width: 100% !important; max-width: none !important;
+                min-height: 0 !important; height: auto !important;
+            }
+            table { border-collapse: collapse !important; width: 100% !important; }
+            th, td { border: 1px solid #000 !important; color: #000 !important; padding: 6px 10px !important; font-size: 10px !important; }
+            th { font-weight: bold !important; background-color: #f3f4f6 !important; }
+            @page { margin: 1.2cm 1.5cm; size: A4 portrait; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <div class="no-print mb-6">
+            <div class="flex flex-wrap justify-between items-center gap-3">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">🏪 Kantin Kira Hesaplama ve Sözleşmesi</h3>
+                    <p class="text-xs text-slate-500">Kantin kira bedeli hesaplama, ödeme takibi ve resmi kira sözleşmesi oluşturma.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="setView('hesaplama')" id="btn-hesaplama" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block w-3.5 h-3.5 mr-1.5 -mt-0.5"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/><line x1="16" y1="18" x2="16" y2="18"/></svg>Hesaplama</button>
+                    <button onclick="setView('sozlesme')" id="btn-sozlesme" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block w-3.5 h-3.5 mr-1.5 -mt-0.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="13" y2="18"/></svg>Sözleşme</button>
+                    <button onclick="window.print()" class="px-4 py-2 bg-slate-600 text-white rounded-lg text-xs font-bold"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block w-3.5 h-3.5 mr-1.5 -mt-0.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Yazdır</button>
+                </div>
+            </div>
+        </div>
+        <div id="content"></div>
+    </div>
+
+<script>
+// ===== STATE =====
+const state = {
+    schoolName: "",
+    academicYear: "2025-2026",
+    canteenRent: {
+        shopName: "Okul Kantini",
+        operatorName: "",
+        contractDate: "",
+        lastYearRent: 0,
+        tufeRate: 36.00,
+        viewMode: 'hesaplama',
+        sozlesme: {
+            birlikAdres: "", birlikTel: "", birlikFaks: "",
+            kiraciAdres: "", kiraciEvTel: "", kiraciIsTel: "",
+            il: "", ilce: "",
+            ada: "", parsel: "", arsaM2: "", kantinM2: "",
+            isletmeTuru: "Kantin", sozlesmeSuresiYil: "5",
+            mahkeme: "", ozelSartlar: ""
+        },
+        payments: {
+            "Eylül": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Ekim": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Kasım": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Aralık": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Ocak": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Şubat": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Mart": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Nisan": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Mayıs": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" },
+            "Haziran": { type: "Tam", status: "Ödenmedi", receiptNo: "", date: "" }
+        }
+    }
+};
+
+// ===== HELPERS =====
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n) { return (n||0).toLocaleString('tr-TR', {style:'currency', currency:'TRY'}); }
+function formatTRDate(iso) { if (!iso) return '../../....'; const [y,m,d] = iso.split('-'); return d+'.'+m+'.'+y; }
+
+function calculateCanteenRentData() {
+    const cr = state.canteenRent;
+    const lastRent = parseFloat(cr.lastYearRent) || 0;
+    const rate = parseFloat(cr.tufeRate) / 100 || 0;
+    const annualRent = lastRent * (1 + rate);
+    const arzBedeli = annualRent * 0.03;
+    const netAnnualRent = annualRent - arzBedeli;
+    const ilPayiYillik = netAnnualRent * 0.10;
+    const ilcePayiYillik = netAnnualRent * 0.10;
+    const birlikPayiYillik = netAnnualRent * 0.80;
+    const kesinTeminat = annualRent * 0.06;
+    const monthCount = Object.keys(cr.payments).length;
+    const monthlyNetRent = netAnnualRent / monthCount;
+    const ilPayiAylik = monthlyNetRent * 0.10;
+    const ilcePayiAylik = monthlyNetRent * 0.10;
+
+    let totalWeight = 0;
+    for (let m in cr.payments) totalWeight += cr.payments[m].type === "Yarım" ? 0.5 : 1;
+    const baseUnit = birlikPayiYillik / totalWeight;
+
+    const monthlyAmounts = {};
+    let totalAccrued = 0, totalCollected = 0;
+    for (let m in cr.payments) {
+        const w = cr.payments[m].type === "Yarım" ? 0.5 : 1;
+        const amt = baseUnit * w;
+        monthlyAmounts[m] = amt;
+        totalAccrued += amt;
+        if (cr.payments[m].status === "Ödendi") totalCollected += amt;
+    }
+
+    return { lastRent, ratePercent: (rate*100).toFixed(2), annualRent, arzBedeli, netAnnualRent,
+        monthlyNetRent, ilPayiAylik, ilPayiYillik, ilcePayiAylik, ilcePayiYillik,
+        birlikPayiYillik, kesinTeminat, monthlyAmounts, totalAccrued, totalCollected, monthCount };
+}
+
+// ===== VIEW =====
+let currentView = 'hesaplama';
+function setView(v) { currentView = v; state.canteenRent.viewMode = v; render(); }
+
+function render() {
+    document.getElementById('btn-hesaplama').className = `px-4 py-2 rounded-lg text-xs font-bold ${currentView==='hesaplama'?'bg-indigo-600 text-white':'bg-slate-200 text-slate-700'}`;
+    document.getElementById('btn-sozlesme').className = `px-4 py-2 rounded-lg text-xs font-bold ${currentView==='sozlesme'?'bg-slate-800 text-white':'bg-slate-200 text-slate-700'}`;
+
+    const calc = calculateCanteenRentData();
+    document.getElementById('content').innerHTML = currentView === 'sozlesme' ? renderSozlesme(calc) : renderHesaplama(calc);
+}
+
+// ===== HESAPLAMA =====
+function renderHesaplama(calc) {
+    const cr = state.canteenRent;
+    const payRows = Object.keys(cr.payments).map(month => {
+        const pay = cr.payments[month];
+        const isPaid = pay.status === "Ödendi";
+        const amt = calc.monthlyAmounts[month];
+        return `<tr class="hover:bg-slate-50">
+            <td class="p-3 border-r font-bold text-indigo-900">${month}</td>
+            <td class="p-3 border-r text-center">
+                <select onchange="updatePayType('${month}',this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold">
+                    <option value="Tam" ${pay.type==='Tam'?'selected':''}>Tam (%100)</option>
+                    <option value="Yarım" ${pay.type==='Yarım'?'selected':''}>Yarım (%50)</option>
+                </select>
+            </td>
+            <td class="p-3 border-r text-right font-semibold">${fmt(amt)}</td>
+            <td class="p-3 border-r text-center">
+                <select onchange="updatePayStatus('${month}',this.value)" class="border rounded px-2 py-1 text-xs font-bold ${isPaid?'bg-emerald-50 text-emerald-800 border-emerald-300':'bg-rose-50 text-rose-800 border-rose-300'}">
+                    <option value="Ödendi" ${pay.status==='Ödendi'?'selected':''}>Ödendi</option>
+                    <option value="Ödenmedi" ${pay.status==='Ödenmedi'?'selected':''}>Ödenmedi</option>
+                </select>
+            </td>
+            <td class="p-3 border-r"><input value="${esc(pay.receiptNo)}" onchange="updatePayField('${month}','receiptNo',this.value)" placeholder="Dekont No" class="w-full border border-slate-200 rounded px-2 py-1 text-xs font-mono"></td>
+            <td class="p-3"><input type="date" value="${pay.date}" onchange="updatePayField('${month}','date',this.value)" class="border border-slate-200 rounded px-1.5 py-1 text-xs"></td>
+        </tr>`;
+    }).join('');
+
+    return `
+    <!-- Kurum Bilgileri -->
+    <div class="no-print grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h4 class="font-bold text-slate-400 text-[10px] uppercase tracking-wider mb-3">Kurum Bilgileri</h4>
+            <div class="space-y-3">
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Okul Adı</label><input value="${esc(state.schoolName)}" oninput="state.schoolName=this.value" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-semibold"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Eğitim Öğretim Yılı</label><input value="${esc(state.academicYear)}" oninput="state.academicYear=this.value" class="w-full border border-slate-300 rounded-lg p-2 text-xs"></div>
+            </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h4 class="font-bold text-slate-400 text-[10px] uppercase tracking-wider mb-3">İşletme Detayları</h4>
+            <div class="space-y-3">
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Kantin / Alan Adı</label><input value="${esc(cr.shopName)}" oninput="state.canteenRent.shopName=this.value" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-semibold"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">İşletmeci Adı Soyadı</label><input value="${esc(cr.operatorName)}" oninput="state.canteenRent.operatorName=this.value" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-semibold"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Sözleşme Tarihi</label><input type="date" value="${cr.contractDate}" oninput="state.canteenRent.contractDate=this.value" class="w-full border border-slate-300 rounded-lg p-2 text-xs"></div>
+            </div>
+        </div>
+        <div class="bg-indigo-50 border border-slate-200 rounded-xl p-5">
+            <h4 class="font-bold text-indigo-400 text-[10px] uppercase tracking-wider mb-3">Kira Parametreleri</h4>
+            <div class="space-y-3">
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Önceki Dönem Yıllık Kira (TL)</label><input type="number" value="${cr.lastYearRent}" oninput="state.canteenRent.lastYearRent=parseFloat(this.value)||0;render()" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-bold"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 uppercase">TÜFE Artış Oranı (%)</label><input type="number" step="0.01" value="${cr.tufeRate}" oninput="state.canteenRent.tufeRate=parseFloat(this.value)||0;render()" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-bold"></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 uppercase">Yeni Yıllık Kira (Otomatik)</label><div class="text-lg font-black text-indigo-700 mt-1">${fmt(calc.annualRent)}</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dağıtım Tablosu -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 mb-6">
+        <h4 class="font-bold text-slate-800 text-sm mb-3 border-b pb-2 uppercase">Resmi Kira Dağılım Payları</h4>
+        <table class="w-full text-left text-xs border-collapse">
+            <thead><tr class="bg-slate-100 text-slate-700">
+                <th class="p-3 border-r">Kurum / Hak Sahibi</th>
+                <th class="p-3 border-r text-center">Oran</th>
+                <th class="p-3 border-r text-right">Aylık Pay (${calc.monthCount} Ay)</th>
+                <th class="p-3 text-right">Yıllık Toplam</th>
+            </tr></thead>
+            <tbody>
+                <tr class="hover:bg-slate-50"><td class="p-3 border-r font-semibold">T.C. Hazine (Arz Bedeli)</td><td class="p-3 border-r text-center font-bold">%3</td><td class="p-3 border-r text-right">${fmt(calc.arzBedeli/calc.monthCount)}</td><td class="p-3 text-right font-bold">${fmt(calc.arzBedeli)}</td></tr>
+                <tr class="hover:bg-slate-50"><td class="p-3 border-r font-semibold">İl Millî Eğitim Md.</td><td class="p-3 border-r text-center font-bold">%10 (Kalanın)</td><td class="p-3 border-r text-right">${fmt(calc.ilPayiAylik)}</td><td class="p-3 text-right font-bold">${fmt(calc.ilPayiYillik)}</td></tr>
+                <tr class="hover:bg-slate-50"><td class="p-3 border-r font-semibold">İlçe Millî Eğitim Md.</td><td class="p-3 border-r text-center font-bold">%10 (Kalanın)</td><td class="p-3 border-r text-right">${fmt(calc.ilcePayiAylik)}</td><td class="p-3 text-right font-bold">${fmt(calc.ilcePayiYillik)}</td></tr>
+                <tr class="bg-emerald-50"><td class="p-3 border-r font-bold text-emerald-800">Okul-Aile Birliği</td><td class="p-3 border-r text-center font-bold text-emerald-800">%80 (Kalanın)</td><td class="p-3 border-r text-right font-bold text-emerald-800">Dinamik</td><td class="p-3 text-right font-black text-emerald-900">${fmt(calc.birlikPayiYillik)}</td></tr>
+                <tr class="bg-slate-100 font-bold"><td class="p-3 border-r">GENEL TOPLAM</td><td class="p-3 border-r text-center">%100</td><td class="p-3 border-r text-right">—</td><td class="p-3 text-right">${fmt(calc.annualRent)}</td></tr>
+            </tbody>
+        </table>
+        <div class="grid grid-cols-3 gap-4 mt-4 text-xs">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center"><div class="text-amber-600 font-bold">%3 Arz Bedeli (Yıllık)</div><div class="text-lg font-black text-amber-800">${fmt(calc.arzBedeli)}</div></div>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center"><div class="text-emerald-600 font-bold">Kesin Teminat (%6)</div><div class="text-lg font-black text-emerald-800">${fmt(calc.kesinTeminat)}</div></div>
+            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-center"><div class="text-indigo-600 font-bold">Net Dağıtılabilir</div><div class="text-lg font-black text-indigo-800">${fmt(calc.netAnnualRent)}</div></div>
+        </div>
+    </div>
+
+    <!-- Ödeme Takibi -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 mb-6">
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+            <h4 class="font-bold text-slate-800 text-sm uppercase">Aylık Kira Tahsilat Defteri</h4>
+            <div class="text-xs font-bold text-slate-600">
+                Tahakkuk: <span class="text-indigo-700">${fmt(calc.totalAccrued)}</span> |
+                Tahsil: <span class="text-emerald-700">${fmt(calc.totalCollected)}</span> |
+                Kalan: <span class="text-rose-700">${fmt(calc.totalAccrued - calc.totalCollected)}</span>
+            </div>
+        </div>
+        <table class="w-full text-left text-xs border-collapse">
+            <thead><tr class="bg-slate-100 text-slate-700">
+                <th class="p-3 border-r">Ay</th>
+                <th class="p-3 border-r text-center">Ödeme Şekli</th>
+                <th class="p-3 border-r text-right">Birlik Payı</th>
+                <th class="p-3 border-r text-center">Durum</th>
+                <th class="p-3 border-r">Dekont No</th>
+                <th class="p-3">Tarih</th>
+            </tr></thead>
+            <tbody>${payRows}</tbody>
+        </table>
+    </div>
+
+    <!-- İmza -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5">
+        <div class="grid grid-cols-3 text-center gap-6 mt-4">
+            <div><div class="border-b border-slate-300 h-12 mb-2"></div><p class="font-bold text-xs">Okul Müdürü</p></div>
+            <div><div class="border-b border-slate-300 h-12 mb-2"></div><p class="font-bold text-xs">Birlik Başkanı</p></div>
+            <div><div class="border-b border-slate-300 h-12 mb-2"></div><p class="font-bold text-xs">Kiracı (İşletmeci)</p></div>
+        </div>
+    </div>`;
+}
+
+// ===== SÖZLEŞME =====
+function renderSozlesme(calc) {
+    const cr = state.canteenRent;
+    const s = cr.sozlesme;
+    const birlikAdi = `${state.schoolName || '........................'} Okul-Aile Birliği`;
+    const aylikArz = calc.arzBedeli / calc.monthCount;
+    const aylikBirlikPayi = calc.birlikPayiYillik / calc.monthCount;
+    const yururluk = formatTRDate(cr.contractDate);
+
+    const inp = (label, field, val, type='text') => `
+        <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">${label}</label>
+        <input type="${type}" value="${esc(val)}" onchange="updateSozlesme('${field}',this.value)" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-indigo-500"></div>`;
+
+    return `
+    <!-- Sözleşme Bilgi Alanları -->
+    <div class="no-print bg-white border border-slate-200 rounded-xl p-5 mb-6">
+        <h4 class="font-bold text-slate-800 text-sm mb-1">Sözleşme Bilgi Alanları</h4>
+        <p class="text-[11px] text-slate-500 mb-4">Aşağıdaki bilgiler resmi sözleşme metnine otomatik işlenir.</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Kiracı Adı Soyadı</label><input value="${esc(cr.operatorName)}" oninput="state.canteenRent.operatorName=this.value" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-semibold"></div>
+            <div><label class="block text-[10px] font-bold text-slate-500 uppercase">İşletme Türü</label><input value="${esc(s.isletmeTuru)}" onchange="updateSozlesme('isletmeTuru',this.value)" class="w-full border border-slate-300 rounded-lg p-2 text-xs"></div>
+            <div><label class="block text-[10px] font-bold text-slate-500 uppercase">Sözleşme Tarihi</label><input type="date" value="${cr.contractDate}" onchange="state.canteenRent.contractDate=this.value;render()" class="w-full border border-slate-300 rounded-lg p-2 text-xs"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            ${inp('Birlik Adresi','birlikAdres',s.birlikAdres)} ${inp('Birlik Telefon','birlikTel',s.birlikTel)} ${inp('Birlik Faks','birlikFaks',s.birlikFaks)}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            ${inp('Kiracı Adresi','kiraciAdres',s.kiraciAdres)} ${inp('Kiracı Ev Tel','kiraciEvTel',s.kiraciEvTel)} ${inp('Kiracı İş Tel','kiraciIsTel',s.kiraciIsTel)}
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-3">
+            ${inp('İl','il',s.il)} ${inp('İlçe','ilce',s.ilce)} ${inp('Ada','ada',s.ada)} ${inp('Parsel','parsel',s.parsel)} ${inp('Arsa (m²)','arsaM2',s.arsaM2)} ${inp('Kantin (m²)','kantinM2',s.kantinM2)}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            ${inp('Sözleşme Süresi (Yıl)','sozlesmeSuresiYil',s.sozlesmeSuresiYil,'number')} ${inp('Yetkili Mahkeme','mahkeme',s.mahkeme)}
+        </div>
+        <div><label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Ek Özel Şart (Madde 2)</label><textarea onchange="updateSozlesme('ozelSartlar',this.value)" rows="2" class="w-full border border-slate-300 rounded-lg p-2 text-xs">${esc(s.ozelSartlar)}</textarea></div>
+    </div>
+
+    <!-- Sözleşme Metni -->
+    <div class="official-letter-page font-serif text-black text-[11px] leading-relaxed">
+        <div class="text-right text-[10px] font-bold mb-1">(Değişik:RG-1/12/2023-32386)&nbsp;&nbsp;&nbsp;EK-2</div>
+        <div class="text-center font-bold text-sm uppercase mb-6">OKULLARDA BULUNAN KANTİN VE BENZERİ YERLERİ KİRALAMA SÖZLEŞMESİ</div>
+        <div class="text-center font-extrabold uppercase mb-4 mt-6">GENEL ŞARTLAR</div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Sözleşmenin tarafları</p>
+            <p class="text-justify"><span class="font-bold">MADDE 1-</span> Bu sözleşme, bir tarafta <strong>${esc(birlikAdi)}</strong> (Bundan sonra "Birlik" olarak anılacaktır.) ile diğer tarafta işletmeci <strong>${esc(cr.operatorName || '................')}</strong> (Bundan sonra "Kiracı" olarak anılacaktır.) arasında aşağıda yazılı şartlar dâhilinde akdedilmiştir.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Taraflara ilişkin bilgiler</p>
+            <p class="text-justify"><span class="font-bold">MADDE 2-</span> Birliğin adresi <strong>${esc(s.birlikAdres || '................')}</strong> olup Tel no: <strong>${esc(s.birlikTel || '................')}</strong> Faks no: <strong>${esc(s.birlikFaks || '................')}</strong> Kiracının tebligata esas adresi: <strong>${esc(s.kiraciAdres || '................')}</strong> Ev tel. no: <strong>${esc(s.kiraciEvTel || '................')}</strong> İş tel. no: <strong>${esc(s.kiraciIsTel || '................')}</strong></p>
+            <p class="text-justify mt-1">Her iki taraf da yukarıda belirtilen adresleri tebligat adresi olarak kabul etmişlerdir. Adres değişiklikleri usulüne uygun şekilde karşı tarafa tebliğ edilmedikçe en son bildirilen adrese yapılacak tebliğ ilgili tarafa yapılmış sayılır.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">İş tanımı</p>
+            <p class="text-justify"><span class="font-bold">MADDE 3-</span> Sözleşme konusu iş; <strong>${esc(s.il || '................')}</strong> İli <strong>${esc(s.ilce || '................')}</strong> İlçesi <strong>${esc(s.ada || '....')}</strong> ada <strong>${esc(s.parsel || '....')}</strong> parsel <strong>${esc(s.arsaM2 || '....')}</strong> m² yüzölçümlü ve Millî Eğitim Bakanlığına tahsisli taşınmaz mal üzerinde bulunan <strong>${esc(state.schoolName || '................')}</strong> Okulundaki yaklaşık <strong>${esc(s.kantinM2 || '....')}</strong> m²'lik <strong>${esc(s.isletmeTuru || 'Kantin')}</strong> işletme hakkının verilmesi (kiralama) sözleşmenin konusunu oluşturmaktadır.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Sözleşmenin bedeli</p>
+            <p class="text-justify"><span class="font-bold">MADDE 4-</span> İşbu sözleşmenin komisyonca dokuz/on iki ay üzerinden belirlenen aylık kira bedeli <strong>${fmt(calc.monthlyNetRent)}</strong> ve yıllık kira bedeli <strong>${fmt(calc.annualRent)}</strong>'dir. Kiracı, her aya ilişkin kira bedelini o ayın 5-15 inci günleri arasında öder. Yarıyıl tatilinin yapıldığı ayda o aya ilişkin kira bedelinin yarısını öder. Okulların tatil olduğu dönemde (Haziran, Temmuz ve Ağustos ayları) işletilmeyen yerler için dokuz ay, tam yıl işletilebilen yerler için ise on iki ay kira öder.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Vergi, resim, harçlar ve diğer giderler</p>
+            <p class="text-justify"><span class="font-bold">MADDE 5-</span> Kiralama ile ilgili her türlü vergi, resim, harçlar ve diğer giderler kiracıya aittir.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Sözleşmenin süresi ve yıllık artışları</p>
+            <p class="text-justify"><span class="font-bold">MADDE 6-</span> Kiralama işleminde kira sözleşmesinin süresi <strong>${esc(s.sozlesmeSuresiYil || '5')}</strong> yıldır. Bir yıldan uzun süreli kiralama sözleşmelerinde ilk yıl kira bedeli ihale bedelidir. İkinci ve izleyen yıllar kira bedelleri Türkiye İstatistik Kurumunca (TÜİK) yayımlanan Tüketici Fiyat Endeksi (TÜFE-on iki aylık ortalamalara göre yüzde değişim) oranında artırılır. Ancak kira bedelinin tespitine ilişkin önemli ölçüde farklılaşma (öğrenci mevcudunda en az %25 oranında azalış veya artış, kiracının cirosunu önemli derecede etkileyebilecek Bakanlık tarafından getirilen kısıtlayıcı düzenlemeler) olması hâlinde, muhammen bedel yeniden tespit edilerek mevcut kiracıya aynı usulle sözleşmenin kalan süresi ile sınırlı olmak üzere ihale edilerek yeni sözleşme düzenlenir.</p>
+            <p class="text-justify mt-1">Sözleşme süresi biten ve sözleşmeden doğan yükümlülüklerini yerine getiren mevcut kantin işletmecilerinin talep etmesi ve bu talebin okul aile birlikleri tarafından uygun görülmesi halinde bu kantinler pazarlık usulü ile aynı işletmeciye yeniden kiralanabilir. Bu kiralamalarda da sözleşme süresi beş yılı, toplam sözleşme süresi de ilk sözleşme tarihinden itibaren yirmi yılı geçemez.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Kira ödenmesindeki esaslar</p>
+            <p class="text-justify"><span class="font-bold">MADDE 7-</span> Kiracı dokuz/oniki ay üzerinden belirlenen yıllık kira bedelinin %3 (<strong>${fmt(calc.arzBedeli)}</strong>) arz bedelini peşin olarak veya üçer aylık dönemler itibarıyla dönemi takip eden ayın onuncu günü sonuna kadar defterdarlık/mal müdürlüğü hesabına ödeyecek ve ödeme dekontunun aslını birliğe/okul müdürlüğüne teslim edecektir.</p>
+            <p class="text-justify mt-1">Kiracı aylık %3 arz bedelinin (<strong>${fmt(aylikArz)}</strong>) ödenmesinden geriye kalan kira bedelinin (<strong>${fmt(calc.monthlyNetRent)}</strong>) %10'u (<strong>${fmt(calc.ilPayiAylik)}</strong>) İl Millî Eğitim Müdürlüğüne, %10'u (<strong>${fmt(calc.ilcePayiAylik)}</strong>) İlçe Millî Eğitim Müdürlüğüne, %80'i de (<strong>${fmt(aylikBirlikPayi)}</strong>) birliğin göstereceği hesaplara ilgili ayın 5-15 tarihleri arasında yatırarak dekontlarını birliğe/okul müdürlüğüne teslim edecektir.</p>
+            <p class="text-justify mt-1">Tabii afetler (yangın, deprem, su baskını vs.), bulaşıcı hastalık, salgın gibi olayların çıkması ve benzeri hâller gibi mücbir sebep durumlarında eğitim ve öğretime ara verilen günlere tekabül eden kira tutarı o ayın kira bedelinden düşülerek ödeme yapılır.</p>
+            <p class="text-justify mt-1">Mücbir sebepler dışında sözleşme süresi içerisinde aylık kira bedelini iki defa üst üste ödemeyen kiracının sözleşmesi birlikçe tek taraflı olarak feshedilir. Bu durumda, Birliğin alacakları, kesin teminat tutarından mahsup edilir varsa kalan tutar kiracıya iade edilir. Kiracı, bu işlemden dolayı hiçbir hak talep edemez.</p>
+            <p class="text-justify mt-1">Süresinde ödenmeyen işletme bedeline 21/7/1953 tarihli ve 6183 sayılı Amme Alacaklarının Tahsil Usulü Hakkında Kanunun 51 inci maddesi gereğince belirlenen oranda gecikme zammı uygulanır.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Kesin teminat ve iade şekli</p>
+            <p class="text-justify"><span class="font-bold">MADDE 8-</span> Kesin teminat tutarı, bir yıllık kira bedelinin %6'sı oranında olup <strong>${fmt(calc.kesinTeminat)}</strong>'dir. Kesin teminat sözleşme bitiminde, birliğin herhangi bir alacağının kalmaması hâlinde kiracıya iade edilir.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Genel hükümler</p>
+            <p class="text-justify"><span class="font-bold">MADDE 9-</span> Kantin bizzat kiracı tarafından çalıştırılacaktır. Kantin başkası tarafından çalıştırılamaz, resmî veya gayri resmî devir ve temlik yapılamaz.</p>
+            <p class="text-justify mt-1">Kiracının ölümü hâlinde; varislerin noterden alınmış ortak kararıyla, bunlardan birisinin ihaleye katılma şartlarını taşıması, bir başka kantin işletmemesi, sözleşme yükümlülüklerini devam ettirmeyi kabul etmesi kaydıyla birlik yönetimi sözleşmeyi devam ettirebilir.</p>
+            <p class="text-justify mt-1">Zorunlu askerlik görevi veya iş göremeyecek derecede ağır hastalık sebebiyle kiracının geçici olarak işinin başında bulunamaması hâlinde, şahsi sorumluluğu devam etmek kaydıyla, askerlik görevinin veya iş göremezlik ağır hastalık bitimine kadar noter vekâleti ile vekil tayin eder. Vekil tayin edilen, yerine vekâlet edilenin görev ve sorumluluklarını yerine getirmekle sorumludur.</p>
+            <p class="text-justify mt-1">Kantinler, bu şartların dışında hiçbir şekilde devir, temlik edilemez, başkasına kiraya verilemez ve başkası tarafından çalıştırılamaz.</p>
+        </div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 10-</span> Kantinin işletilmesinde 6/12/1984 tarihli ve 3100 sayılı Katma Değer Vergisi Mükelleflerinin Ödeme Kaydedici Cihazları Kullanmaları Mecburiyeti Hakkında Kanun gereğince ödeme kaydedici cihaz (yazar kasa) kullanılır. Ödeme kaydedici cihazın kullanılamayacağı durumlarda, 4/1/1961 tarihli ve 213 sayılı Vergi Usul Kanunda belirtilen fatura veya perakende satış fişi kesilir.</p></div>
+
+        <div class="mb-3">
+            <p class="text-justify"><span class="font-bold">MADDE 11-</span> Sözleşme konusu kantin ve benzeri yerlerin elektrik, su, doğal gaz, ısıtma gideri, okulun sayaçlarından ayrı ise tahakkuk eden fatura bedelleri ilgili tahsilât müdürlüklerine, okulun sayaçlarıyla aynı ise idare tarafından tespit edilecek miktar tahakkuk dönemlerinde defterdarlık/malmüdürlüğü/il özel idaresine ödenmek üzere kiracı tarafından okul yönetimine ödenir.</p>
+            <p class="text-justify mt-1">Kantin ve benzeri yerlerin elektrik, su ve doğalgaz gibi tesisatın ilk işlem giderleri birlikçe yerine getirilir, abonman, kullanım ve tamir giderleri ise kiracı tarafından karşılanır.</p>
+        </div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 12-</span> İşletme hakkı verilen kantinin bulunduğu yer, idarece mahallinde tanzim edilecek tutanakla işleticiye teslim edilir. Tutanakla teslim edilen yerdeki kapı, pencere, dolap, lavabo gibi levazımın tam ve sağlam olup olmadığı, işletme hakkı verilen taşınmaz içerisindeki malzemenin çeşit ve değerleri itibarıyla ayrı ayrı belirtilerek teslim tutanağı düzenlenir. Bu tutanak birlik/okul yönetimi yetkilileri ile işletme hakkı verilen kiracı tarafından imzalanır.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 13-</span> Kantin ve benzeri yerin işletme hakkı sona erdiğinde, kiracı söz konusu kiraladığı yeri kullanımına bırakılan malzemelerle birlikte birlik, okul/kurum yönetimine bir tutanakla teslim eder.</p></div>
+
+        <div class="mb-3">
+            <p class="text-justify"><span class="font-bold">MADDE 14-</span> Kiracı; temizlik ve sağlık koşullarına uygun faaliyette bulunmak zorundadır. Kantinlerde eğitim-öğretimi olumsuz etkileyebilecek görsel ve işitsel kitle iletişim araçları bulundurulamaz. İşletmeci gıda maddelerini hijyen güvenliğinin sağlanması için kırtasiye, temizlik ve benzeri maddeleri diğer maddelerden ayrı yerlerde satışa sunar. Ayrıca sabotaj ve yangın gibi tehlikelere karşı her türlü tedbirleri alır. Kiracıdan kaynaklanan tedbirsizlik, ihmal ve kusur gibi nedenlere bağlı meydana gelecek zarar ziyanı tazmin etmekle yükümlüdür.</p>
+            <p class="text-justify mt-1">Fiziki mekânı uygun olan kantinlerde gıda ve hijyen güvenliğinin sağlanması için Türk Standartları Enstitüsünün (TSE) yayımladığı 13275, 13284 ve benzeri diğer standart kriterlerine uyulur.</p>
+        </div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 15-</span> Sözleşme süresi içinde; (1) Millî Eğitim Bakanlığı Okul-Aile Birliği Yönetmeliğinin 12 nci maddesinin beşinci fıkrasında sayılan suçları işlediklerinin yargı kararıyla tespiti, (2) İşletme hakkı verilen yerde, işletmecinin ve yanında çalışanların; Devletin güvenliğine aykırı, eğitim öğretim ortamını bozan davranışları, genel ahlaka aykırı görsel, yazılı yayınlar vb. malzemeyi bulundurduklarının tespiti, hâlinde birlik yönetimi kiracının sözleşmesini tek taraflı fesheder. Bu işlemden dolayı kiracı hiçbir hak talep edemez.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 16-</span> Kiracı, ilgili bakanlık/bakanlıkların kantin ve benzeri yerler ile buralarda bulundurulacak yiyecek ve içecek ve benzeri diğer hususlara ilişkin olarak yayımlanan genelge ve diğer düzenlemelere uymak zorundadır.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 17-</span> İşletme hakkı verilen yerde hiç bir şekilde "bira" dâhil alkollü içki, tütün ve tütün mamulleri ile enerji içecekleri bulundurulamaz ve satışı yapılamaz. Kantin ve benzeri yerlerde gıda kodeksine uygun öğrencinin ruh ve beden sağlığına faydalı gıda ve içeceklerin bulundurulması zorunludur.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 18-</span> İşletilen yerin; sözleşme hükümlerine aykırı işletilmesi halinde Bakanlıkça ihtiyaç duyulması halinde tebligatı müteakip on beş gün içinde bu yerlerin tahliyesi sağlanır.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 19-</span> Kantinin işletilmesinde mesleki ve teknik eğitim diploması, sertifika ile kurs bitirme, ustalık, kalfalık ve işyeri açma belgelerinden en az birine sahip öğrenci psikolojisine uyum sağlayabilecek kişiler istihdam edilir. Çalışan kişilerin bu özelliklere haiz olmaması hâlinde birlik ve okul yönetimince gerekli tedbirler alınır.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 20-</span> Kiracı, 7/6/2005 tarihli ve 5362 sayılı Esnaf ve Sanatkârlar Meslek Kuruluşları Kanununun 62 nci maddesine göre belirlenen fiyat tarifesini, 7/11/2013 tarihli ve 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve uygulaması ile ilgili yönetmelik gereği öğrencilerin rahatlıkla görebileceği yerlere asar.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 21–</span> Sözleşme süresi içerisinde okulun fiziki değişikliğe uğraması veya bir başka adresteki okulda faaliyetine devam ettirilmesi durumunda, yeni okulda işletmeci yoksa faaliyetine burada da devam edecektir. Güçlendirme, yangın, onarım ve benzeri nedenlerle geçici olarak eğitim ve öğretime ara verilmesi durumunda kiracının çalışma süresi ve kirası dondurulur. Okulun faaliyete geçmesini müteakip dondurulan süre sözleşme süresine eklenir.</p></div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Cezai işlemler</p>
+            <p class="text-justify"><span class="font-bold">MADDE 22-</span> Kira süresinin sona ermesi veya sözleşmenin feshinden sonra, kiracı taşınmazı idareye teslim etmediği takdirde, her geçen gün için kiracı işletme bedelinden ayrı olarak aylık kira bedelinin %3'ü oranında ayrıca ceza öder. Ceza ödenmesi taşınmazın kullanılmasına ve tahliyesinin geciktirilmesine neden olamaz.</p>
+            <p class="text-justify mt-1">Kiracının fesih talebinde bulunması, kira dönemi sona ermeden faaliyetini durdurması, kiralanan yeri amacı dışında kullanması, taahhüdünü sözleşme hükümlerine uygun olarak yerine getirmemesi veya izin ve ruhsatların her ne sebeple olursa olsun iptal edilmesi hallerinde kira sözleşmesi, birlik tarafından feshedilerek ayrıca, protesto çekmeye ve hüküm almaya gerek kalmaksızın 2886 sayılı Devlet İhale Kanununun 62 nci maddesine göre kesin teminatı gelir kaydedilir ve cari kiralama dönemine ilişkin (9 aylık veya 12 aylık) kira bedeli tazminat olarak tahsil edilir.</p>
+            <p class="text-justify mt-1">Bu sözleşmede yazılı olan hususlara sözleşme yapılmasından sonra yapılan itirazlar kabul edilmez.</p>
+        </div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 23-</span> Bu sözleşmede düzenlenmeyen hususlarda Millî Eğitim Bakanlığı Okul-Aile Birliği Yönetmeliği hükümleri uygulanır.</p></div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Anlaşmazlıkların çözümü</p>
+            <p class="text-justify"><span class="font-bold">MADDE 24-</span> Sözleşme süresinin bitiminde, kiracı kiralanan yeri rızasıyla tahliye etmediği takdirde, 8/9/1983 tarihli ve 2886 sayılı Devlet İhale Kanunu hükümleri gereğince yasal yollara başvurulmak üzere, okul yönetimince mülkiyet durumuna göre İl Muhakemat Müdürlüğü/İl Özel İdaresine bildirilir.</p>
+            <p class="text-justify mt-1">Bu sözleşmeden doğan ihtilafların hâl mercii <strong>${esc(s.mahkeme || '................')}</strong> Mahkeme ve İcra Daireleridir.</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-center font-bold italic mb-1">Yürürlük</p>
+            <p class="text-justify"><span class="font-bold">MADDE 25-</span> Yirmi beş maddeden oluşan bu sözleşme, taraflarca okunup anlaşılarak <strong>${yururluk}</strong> tarihinde yürürlüğe girmek üzere iki nüsha halinde düzenlenerek <strong>${yururluk}</strong> tarihinde imzalanmıştır.</p>
+        </div>
+
+        <div class="text-center font-extrabold uppercase mb-4 mt-8">ÖZEL ŞARTLAR</div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 1-</span> Kiracının değişmesi durumunda; kantine kiracı tarafından yapılan tüm tesis masrafları, kullanım süresi ve amortisman da dikkate alınarak okul, birlik, varsa ilgili oda temsilcisinin/kuruluşun ve gerektiğinde bilirkişi katılımıyla oluşturulan komisyonca takdir edilen meblağ, eski kiracıya yeni kiracı tarafından ödenir. Bu husus ihale ilanında ve şartnamede belirtilir. Ancak kiracının ilk iki yıl içerisinde sözleşmeyi tek taraflı feshetmesi veya sözleşmesinin haklı nedenlerle birlikçe feshedilmesi hâlinde, kiracı kantine yaptığı tüm tesis masrafları için iade veya herhangi bir hak talebinde bulunamaz.</p></div>
+
+        <div class="mb-3"><p class="text-justify"><span class="font-bold">MADDE 2-</span> ${s.ozelSartlar && s.ozelSartlar.trim() ? esc(s.ozelSartlar) : 'Taraflarca ilave bir özel şart belirlenmemiştir.'}</p></div>
+
+        <p class="text-justify text-[10px] italic mt-4">Not: Yirmi beş genel ve iki özel şart olmak üzere toplam yirmi yedi maddeden oluşan işbu sözleşme aşağıdaki imzalarla yürürlük kazanır.</p>
+
+        <div class="grid grid-cols-3 gap-4 mt-16 text-center text-xs">
+            <div>
+                <div class="border-b border-black h-12 mb-1"></div>
+                <p class="font-bold">Birlik Başkanı</p>
+                <p class="text-[10px]">Okul-Aile Birliği</p>
+            </div>
+            <div>
+                <div class="border-b border-black h-12 mb-1"></div>
+                <p class="font-bold">${esc(cr.operatorName || '................')}</p>
+                <p class="text-[10px]">Kiracı</p>
+            </div>
+            <div>
+                <div class="border-b border-black h-12 mb-1"></div>
+                <p class="font-bold">&nbsp;</p>
+                <p class="text-[10px]">Varsa İlgili Esnaf Odası Temsilcisi</p>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ===== MUTATIONS =====
+function updateSozlesme(field, val) { state.canteenRent.sozlesme[field] = val; }
+function updatePayType(m, v) { state.canteenRent.payments[m].type = v; render(); }
+function updatePayStatus(m, v) { state.canteenRent.payments[m].status = v; render(); }
+function updatePayField(m, f, v) { state.canteenRent.payments[m][f] = v; }
+
+// ===== INIT =====
+render();
+</script>
+</body>
+</html>

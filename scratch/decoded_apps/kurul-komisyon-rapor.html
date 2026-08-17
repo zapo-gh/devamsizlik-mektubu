@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurul ve Komisyonlar Rapor Oluşturucu</title>
+    <style>
+        :root {
+            --primary: #4338ca;
+            --primary-light: #6366f1;
+            --primary-dark: #1e1b4b;
+            --secondary: #0891b2;
+            --accent: #7c3aed;
+            --success: #059669;
+            --danger: #dc2626;
+            --bg-gray: #eef1f8;
+            --card-bg: #ffffff;
+            --text-dark: #14172b;
+            --text-muted: #64748b;
+            --border-color: #e0e4ee;
+            --radius: 14px;
+            --radius-sm: 9px;
+            --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 8px 24px rgba(30, 27, 75, 0.08);
+            --shadow-lg: 0 20px 45px rgba(30, 27, 75, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+        }
+
+        body {
+            background:
+                radial-gradient(1200px 500px at 100% -10%, rgba(99,102,241,0.10), transparent),
+                radial-gradient(900px 400px at -10% 10%, rgba(8,145,178,0.08), transparent),
+                var(--bg-gray);
+            color: var(--text-dark);
+            line-height: 1.5;
+            padding: 20px;
+            font-size: 14px;
+            min-height: 100vh;
+        }
+
+        /* App Header Controls */
+        .app-header {
+            background: linear-gradient(135deg, #4338ca 0%, #6d28d9 55%, #0891b2 120%);
+            color: white;
+            padding: 20px 26px;
+            border-radius: 18px;
+            margin-bottom: 22px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(600px 200px at 90% -30%, rgba(255,255,255,0.18), transparent);
+            pointer-events: none;
+        }
+
+        .app-title { position: relative; }
+
+        .app-title h1 {
+            font-family: 'Segoe UI', -apple-system, Roboto, Arial, sans-serif;
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-title p {
+            font-size: 12.5px;
+            opacity: 0.85;
+            margin-top: 3px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(6px);
+            padding: 4px 11px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #34d399;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #34d399;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            position: relative;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 40px;
+        }
+
+        .btn:active { transform: translateY(1px) scale(0.98); }
+
+        .btn-primary {
+            background-color: #ffffff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-primary:hover { background-color: #eef1ff; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        .btn-success:hover { background-color: #047857; transform: translateY(-1px); }
+
+        .btn-outline {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.35);
+        }
+        .btn-outline:hover { background-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover { background-color: #b91c1c; }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 11px;
+            min-height: auto;
+            border-radius: 7px;
+        }
+
+        /* Mobile View Switcher Tabs */
+        .mobile-tab-bar {
+            display: none;
+            gap: 6px;
+            margin-bottom: 15px;
+            background: #fff;
+            padding: 5px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-radius: 9px;
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.18s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(67, 56, 202, 0.28);
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* Form Controls Sidebar */
+        .editor-panel {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+            max-height: 85vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        .editor-panel::-webkit-scrollbar { width: 8px; }
+        .editor-panel::-webkit-scrollbar-thumb { background: #dbe0ee; border-radius: 8px; }
+
+        .panel-section {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eef0f6;
+        }
+
+        .panel-section:last-child { border-bottom: none; margin-bottom: 0; }
+
+        .panel-section h3 {
+            font-family: 'Segoe UI', -apple-system, Roboto, Arial, sans-serif;
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-group {
+            margin-bottom: 13px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin-bottom: 5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1.5px solid var(--border-color);
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 55px;
+        }
+
+        .committee-accordion {
+            background: #fbfcfe;
+            border-radius: var(--radius-sm);
+            margin-bottom: 9px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: box-shadow 0.18s;
+        }
+
+        .committee-accordion:hover { box-shadow: var(--shadow-sm); }
+
+        .accordion-header {
+            padding: 11px 13px;
+            background: #f1f3fb;
+            font-weight: 600;
+            font-size: 12.5px;
+            color: var(--primary-dark);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .accordion-header:hover {
+            background: #e7e9fa;
+        }
+
+        .accordion-body {
+            padding: 13px;
+            display: none;
+            background: white;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .member-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .member-row input {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        /* Document Preview Page (A4 Format) */
+        .preview-panel {
+            background: linear-gradient(180deg, #dfe3f0, #d3d8ea);
+            padding: 24px;
+            border-radius: var(--radius);
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+
+        .document-paper {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 13mm;
+            box-shadow: var(--shadow-lg);
+            border-radius: 3px;
+            color: #000;
+            position: relative;
+            font-family: 'Times New Roman', Cambria, Georgia, serif;
+        }
+
+        .document-paper * {
+            font-family: 'Times New Roman', Cambria, Georgia, serif;
+        }
+
+        /* Official Document Typography & Tables */
+        .doc-header {
+            text-align: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+        }
+
+        .doc-header h2 {
+            font-size: 13pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .doc-header h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .doc-header h4 {
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #1e3a8a;
+            margin-top: 4px;
+        }
+
+        .doc-info-bar {
+            display: table;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 8pt;
+            font-weight: bold;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 4px;
+        }
+
+        .doc-info-cell {
+            display: table-cell;
+        }
+
+        .doc-info-cell.right {
+            text-align: right;
+        }
+
+        .committee-block {
+            margin-bottom: 11px;
+            page-break-inside: avoid;
+        }
+
+        .committee-title {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 4px 9px;
+            font-size: 9.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .committee-meta {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-top: none;
+            padding: 5px 9px;
+            font-size: 8pt;
+            line-height: 1.25;
+            color: #334155;
+            margin-bottom: 3px;
+        }
+
+        .committee-meta strong {
+            color: #0f172a;
+        }
+
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+        }
+
+        .doc-table th, .doc-table td {
+            border: 1px solid #94a3b8;
+            padding: 2.5px 6px;
+            text-align: left;
+            line-height: 1.2;
+        }
+
+        .doc-table th {
+            background-color: #e2e8f0;
+            color: #0f172a;
+            font-weight: bold;
+            font-size: 7.5pt;
+            text-transform: uppercase;
+            padding: 3px 6px;
+        }
+
+        .doc-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .doc-signatures {
+            margin-top: 22px;
+            display: table;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+
+        .sig-cell {
+            display: table-cell;
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
+            font-size: 10pt;
+        }
+
+        .sig-title {
+            font-weight: bold;
+            margin-bottom: 26px;
+        }
+
+        .sig-name {
+            font-weight: bold;
+        }
+
+        .sig-sub {
+            font-size: 8.5pt;
+            color: #475569;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 960px) {
+            body {
+                padding: 10px;
+            }
+
+            .app-header {
+                padding: 14px 18px;
+            }
+
+            .mobile-tab-bar {
+                display: flex;
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .editor-panel.tab-hidden,
+            .preview-panel.tab-hidden {
+                display: none;
+            }
+
+            .preview-panel {
+                padding: 10px;
+            }
+
+            .document-paper {
+                width: 100%;
+                min-height: auto;
+                padding: 15px;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+
+            .app-header, .editor-panel, .mobile-tab-bar, .no-print {
+                display: none !important;
+            }
+
+            .workspace {
+                display: block !important;
+            }
+
+            .preview-panel {
+                background: white !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+
+            .document-paper {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                width: 100% !important;
+                padding: 0 !important;
+                min-height: auto !important;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 11mm 10mm;
+            }
+
+            .committee-title {
+                background-color: #1e3a8a !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .doc-table th {
+                background-color: #e2e8f0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .doc-table tr:nth-child(even) {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .committee-meta {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden File Input for JSON Import -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSON(event)">
+
+    <!-- Upper App Header -->
+    <header class="app-header no-print">
+        <div class="app-title">
+            <h1>📋 Kurul ve Komisyonlar Yönetim Sistemi</h1>
+            <p>Otomatik kaydetme, içeri/dışarı aktarma ve A4 çıktı desteği</p>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span id="saveStatusText">Veriler Taranıyor...</span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-outline" onclick="triggerImport()" title="JSON Dosyasından Yükle">📥 İçeri Aktar</button>
+            <button class="btn btn-success" onclick="exportJSON()" title="JSON Olarak Bilgisayara Kaydet">📤 Dışarı Aktar</button>
+            <button class="btn btn-primary" onclick="window.print()" title="Resmi Belgeyi Yazdır veya PDF Kaydet">🖨️ Yazdır / PDF</button>
+            <button class="btn btn-outline" onclick="resetToDefault()" style="border-color: rgba(239,68,68,0.5); color: #fca5a5;" title="Varsayılan Verilere Sıfırla">🔄 Sıfırla</button>
+        </div>
+    </header>
+
+    <!-- Mobile View Switcher Tab Bar -->
+    <div class="mobile-tab-bar no-print">
+        <button class="tab-btn active" id="tabEditorBtn" onclick="switchTab('editor')">✏️ Veri Düzenle</button>
+        <button class="tab-btn" id="tabPreviewBtn" onclick="switchTab('preview')">👁️ Rapor Önizleme</button>
+    </div>
+
+    <!-- Main Workspace Layout -->
+    <div class="workspace">
+        
+        <!-- Left Side: Interactive Form Editor Panel -->
+        <aside class="editor-panel no-print" id="editorPanel">
+            
+            <div class="panel-section">
+                <h3>🏛️ Genel Okul Bilgileri</h3>
+                <div class="form-group">
+                    <label>Eğitim-Öğretim Yılı</label>
+                    <input type="text" id="inputYear" class="form-control" value="2025 - 2026" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Okul / Kurum Adı</label>
+                    <input type="text" id="inputSchool" class="form-control" value="ÖZEL ŞEBNEM İLKOKULU - ORTAOKULU" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Rapor Başlığı</label>
+                    <input type="text" id="inputTitle" class="form-control" value="2025-2026 ÖĞRETİM YILINDA KURULAN KURUL VE KOMİSYONLAR" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Okul Müdürü (Onaylayan)</label>
+                    <input type="text" id="inputPrincipal" class="form-control" value="Yusuf BALTACIOĞLU" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Rapor Tarihi</label>
+                    <input type="text" id="inputDate" class="form-control" value="01.09.2025" oninput="onDataChanged()">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>
+                    <span>📋 Kurul ve Komisyonlar (<span id="commCount">25</span>)</span>
+                    <button class="btn btn-primary btn-sm" onclick="addNewCommittee()">+ Yeni Komisyon</button>
+                </h3>
+                <div id="committeeFormList">
+                    <!-- Dynamic Accordions Rendered Here -->
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Right Side: Official Document Live Preview Panel -->
+        <main class="preview-panel" id="previewPanel">
+            <div class="document-paper" id="documentPaper">
+                
+                <!-- Official Document Header -->
+                <div class="doc-header">
+                    <h2>T.C.</h2>
+                    <h3>MİLLÎ EĞİTİM BAKANLIĞI</h3>
+                    <h3 id="docSchoolName">ÖZEL ŞEBNEM İLKOKULU - ORTAOKULU</h3>
+                    <h4 id="docYearTitle">2025 - 2026 EĞİTİM ÖĞRETİM YILI</h4>
+                    <h4 id="docMainTitle" style="color:#1e3a8a; margin-top:8px;">KURUL VE KOMİSYONLAR ÇALIŞMA RAPORU VE ÜYE LİSTESİ</h4>
+                </div>
+
+                <div class="doc-info-bar">
+                    <div class="doc-info-cell">DOKÜMAN KODU: KK-RPR-2025</div>
+                    <div class="doc-info-cell right">TARİH: <span id="docDate">01.09.2025</span></div>
+                </div>
+
+                <!-- Committee List Rendered Here -->
+                <div id="docCommitteesContainer">
+                    <!-- Dynamic Document Blocks Generated by JS -->
+                </div>
+
+                <!-- Official Signature Block -->
+                <div class="doc-signatures">
+                    <div class="sig-cell">
+                        <div class="sig-title">Düzenleyen</div>
+                        <div class="sig-name">Müdür Yardımcısı</div>
+                        <div class="sig-sub">Kurul Koordinatörü</div>
+                    </div>
+                    <div class="sig-cell">
+                        <div class="sig-title">ONAY</div>
+                        <div class="sig-name" id="docPrincipalName">Yusuf BALTACIOĞLU</div>
+                        <div class="sig-sub">Okul Müdürü</div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Initial Default Data (All 25 Committees extracted from Word document)
+        const defaultCommittees = [
+    {
+        "id": "c1",
+        "name": "REHBERLİK VE PSİKOLOJİK DANIŞMA HİZMETLERİ YÜRÜTME KOMİSYONU",
+        "basis": "MEB Rehberlik ve Psikolojik Danışma Hizmetleri Yönetmeliği / Madde: 45",
+        "duties": "Rehberlik hizmetleri yürütme komisyonu eğitim kurumu müdürünün başkanlığında rehberlik ve psikolojik danışma hizmetlerinin yıllık çalışma planını hazırlar, yürütülmesini takip eder, okuldaki rehberlik faaliyetlerinin koordinasyonunu ve etkinliğini değerlendirir.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Komisyon Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Müdür Yardımcısı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Danışman Öğretmen",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Ana Sınıfı Öğretmeni",
+                "title": "Okul Öncesi Temsilcisi",
+                "name": "Elif ŞAHİN"
+            },
+            {
+                "role": "1. Sınıf Öğretmeni",
+                "title": "1. Sınıflar Temsilcisi",
+                "name": "Zeynep AYDIN"
+            },
+            {
+                "role": "2. Sınıf Öğretmeni",
+                "title": "2. Sınıflar Temsilcisi",
+                "name": "Ali ÖZTÜRK"
+            },
+            {
+                "role": "3. Sınıf Öğretmeni",
+                "title": "3. Sınıflar Temsilcisi",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "4. Sınıf Öğretmeni",
+                "title": "4. Sınıflar Temsilcisi",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "5. Sınıf Öğretmeni",
+                "title": "5. Sınıflar Temsilcisi",
+                "name": "Fatma KOÇ"
+            },
+            {
+                "role": "6. Sınıf Öğretmeni",
+                "title": "6. Sınıflar Temsilcisi",
+                "name": "Canan ERDOĞAN"
+            },
+            {
+                "role": "7. Sınıf Öğretmeni",
+                "title": "7. Sınıflar Temsilcisi",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "8. Sınıf Öğretmeni",
+                "title": "8. Sınıflar Temsilcisi",
+                "name": "Kemal YILMAZ"
+            },
+            {
+                "role": "Okul Aile Birliği Başkanı",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            }
+        ]
+    },
+    {
+        "id": "c2",
+        "name": "EĞİTİM ORTAMLARINDA ŞİDDETİN ÖNLENMESİ OKUL ÇALIŞMA KURULU",
+        "basis": "Özel Eğ. Reh. ve Dan. Hiz. Genel Müd. 24.03.2006 tarih ve 2006/26 numaralı genelgesi",
+        "duties": "Eğitim Ortamlarında Şiddetin Önlenmesi ve Azaltılması Strateji ve Eylem Planı çerçevesinde okul çalışma ekibini oluşturur, çalışmaların aksamaması için ihtiyaç duyulan personeli Millî Eğitim Müdürlüğüne bildirir.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Kurul Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "İdari Temsilci",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "İdari Temsilci",
+                "name": "Hüseyin BİLGE"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Temsilci",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Öğretmen Temsilcisi",
+                "name": "Mehmet KAYA"
+            },
+            {
+                "role": "Okul Aile Birliği Temsilcisi",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            },
+            {
+                "role": "Öğrenci Temsilcisi",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            }
+        ]
+    },
+    {
+        "id": "c3",
+        "name": "YAZI YAYIN İNCELEME KURULU",
+        "basis": "MEB Sosyal Etkinlikler Yönetmeliği / Madde: 12",
+        "duties": "İnceleme Kurulu: Müdürün veya görevlendireceği müdür yardımcısının başkanlığında, biri kültür dersleri öğretmeni olmak üzere iki öğretmen ile ilgili sosyal etkinlikler danışman öğretmeninden oluşur. Seçme Kurulu: Kulüp üyeleri arasından seçilen 5 öğrenciden oluşur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "İnceleme Kurulu Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Türkçe Öğretmeni",
+                "title": "Kültür Dersleri Öğretmeni",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Danışman Öğretmen",
+                "name": "Osman KAN"
+            },
+            {
+                "role": "Öğrenci Temsilcisi",
+                "title": "Seçme Kurulu Üyesi (5 Öğrenci)",
+                "name": "Öğrenci Kurulu"
+            }
+        ]
+    },
+    {
+        "id": "c4",
+        "name": "WEB YAYIN KOMİSYONU",
+        "basis": "MEB Okul İnternet Siteleri Yönergesi / Madde: 7",
+        "duties": "Okul internet sitesinin işletimi ile ilgili iş ve işlemleri yürütmek üzere oluşturulur. Yayın ekibi; okul müdürü/müdür yardımcısı, Fatih Projesi BT rehber öğretmeni, Türkçe/Edebiyat öğretmeni (editör) ve rehber öğretmenden (danışman) oluşur.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Yayın Ekibi Yöneticisi",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Yayın Ekibi Yöneticisi",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Danışman",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Bilişim / BT Öğretmeni",
+                "title": "İnternet Sitesi Yöneticisi",
+                "name": "Mustafa KAN"
+            },
+            {
+                "role": "Türkçe / Edebiyat Öğretmeni",
+                "title": "Editör",
+                "name": "Derya KILIÇ"
+            }
+        ]
+    },
+    {
+        "id": "c5",
+        "name": "OKUL PSİKOSOSYAL MÜDAHALE HİZMETLERİ KRİZE MÜDAHALE EKİBİ",
+        "basis": "MEB Psikososyal Müdahale Hizmetleri Krize Müdahale 2002/11 Sayılı Genelge",
+        "duties": "Öğrenciler, eğitimciler ve velilerin karşılaşabileceği travmatik/zorlu yaşam olayları ve sonrasında ortaya çıkabilecek durumlara yönelik koruyucu-önleyici ve yönlendirici çalışmaları yürüten ekiptir.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Ekip Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Ekip Yöneticisi",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Üye",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Öğretmen (1. Üye)",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Elif ŞAHİN"
+            },
+            {
+                "role": "Öğretmen (2. Üye)",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Zeynep AYDIN"
+            },
+            {
+                "role": "Öğretmen (3. Üye)",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Ali ÖZTÜRK"
+            },
+            {
+                "role": "Öğretmen (4. Üye)",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "Öğretmen (5. Üye)",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "Öğretmen (6. Üye)",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Fatma KOÇ"
+            }
+        ]
+    },
+    {
+        "id": "c6",
+        "name": "OKUL STRATEJİK PLAN HAZIRLAMA VE İNCELEME KOMİSYONU",
+        "basis": "5018 Sayılı Kamu Mali Yönetimi ve Kontrol Kanunu / Strateji Geliştirme Mevzuatı",
+        "duties": "Üst yöneticinin başkanlığında, idarenin stratejik planının hazırlanması, takibi ve incelenmesi süreçlerini yürütür.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Komisyon Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Koordinatör Üye",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Üye",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "İngilizce Öğretmeni",
+                "title": "Branş Öğretmeni",
+                "name": "Seda ŞEN"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Üye Öğretmen",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Üye Öğretmen",
+                "name": "Merve SEZER"
+            },
+            {
+                "role": "Okul Aile Birliği Temsilcisi",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            }
+        ]
+    },
+    {
+        "id": "c7",
+        "name": "SOSYAL ETKİNLİKLER VE TÖREN KUTLAMA KOMİSYONU",
+        "basis": "MEB İlköğretim ve Ortaöğretim Kurumları Sosyal Etkinlikler Yönetmeliği / Madde: 28",
+        "duties": "Tören programı her okulda müdür veya görevlendireceği bir müdür yardımcısının başkanlığında en az iki öğretmen ve bir öğrenci temsilcisinden oluşturulan komisyonca hazırlanır ve uygulanır.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Komisyon Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Komisyon Üyesi Öğretmen",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Komisyon Üyesi Öğretmen",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Komisyon Üyesi Öğretmen",
+                "name": "Canan ERDOĞAN"
+            },
+            {
+                "role": "Öğrenci Temsilcisi",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            },
+            {
+                "role": "Temsilci Veli",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            }
+        ]
+    },
+    {
+        "id": "c8",
+        "name": "ESER İNCELEME VE SEÇME KURULU",
+        "basis": "MEB İlköğretim ve Ortaöğretim Kurumları Sosyal Etkinlikler Yönetmeliği / Madde: 12/2",
+        "duties": "Müdürün veya görevlendireceği müdür yardımcısının başkanlığında, iki öğretmen, ilgili sosyal etkinlikler öğrenci kulübü danışman öğretmeni ve temsilci öğrenciden Eser İnceleme ve Seçme Kurulu oluşturulur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Kurul Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Kurul Üyesi Öğretmen",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Kurul Üyesi Öğretmen",
+                "name": "Osman KAN"
+            },
+            {
+                "role": "Kulüp Danışman Öğretmeni",
+                "title": "Danışman Öğretmen",
+                "name": "Seda ŞEN"
+            },
+            {
+                "role": "Öğrenci Temsilcisi",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            }
+        ]
+    },
+    {
+        "id": "c9",
+        "name": "DEĞERLER EĞİTİMİ KOMİSYONU",
+        "basis": "MEB Değerler Eğitimi Yönergesi ve Okul Yıllık Çalışma Planı",
+        "duties": "Okul müdürü veya sorumlu müdür yardımcısı başkanlığında, rehber öğretmenler, her sınıf seviyesinden bir sınıf rehber öğretmeni, okul aile birliğinden bir kişi ve okul öğrenci temsilcisinden oluşur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Komisyon Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Üye",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "1. Sınıf Öğretmeni",
+                "title": "1. Sınıf Temsilcisi",
+                "name": "Zeynep AYDIN"
+            },
+            {
+                "role": "2. Sınıf Öğretmeni",
+                "title": "2. Sınıf Temsilcisi",
+                "name": "Ali ÖZTÜRK"
+            },
+            {
+                "role": "3. Sınıf Öğretmeni",
+                "title": "3. Sınıf Temsilcisi",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "4. Sınıf Öğretmeni",
+                "title": "4. Sınıf Temsilcisi",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "5. Sınıf Öğretmeni",
+                "title": "5. Sınıf Temsilcisi",
+                "name": "Fatma KOÇ"
+            },
+            {
+                "role": "6. Sınıf Öğretmeni",
+                "title": "6. Sınıf Temsilcisi",
+                "name": "Canan ERDOĞAN"
+            },
+            {
+                "role": "7. Sınıf Öğretmeni",
+                "title": "7. Sınıf Temsilcisi",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "8. Sınıf Öğretmeni",
+                "title": "8. Sınıf Temsilcisi",
+                "name": "Kemal YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Üye Öğretmen",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Üye Öğretmen",
+                "name": "Osman KAN"
+            },
+            {
+                "role": "Okul Aile Birliği Temsilcisi",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            },
+            {
+                "role": "Öğrenci Temsilcisi",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            }
+        ]
+    },
+    {
+        "id": "c10",
+        "name": "KÜTÜPHANE KAYNAKLARININ TESPİTİ VE SEÇİMİ KOMİSYONU",
+        "basis": "MEB Okul Kütüphaneleri Yönetmeliği / Madde: 10/b",
+        "duties": "Kütüphane kaynaklarının tespiti ve seçimini yapacak komisyon; okul müdürünün başkanlığında, ilgili zümre başkanları, kütüphanecilik kulübü danışman öğretmeni, kütüphanecilik kulübü temsilcisi, okul-aile birliği üyesi, okul öğrenci meclisi başkanı ve kütüphaneciden oluşturulur.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Komisyon Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "1. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Zeynep AYDIN"
+            },
+            {
+                "role": "2. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Ali ÖZTÜRK"
+            },
+            {
+                "role": "3. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "4. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "5. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Fatma KOÇ"
+            },
+            {
+                "role": "6. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Canan ERDOĞAN"
+            },
+            {
+                "role": "7. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "8. Sınıf Öğretmeni",
+                "title": "Zümre Temsilcisi",
+                "name": "Kemal YILMAZ"
+            },
+            {
+                "role": "Okul Meclisi Başkanı",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            },
+            {
+                "role": "Okul Aile Birliği Temsilcisi",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            }
+        ]
+    },
+    {
+        "id": "c11",
+        "name": "SİVİL SAVUNMA KOMİSYONU",
+        "basis": "7126 Sayılı Sivil Savunma Kanunu ve İlgili Yönetmelik Madde: 78 (4)",
+        "duties": "Sivil savunma ekiplerinin kuruluş, eğitim ve afet/acil durum işleyişini 7126 sayılı Sivil Savunma Kanunu hükümlerine göre yürütür.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Komisyon Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Sivil Savunma Amiri",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Destek Ekibi Üyesi",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Sivil Savunma Görevlisi",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Sivil Savunma Görevlisi",
+                "name": "Kemal YILMAZ"
+            }
+        ]
+    },
+    {
+        "id": "c12",
+        "name": "TAŞINABİLİR MAL SAYIM TESPİT DÜŞÜM VE MUAYENE KABUL KOMİSYONU (TİF)",
+        "basis": "Taşınır Mal Yönetmeliği / Madde: 32 (2)",
+        "duties": "Taşınır sayımları, harcama yetkilisince kendisinin veya görevlendireceği bir kişinin başkanlığında taşınır kayıt kontrol yetkilisinin katılımıyla en az üç kişiden oluşturulan sayım kurulu tarafından yapılır.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Komisyon Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Asil Üye",
+                "name": "Mustafa KAN"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Asil Üye",
+                "name": "Osman KAN"
+            },
+            {
+                "role": "Öğretmen (Yedek)",
+                "title": "Yedek Üye",
+                "name": "Merve SEZER"
+            }
+        ]
+    },
+    {
+        "id": "c13",
+        "name": "MAL VE HİZMET SATIN ALIMLARI İLE BAKIM, KÜÇÜK ONARIM KOMİSYONU",
+        "basis": "4734 Sayılı Kamu İhale Kanunu ve Muayene Kabul Yönetmeliği / Madde: 6",
+        "duties": "Biri başkan, biri işin uzmanı olmak üzere en az üç veya daha fazla tek sayıda kişi ile yedek üyelerden oluşan muayene ve kabul komisyonudur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Komisyon Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "İşin Uzmanı / Üye",
+                "name": "Hüseyin BİLGE"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Asil Üye",
+                "name": "Mehmet KAYA"
+            },
+            {
+                "role": "Öğretmen (Yedek)",
+                "title": "Yedek Üye",
+                "name": "Ali ÖZTÜRK"
+            }
+        ]
+    },
+    {
+        "id": "c14",
+        "name": "OKUL AİLE BİRLİĞİ DENETLEME KURULU",
+        "basis": "MEB Okul-Aile Birliği Yönetmeliği / Madde: 14",
+        "duties": "Denetleme kurulu, genel kurulca seçilen bir veli ve öğretmenler kurulunca seçilen iki öğretmen olmak üzere üç asıl ve üç yedek üyeden oluşur.",
+        "members": [
+            {
+                "role": "Öğretmen (Asil)",
+                "title": "Denetleme Kurulu Üyesi",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "Öğretmen (Asil)",
+                "title": "Denetleme Kurulu Üyesi",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "Öğretmen (Yedek)",
+                "title": "Yedek Üye Öğretmen",
+                "name": "Fatma KOÇ"
+            },
+            {
+                "role": "Öğretmen (Yedek)",
+                "title": "Yedek Üye Öğretmen",
+                "name": "Canan ERDOĞAN"
+            },
+            {
+                "role": "Veli (Asil)",
+                "title": "Denetleme Kurulu Başkanı (Veli)",
+                "name": "Hatice DOĞAN"
+            },
+            {
+                "role": "Veli (Yedek)",
+                "title": "Yedek Üye Veli",
+                "name": "Ahmet DEMİR"
+            }
+        ]
+    },
+    {
+        "id": "c15",
+        "name": "OKUL KANTİNİ DENETLEME KOMİSYONU",
+        "basis": "Okul Kantinlerine Dair Özel Hijyen Kuralları Yönetmeliği",
+        "duties": "Okul müdürü/müdür yardımcısı başkanlığında, özel hijyen eğitimi alan en az bir öğretmen, okul aile birliği yetkilisi ve okul meclisi başkanı/yardımcısından oluşur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Komisyon Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen (Asil)",
+                "title": "Hijyen Eğitimi Alan Öğretmen",
+                "name": "Elif ŞAHİN"
+            },
+            {
+                "role": "Öğretmen (Asil)",
+                "title": "Asil Üye Öğretmen",
+                "name": "Zeynep AYDIN"
+            },
+            {
+                "role": "Veli (Asil)",
+                "title": "Okul Aile Birliği Yetkilisi",
+                "name": "Hatice DOĞAN"
+            },
+            {
+                "role": "Okul Meclisi Başkanı",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            }
+        ]
+    },
+    {
+        "id": "c16",
+        "name": "OKUL SERVİSLERİ DENETLEME KOMİSYONU",
+        "basis": "Okul Servis Araçları Hizmet Yönetmeliği / Madde: 3-i",
+        "duties": "Okul servis araçlarının güvenliği, taşıma şartları ve mevzuata uygunluğunu periyodik olarak denetler.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Komisyon Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Denetçi Öğretmen",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Denetçi Öğretmen",
+                "name": "Kemal YILMAZ"
+            },
+            {
+                "role": "Veli Temsilcisi",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            }
+        ]
+    },
+    {
+        "id": "c17",
+        "name": "OKUL RİSK TAKİP KURULU (OKUL RİTA)",
+        "basis": "2005/95 Sayılı Rehberlik ve Psikolojik Danışma Hizmetlerinin Geliştirilmesi Genelgesi",
+        "duties": "Okul müdürü veya müdür yardımcısı başkanlığında, sınıf/şube rehber öğretmenleri, okul rehber öğretmeni ve öğrenci temsilcisinden oluşur. Okuldaki risk gruplarını tespit eder ve takip eder.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Kurul Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Kurul Yöneticisi",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Temsilci",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Sınıf Rehber Öğretmeni",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Şube Rehber Öğretmeni",
+                "name": "Murat YILDIZ"
+            }
+        ]
+    },
+    {
+        "id": "c18",
+        "name": "OKUL SEÇİM KURULU",
+        "basis": "MEB Demokrasi Eğitimi ve Okul Meclisleri Yönergesi / Madde: 9",
+        "duties": "Öğretmenler kurulunca seçilen bir öğretmenin başkanlığında öğrencilerden seçilen iki asıl, iki yedek üyeden oluşur. Okuldaki seçim işlerini yürütür.",
+        "members": [
+            {
+                "role": "Öğretmen",
+                "title": "Seçim Kurulu Başkanı",
+                "name": "Osman KAN"
+            },
+            {
+                "role": "Öğrenci (Asil)",
+                "title": "Asil Öğrenci Üye",
+                "name": "Ege YILMAZ"
+            },
+            {
+                "role": "Öğrenci (Asil)",
+                "title": "Asil Öğrenci Üye",
+                "name": "Zeynep KAYA"
+            },
+            {
+                "role": "Yedek Öğrenci",
+                "title": "Yedek Öğrenci Üye",
+                "name": "Ali CAN"
+            },
+            {
+                "role": "Yedek Öğrenci",
+                "title": "Yedek Öğrenci Üye",
+                "name": "Selin ŞAHİN"
+            }
+        ]
+    },
+    {
+        "id": "c19",
+        "name": "SANDIK KURULU",
+        "basis": "MEB Demokrasi Eğitimi ve Okul Meclisleri Yönergesi / Madde: 10",
+        "duties": "Bir öğretmenin rehberliğinde, üç asıl ve üç yedek öğrenciden oluşur. Yaşça en büyük öğrenci sandık kurulu başkanı görevini yürütür.",
+        "members": [
+            {
+                "role": "Öğretmen",
+                "title": "Rehber Öğretmen",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Öğrenci (Asil)",
+                "title": "Sandık Kurulu Başkanı (Öğrenci)",
+                "name": "Ege YILMAZ"
+            },
+            {
+                "role": "Öğrenci (Asil)",
+                "title": "Asil Öğrenci Üye",
+                "name": "Zeynep KAYA"
+            },
+            {
+                "role": "Öğrenci (Asil)",
+                "title": "Asil Öğrenci Üye",
+                "name": "Mert DEMİR"
+            },
+            {
+                "role": "Yedek Öğrenci",
+                "title": "Yedek Öğrenci Üye",
+                "name": "Selin ŞAHİN"
+            },
+            {
+                "role": "Yedek Öğrenci",
+                "title": "Yedek Öğrenci Üye",
+                "name": "Ali CAN"
+            },
+            {
+                "role": "Yedek Öğrenci",
+                "title": "Yedek Öğrenci Üye",
+                "name": "Aylin KOÇ"
+            }
+        ]
+    },
+    {
+        "id": "c20",
+        "name": "ÖĞRENCİ KURULU VE OKUL MECLİSLERİ",
+        "basis": "MEB Demokrasi Eğitimi ve Okul Meclisleri Yönergesi",
+        "duties": "Öğrenciler tarafından seçilen başkan, ikinci başkan ve şube temsilcilerinden oluşur. Öğretmenler kurulunca seçilen bir öğretmen rehberlik eder.",
+        "members": [
+            {
+                "role": "Öğretmen",
+                "title": "Rehber Öğretmen",
+                "name": "Seda ŞEN"
+            },
+            {
+                "role": "Öğrenci Başkanı",
+                "title": "Okul Meclis Başkanı",
+                "name": "Ege YILMAZ"
+            },
+            {
+                "role": "İkinci Başkan",
+                "title": "Başkan Yardımcısı",
+                "name": "Zeynep KAYA"
+            },
+            {
+                "role": "1. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Ahmet CAN"
+            },
+            {
+                "role": "2. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Elif KAN"
+            },
+            {
+                "role": "3. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Mehmet ER"
+            },
+            {
+                "role": "4. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Seda GÜN"
+            },
+            {
+                "role": "5. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Burak BAŞ"
+            },
+            {
+                "role": "6. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Ceren AK"
+            },
+            {
+                "role": "7. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Deniz TAN"
+            },
+            {
+                "role": "8. Sınıf Öğrenci Temsilcisi",
+                "title": "Şube Temsilcisi",
+                "name": "Efe YILDIZ"
+            }
+        ]
+    },
+    {
+        "id": "c21",
+        "name": "BİREYSELLEŞTİRİLMİŞ EĞİTİM PROGRAMI GELİŞTİRME BİRİMİ (BEP)",
+        "basis": "Özel Eğitim Hizmetleri Yönetmeliği / Madde: 72",
+        "duties": "Okul müdürü veya müdür yardımcısı başkanlığında; gezerek özel eğitim görevi yapan öğretmen, rehber öğretmen, sınıf öğretmeni, branş öğretmenleri, veli ve öğrenciden oluşur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "BEP Birim Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Üye",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Sınıf Öğretmeni",
+                "title": "Öğrencinin Sınıf Öğretmeni",
+                "name": "Zeynep AYDIN"
+            },
+            {
+                "role": "Branş Öğretmeni",
+                "title": "Ders Öğretmeni",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Veli",
+                "title": "Öğrenci Velisi",
+                "name": "Hatice DOĞAN"
+            },
+            {
+                "role": "Öğrenci",
+                "title": "Öğrenci",
+                "name": "Öğrenci Temsilcisi"
+            }
+        ]
+    },
+    {
+        "id": "c22",
+        "name": "ÖĞRENCİ DAVRANIŞLARINI DEĞERLENDİRME KURULU",
+        "basis": "MEB Okul Öncesi Eğitim ve İlköğretim Kurumları Yönetmeliği",
+        "duties": "Müdür yardımcısı başkanlığında, öğretmenler kurulunca seçilen sınıf ve şube rehber öğretmenleri, okul rehber öğretmeni, okul-aile birliği başkanı ve öğrenci kurulu başkanından oluşturulur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Kurul Başkanı",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Rehber Öğretmen",
+                "title": "Uzman Üye",
+                "name": "Ayşe DEMİR"
+            },
+            {
+                "role": "Sınıf Rehber Öğretmeni",
+                "title": "Asil Üye Öğretmen",
+                "name": "Sibel ARSLAN"
+            },
+            {
+                "role": "Şube Rehber Öğretmeni",
+                "title": "Asil Üye Öğretmen",
+                "name": "Murat YILDIZ"
+            },
+            {
+                "role": "Okul Aile Birliği Başkanı",
+                "title": "Veli Temsilcisi",
+                "name": "Hatice DOĞAN"
+            },
+            {
+                "role": "Öğrenci Kurulu Başkanı",
+                "title": "Öğrenci Temsilcisi",
+                "name": "Ege YILMAZ"
+            }
+        ]
+    },
+    {
+        "id": "c23",
+        "name": "TKY KALİTE KURULU",
+        "basis": "MEB Toplam Kalite Yönetimi Uygulama Yönergesi / Madde: 9",
+        "duties": "Birim amirinin başkanlığında, birimin konuyla ilgili kritik sorumluluklarını üstlenmiş, yeterli bilgi ve beceriye sahip en az beş kişiden oluşur.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "Kalite Kurulu Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Süreç Yöneticisi",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Mehmet KAYA"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Hüseyin BİLGE"
+            },
+            {
+                "role": "Öğretmen",
+                "title": "Ekip Üyesi Öğretmen",
+                "name": "Mustafa KAN"
+            }
+        ]
+    },
+    {
+        "id": "c24",
+        "name": "ÖĞRENCİ KULÜPLERİ KURULU",
+        "basis": "MEB Sosyal Etkinlikler Yönetmeliği / Madde: 8",
+        "duties": "Öğrenci Kulüpleri Çizelgesindeki kulüplerden gerekli görülenlerle çevrenin ekonomik, sosyal, kültürel özellikleri dikkate alınarak öğretmenler kurulu kararıyla kurulur.",
+        "members": [
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "Kurul Koordinatörü",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Kültür Medeniyet Kulübü Ökt.",
+                "title": "Kulüp Danışman Öğretmeni",
+                "name": "Derya KILIÇ"
+            },
+            {
+                "role": "Değerler Eğitimi Kulübü Ökt.",
+                "title": "Kulüp Danışman Öğretmeni",
+                "name": "Osman KAN"
+            },
+            {
+                "role": "Çevre ve İklim Kulübü Ökt.",
+                "title": "Kulüp Danışman Öğretmeni",
+                "name": "Canan ERDOĞAN"
+            },
+            {
+                "role": "Sivil Savunma Kulübü Ökt.",
+                "title": "Kulüp Danışman Öğretmeni",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "Kızılay ve Yeşilay Kulübü Ökt.",
+                "title": "Kulüp Danışman Öğretmeni",
+                "name": "Fatma KOÇ"
+            },
+            {
+                "role": "Spor Kulübü Ökt.",
+                "title": "Kulüp Danışman Öğretmeni",
+                "name": "Murat YILDIZ"
+            }
+        ]
+    },
+    {
+        "id": "c25",
+        "name": "İŞ SAĞLIĞI VE GÜVENLİĞİ KURULU",
+        "basis": "İş Sağlığı ve Güvenliği Kurulları Hakkında Yönetmelik / Madde: 6",
+        "duties": "Okulda iş sağlığı ve güvenliği önlemlerini planlar, denetler ve acil durum eylem planlarını yürütür.",
+        "members": [
+            {
+                "role": "Okul Müdürü",
+                "title": "İSG Kurul Başkanı",
+                "name": "Yusuf BALTACIOĞLU"
+            },
+            {
+                "role": "Müdür Yardımcısı",
+                "title": "İSG Uzmanı / İşveren Vekili",
+                "name": "Ahmet YILMAZ"
+            },
+            {
+                "role": "Sivil Savunma Kulübü Ökt.",
+                "title": "Sivil Savunma Sorumlusu",
+                "name": "Hasan ÇELİK"
+            },
+            {
+                "role": "Çalışan Temsilcisi",
+                "title": "Çalışan Temsilcisi",
+                "name": "Mustafa KAN"
+            }
+        ]
+    }
+];
+
+        const defaultData = {
+            year: "2025 - 2026",
+            school: "ÖZEL ŞEBNEM İLKOKULU - ORTAOKULU",
+            title: "2025-2026 ÖĞRETİM YILINDA KURULAN KURUL VE KOMİSYONLAR",
+            principal: "Yusuf BALTACIOĞLU",
+            date: "01.09.2025",
+            committees: defaultCommittees
+        };
+
+        let currentData = null;
+        let autoSaveTimer = null;
+
+        // Initialize App on Page Load
+        window.onload = function() {
+            loadDataFromStorage();
+            renderEditorForms();
+            updateDocument();
+        };
+
+        // Load Data (Local Storage or Default)
+        function loadDataFromStorage() {
+            try {
+                const saved = localStorage.getItem('kurul_komisyon_data_v2');
+                if (saved) {
+                    currentData = JSON.parse(saved);
+                    updateStatusText('🟢 Otomatik Kayıt Yüklendi (' + getFormattedTime() + ')');
+                } else {
+                    currentData = JSON.parse(JSON.stringify(defaultData));
+                    updateStatusText('🟢 Varsayılan Veriler Hazır');
+                }
+            } catch (e) {
+                currentData = JSON.parse(JSON.stringify(defaultData));
+                updateStatusText('⚠️ Varsayılan Veriler Hazır');
+            }
+
+            // Fill header form inputs
+            document.getElementById('inputYear').value = currentData.year || defaultData.year;
+            document.getElementById('inputSchool').value = currentData.school || defaultData.school;
+            document.getElementById('inputTitle').value = currentData.title || defaultData.title;
+            document.getElementById('inputPrincipal').value = currentData.principal || defaultData.principal;
+            document.getElementById('inputDate').value = currentData.date || defaultData.date;
+        }
+
+        // Save Data to LocalStorage (Elektrik Kesintisine Karşı Otomatik Kayıt)
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('kurul_komisyon_data_v2', JSON.stringify(currentData));
+                updateStatusText('🟢 Otomatik Kaydedildi (' + getFormattedTime() + ')');
+            } catch (e) {
+                updateStatusText('❌ Depolama Hatası');
+            }
+        }
+
+        function onDataChanged() {
+            // Debounced Save & Update
+            updateStatusText('🟡 Kaydediliyor...');
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                syncInputFields();
+                saveToLocalStorage();
+                updateDocument();
+            }, 300);
+        }
+
+        function syncInputFields() {
+            currentData.year = document.getElementById('inputYear').value;
+            currentData.school = document.getElementById('inputSchool').value;
+            currentData.title = document.getElementById('inputTitle').value;
+            currentData.principal = document.getElementById('inputPrincipal').value;
+            currentData.date = document.getElementById('inputDate').value;
+        }
+
+        function updateStatusText(msg) {
+            document.getElementById('saveStatusText').innerText = msg;
+        }
+
+        function getFormattedTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        // Update Document Preview Render
+        function updateDocument() {
+            syncInputFields();
+
+            document.getElementById('docSchoolName').innerText = currentData.school;
+            document.getElementById('docYearTitle').innerText = currentData.year + " EĞİTİM ÖĞRETİM YILI";
+            document.getElementById('docMainTitle').innerText = currentData.title;
+            document.getElementById('docDate').innerText = currentData.date;
+            document.getElementById('docPrincipalName').innerText = currentData.principal;
+            document.getElementById('commCount').innerText = currentData.committees.length;
+
+            const container = document.getElementById('docCommitteesContainer');
+            container.innerHTML = '';
+
+            currentData.committees.forEach((c, idx) => {
+                const block = document.createElement('div');
+                block.className = 'committee-block';
+
+                let rowsHtml = '';
+                c.members.forEach((m, mIdx) => {
+                    rowsHtml += `
+                        <tr>
+                            <td style="width: 6%; text-align: center; font-weight: bold;">${mIdx + 1}</td>
+                            <td style="width: 34%; font-weight: bold;">${m.role || ''}</td>
+                            <td style="width: 25%; color: #475569;">${m.title || ''}</td>
+                            <td style="width: 35%; font-weight: bold; color: #1e3a8a;">${m.name || ''}</td>
+                        </tr>
+                    `;
+                });
+
+                block.innerHTML = `
+                    <div class="committee-title">${idx + 1}. ${c.name}</div>
+                    <div class="committee-meta">
+                        <div><strong>Yasal Dayanak:</strong> ${c.basis || 'Belirtilmedi'}</div>
+                        <div><strong>Görev ve Sorumluluklar:</strong> ${c.duties || 'Belirtilmedi'}</div>
+                    </div>
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;">No</th>
+                                <th>Görevi / Konumu</th>
+                                <th>Temsil Ettiği Birim / Ünvan</th>
+                                <th>Adı Soyadı</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(block);
+            });
+        }
+
+        // Render Left Form Editor Accordions
+        function renderEditorForms() {
+            const container = document.getElementById('committeeFormList');
+            container.innerHTML = '';
+
+            currentData.committees.forEach((c, cIdx) => {
+                const acc = document.createElement('div');
+                acc.className = 'committee-accordion';
+
+                let membersInputs = '';
+                c.members.forEach((m, mIdx) => {
+                    membersInputs += `
+                        <div class="member-row">
+                            <input type="text" class="form-control" style="flex:2; min-width: 90px;" value="${m.role || ''}" placeholder="Görevi" oninput="updateMember('${c.id}', ${mIdx}, 'role', this.value)">
+                            <input type="text" class="form-control" style="flex:2; min-width: 90px;" value="${m.title || ''}" placeholder="Ünvan" oninput="updateMember('${c.id}', ${mIdx}, 'title', this.value)">
+                            <input type="text" class="form-control" style="flex:2.5; min-width: 100px;" value="${m.name || ''}" placeholder="Adı Soyadı" oninput="updateMember('${c.id}', ${mIdx}, 'name', this.value)">
+                            <button class="btn btn-danger btn-sm" onclick="removeMember('${c.id}', ${mIdx})" title="Üyeyi Sil">✕</button>
+                        </div>
+                    `;
+                });
+
+                acc.innerHTML = `
+                    <div class="accordion-header" onclick="toggleAccordion('acc-${c.id}')">
+                        <span>📌 ${cIdx + 1}. ${c.name.length > 28 ? c.name.substring(0, 28) + '...' : c.name}</span>
+                        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); removeCommittee('${c.id}')">Sil</button>
+                    </div>
+                    <div class="accordion-body" id="acc-${c.id}">
+                        <div class="form-group">
+                            <label>Komisyon Adı</label>
+                            <input type="text" class="form-control" value="${c.name}" oninput="updateCommitteeField('${c.id}', 'name', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Yasal Dayanak</label>
+                            <input type="text" class="form-control" value="${c.basis || ''}" oninput="updateCommitteeField('${c.id}', 'basis', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Görev ve Sorumluluklar</label>
+                            <textarea class="form-control" oninput="updateCommitteeField('${c.id}', 'duties', this.value)">${c.duties || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="display:flex; justify-content:space-between; align-items:center;">
+                                Üye Listesi
+                                <button class="btn btn-success btn-sm" onclick="addMember('${c.id}')">+ Üye Ekle</button>
+                            </label>
+                            ${membersInputs}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(acc);
+            });
+        }
+
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            const isVisible = el.style.display === 'block';
+            document.querySelectorAll('.accordion-body').forEach(b => b.style.display = 'none');
+            if (!isVisible) el.style.display = 'block';
+        }
+
+        function updateCommitteeField(id, field, value) {
+            const comm = currentData.committees.find(c => c.id === id);
+            if (comm) {
+                comm[field] = value;
+                onDataChanged();
+            }
+        }
+
+        function updateMember(commId, mIdx, field, value) {
+            const comm = currentData.committees.find(c => c.id === commId);
+            if (comm && comm.members[mIdx]) {
+                comm.members[mIdx][field] = value;
+                onDataChanged();
+            }
+        }
+
+        function addMember(commId) {
+            const comm = currentData.committees.find(c => c.id === commId);
+            if (comm) {
+                comm.members.push({ role: "Yeni Görev", title: "Üye", name: "Ad Soyad" });
+                renderEditorForms();
+                onDataChanged();
+                toggleAccordion('acc-' + commId);
+            }
+        }
+
+        function removeMember(commId, mIdx) {
+            const comm = currentData.committees.find(c => c.id === commId);
+            if (comm) {
+                comm.members.splice(mIdx, 1);
+                renderEditorForms();
+                onDataChanged();
+                toggleAccordion('acc-' + commId);
+            }
+        }
+
+        function addNewCommittee() {
+            const newId = 'c_' + Date.now();
+            currentData.committees.push({
+                id: newId,
+                name: "YENİ KURUL VEYA KOMİSYON ADI",
+                basis: "İlgili Mevzuat / Yönetmelik",
+                duties: "Komisyonun görev ve sorumlulukları...",
+                members: [
+                    { role: "Müdür Yardımcısı", title: "Başkan", name: "Ad Soyad" },
+                    { role: "Öğretmen", title: "Üye", name: "Ad Soyad" }
+                ]
+            });
+            renderEditorForms();
+            onDataChanged();
+            toggleAccordion('acc-' + newId);
+        }
+
+        function removeCommittee(id) {
+            if (confirm("Bu komisyonu tamamen silmek istediğinize emin misiniz?")) {
+                currentData.committees = currentData.committees.filter(c => c.id !== id);
+                renderEditorForms();
+                onDataChanged();
+            }
+        }
+
+        // Data Import & Export Features
+        function triggerImport() {
+            document.getElementById('importFileInput').click();
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData && importedData.committees && Array.isArray(importedData.committees)) {
+                        currentData = importedData;
+                        
+                        // Fill inputs
+                        document.getElementById('inputYear').value = currentData.year || '';
+                        document.getElementById('inputSchool').value = currentData.school || '';
+                        document.getElementById('inputTitle').value = currentData.title || '';
+                        document.getElementById('inputPrincipal').value = currentData.principal || '';
+                        document.getElementById('inputDate').value = currentData.date || '';
+
+                        renderEditorForms();
+                        saveToLocalStorage();
+                        updateDocument();
+                        alert('✅ Veriler başarıyla içeri aktarıldı ve kaydedildi!');
+                    } else {
+                        alert('❌ Geçersiz JSON formatı! Dosyada "committees" dizisi bulunamadı.');
+                    }
+                } catch (err) {
+                    alert('❌ Dosya okunurken hata oluştu: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        function exportJSON() {
+            syncInputFields();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "kurul_ve_komisyonlar_yedek_" + (currentData.year || '2025-2026').replace(/\s+/g, '') + ".json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function resetToDefault() {
+            if (confirm("⚠️ Tüm değişiklikler sıfırlanıp 25 kurulun varsayılan haline dönülecek. Onaylıyor musunuz?")) {
+                localStorage.removeItem('kurul_komisyon_data_v2');
+                currentData = JSON.parse(JSON.stringify(defaultData));
+                
+                document.getElementById('inputYear').value = currentData.year;
+                document.getElementById('inputSchool').value = currentData.school;
+                document.getElementById('inputTitle').value = currentData.title;
+                document.getElementById('inputPrincipal').value = currentData.principal;
+                document.getElementById('inputDate').value = currentData.date;
+
+                renderEditorForms();
+                saveToLocalStorage();
+                updateDocument();
+            }
+        }
+
+        // Mobile Tab Switcher Logic
+        function switchTab(tabName) {
+            const editorPanel = document.getElementById('editorPanel');
+            const previewPanel = document.getElementById('previewPanel');
+            const tabEditorBtn = document.getElementById('tabEditorBtn');
+            const tabPreviewBtn = document.getElementById('tabPreviewBtn');
+
+            if (tabName === 'editor') {
+                editorPanel.classList.remove('tab-hidden');
+                previewPanel.classList.add('tab-hidden');
+                tabEditorBtn.classList.add('active');
+                tabPreviewBtn.classList.remove('active');
+            } else {
+                editorPanel.classList.add('tab-hidden');
+                previewPanel.classList.remove('tab-hidden');
+                tabEditorBtn.classList.remove('active');
+                tabPreviewBtn.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

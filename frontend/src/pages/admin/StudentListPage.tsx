@@ -1,6 +1,11 @@
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import api from '../../services/api';
 import { useConfirm } from '../../hooks/useConfirm';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { DataTable, Column } from '../../components/ui/DataTable';
+import { ActionModal } from '../../components/ui/ActionModal';
+import { StatusBadge } from '../../components/ui/StatusBadge';
+import { Users, Upload, FileSpreadsheet, Trash2, Plus, Edit2, ShieldAlert } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -8,7 +13,7 @@ interface Student {
   fullName: string;
   className: string;
   status: string;
-  parents: { id: string; fullName: string; phone: string }[];
+  parents: { id: string; fullName: string; phone: string; waConsentStatus: string }[];
   _count: { absenteeisms: number };
 }
 
@@ -122,11 +127,11 @@ export default function StudentListPage() {
     return pa.section.localeCompare(pb.section, 'tr');
   });
 
-  // Auto-select first class when data loads or active becomes invalid
   const effectiveClass = activeClass && grouped[activeClass] ? activeClass : sortedClassNames[0] || '';
   const filteredStudents = (grouped[effectiveClass] || []).sort((a, b) =>
     a.schoolNumber.localeCompare(b.schoolNumber, undefined, { numeric: true })
   );
+
   useEffect(() => {
     loadStudents();
   }, [page, search]);
@@ -148,18 +153,25 @@ export default function StudentListPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!await confirm(`"${name}" öğrencisini silmek istediğinize emin misiniz?`)) return;
-
+    if (!await confirm(`${name} adlı öğrenciyi silmek istediğinize emin misiniz?`)) return;
     try {
       await api.delete(`/students/${id}`);
-      setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
       loadStudents();
-    } catch (error) {
-      console.error('Delete failed:', error);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Öğrenci silinemedi.');
     }
   };
 
-  // Bulk delete
+  const handleSendConsent = async (parentId: string) => {
+    try {
+      await api.post('/whatsapp/send-consent', { parentId });
+      await alert('Onay isteği veliye WhatsApp üzerinden gönderildi.');
+      loadStudents();
+    } catch (err: any) {
+      await alert(err.response?.data?.message || 'Onay isteği gönderilemedi.');
+    }
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -172,17 +184,9 @@ export default function StudentListPage() {
     const allIds = filteredStudents.map((s) => s.id);
     const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
     if (allSelected) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        allIds.forEach((id) => next.delete(id));
-        return next;
-      });
+      setSelectedIds(new Set());
     } else {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        allIds.forEach((id) => next.add(id));
-        return next;
-      });
+      setSelectedIds(new Set(allIds));
     }
   };
 
@@ -202,8 +206,6 @@ export default function StudentListPage() {
       setBulkDeleting(false);
     }
   };
-
-  // ——— Excel Import Functions ———
 
   const resetImportModal = () => {
     setImportFile(null);
@@ -255,8 +257,6 @@ export default function StudentListPage() {
     }
   };
 
-  // ——— Parent Import Functions ———
-
   const resetParentModal = () => {
     setParentFile(null);
     setParentPreview(null);
@@ -307,8 +307,6 @@ export default function StudentListPage() {
     }
   };
 
-  // ——— Edit Modal Functions ———
-
   const openEditModal = (student: Student) => {
     setEditStudent(student);
     setEditForm({
@@ -330,14 +328,12 @@ export default function StudentListPage() {
     setEditError('');
 
     try {
-      // Update student info
       await api.put(`/students/${editStudent.id}`, {
         fullName: editForm.fullName,
         className: editForm.className,
         status: editForm.status,
       });
 
-      // Update each parent
       for (const p of editParents) {
         if (p.id) {
           await api.put(`/students/parents/${p.id}`, {
@@ -347,7 +343,6 @@ export default function StudentListPage() {
         }
       }
 
-      // Add new parent if filled
       if (newEditParent && newEditParent.fullName.trim() && newEditParent.phone.trim()) {
         await api.post(`/students/${editStudent.id}/parents`, {
           fullName: newEditParent.fullName.trim(),
@@ -376,886 +371,569 @@ export default function StudentListPage() {
     }
   };
 
+  const columns: Column<Student>[] = [
+    {
+      header: (
+        <input
+          type="checkbox"
+          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={filteredStudents.length > 0 && filteredStudents.every((s) => selectedIds.has(s.id))}
+          onChange={toggleSelectAll}
+          title="Tümünü seç/kaldır"
+        />
+      ),
+      align: 'center',
+      render: (s) => (
+        <input
+          type="checkbox"
+          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={selectedIds.has(s.id)}
+          onChange={() => toggleSelect(s.id)}
+        />
+      )
+    },
+    {
+      header: 'Okul No',
+      render: (s) => <span className="font-semibold text-gray-700">{s.schoolNumber}</span>
+    },
+    {
+      header: 'Ad Soyad',
+      render: (s) => <span className="font-bold text-gray-900">{s.fullName}</span>
+    },
+    {
+      header: 'Durum',
+      render: (s) => <StatusBadge status={s.status} />
+    },
+    {
+      header: 'Veli Bilgileri',
+      render: (s) => (
+        <div className="space-y-2">
+          {s.parents.length > 0 ? (
+            s.parents.map((p, pi) => (
+              <div key={pi} className="text-sm border-b border-gray-50 pb-1 last:border-0 last:pb-0">
+                <div>
+                  <span className="font-medium text-gray-800">{p.fullName}</span>
+                  {p.phone && <span className="text-gray-500 ml-2">{p.phone}</span>}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  {p.waConsentStatus === 'ACCEPTED' && <StatusBadge status="ACTIVE" customText="Onaylı" />}
+                  {p.waConsentStatus === 'DECLINED' && <StatusBadge status="REJECTED" customText="Reddedildi" />}
+                  {p.waConsentStatus === 'PENDING' && (
+                    <>
+                      <StatusBadge status="PENDING" customText="Bekliyor" />
+                      <button 
+                        onClick={() => handleSendConsent(p.id)}
+                        className="text-xs px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition"
+                      >
+                        Onay İste
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <span className="text-gray-400">-</span>
+          )}
+        </div>
+      )
+    },
+    {
+      header: 'İşlemler',
+      align: 'right',
+      render: (s) => (
+        <div className="flex justify-end gap-2">
+          <button 
+            onClick={() => openEditModal(s)}
+            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+            title="Düzenle"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button 
+            onClick={() => handleDelete(s.id, s.fullName)}
+            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Sil"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      )
+    }
+  ];
+
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">👨‍🎓 Öğrenciler</h1>
-          <p className="page-subtitle">Öğrenci listesini yönetin ve veli bilgilerini güncelleyin</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="btn btn-outline"
-            onClick={() => { resetParentModal(); setShowParentModal(true); }}
-          >
-            👨‍👩‍👧 Veli Bilgisi Aktar
-          </button>
-          <button
-            className="btn btn-outline"
-            onClick={() => { resetImportModal(); setShowImportModal(true); }}
-          >
-            📥 Excel'den Aktar
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => { setNewForm({ schoolNumber: '', fullName: '', className: '' }); setNewParents([{ fullName: '', phone: '' }]); setNewError(''); setShowNewModal(true); }}
-          >
-            + Yeni Öğrenci
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
-        <div style={{ marginBottom: 16 }}>
-          <input
-            type="text"
-            placeholder="Öğrenci ara (ad, numara, sınıf)..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ width: '100%', maxWidth: 400, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 14 }}
-          />
-        </div>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <div className="spinner spinner-dark" />
-          </div>
-        ) : sortedClassNames.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-            Öğrenci bulunamadı.
-          </div>
-        ) : (
+    <div className="space-y-6">
+      
+      {/* 1. Page Header */}
+      <PageHeader
+        title="Öğrenciler"
+        description="Öğrenci listesini yönetin ve veli bilgilerini güncelleyin"
+        icon={<Users size={28} className="text-indigo-600" />}
+        actions={
           <>
-            {/* Class Tabs */}
-            <div className="class-tabs">
+            <button 
+              onClick={() => { resetParentModal(); setShowParentModal(true); }}
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm flex items-center gap-2 transition"
+            >
+              <Users size={16} /> Veli Bilgisi Aktar
+            </button>
+            <button 
+              onClick={() => { resetImportModal(); setShowImportModal(true); }}
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm flex items-center gap-2 transition"
+            >
+              <FileSpreadsheet size={16} /> Excel'den Aktar
+            </button>
+            <button 
+              onClick={() => { setNewForm({ schoolNumber: '', fullName: '', className: '' }); setNewParents([{ fullName: '', phone: '' }]); setNewError(''); setShowNewModal(true); }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm flex items-center gap-2 shadow-sm transition"
+            >
+              <Plus size={16} /> Yeni Öğrenci
+            </button>
+          </>
+        }
+      />
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Search & Tabs */}
+        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="max-w-md mb-4">
+            <input
+              type="text"
+              placeholder="Öğrenci ara (ad, numara, sınıf)..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
+            />
+          </div>
+
+          {!loading && sortedClassNames.length > 0 && (
+            <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
               {sortedClassNames.map((cls) => (
                 <button
                   key={cls}
-                  className={`class-tab ${effectiveClass === cls ? 'class-tab-active' : ''}`}
                   onClick={() => { setActiveClass(cls); setSelectedIds(new Set()); }}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors shrink-0 ${
+                    effectiveClass === cls 
+                      ? 'bg-indigo-600 text-white shadow-sm' 
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  }`}
                 >
                   {cls}
-                  <span className="class-tab-count">{grouped[cls].length}</span>
+                  <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${effectiveClass === cls ? 'bg-indigo-700/50 text-indigo-50' : 'bg-gray-100 text-gray-500'}`}>
+                    {grouped[cls].length}
+                  </span>
                 </button>
               ))}
             </div>
+          )}
+        </div>
 
-            {/* Class Info Bar */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '10px 14px',
-              background: '#f8fafc',
-              borderRadius: 'var(--radius)',
-              marginBottom: 12,
-              fontSize: 13,
-            }}>
-              <span>
-                📚 <strong>{effectiveClass}</strong> — {filteredStudents.length} öğrenci
-                {selectedIds.size > 0 && (
-                  <span style={{ marginLeft: 12, color: 'var(--danger)', fontWeight: 600 }}>
-                    ({selectedIds.size} seçili)
-                  </span>
-                )}
-              </span>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {selectedIds.size > 0 && (
-                  <button
-                    className="btn btn-outline btn-sm"
-                    onClick={handleBulkDelete}
-                    disabled={bulkDeleting}
-                    style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                  >
-                    {bulkDeleting ? '⏳ Siliniyor...' : `🗑️ ${selectedIds.size} Öğrenci Sil`}
-                  </button>
-                )}
-                <span style={{ color: 'var(--text-muted)' }}>
-                  Toplam: {students.length} öğrenci / {sortedClassNames.length} sınıf
+        {/* Action Bar (Delete / Summary) */}
+        {!loading && sortedClassNames.length > 0 && (
+          <div className="flex justify-between items-center px-6 py-3 bg-indigo-50/50 border-b border-indigo-100/50 text-sm">
+            <div className="font-medium text-gray-700">
+              <span className="text-indigo-700 font-bold mr-2">Sınıf {effectiveClass}</span> 
+              ({filteredStudents.length} öğrenci)
+              
+              {selectedIds.size > 0 && (
+                <span className="ml-3 text-indigo-600 font-bold">
+                  {selectedIds.size} Seçili
                 </span>
-              </div>
+              )}
             </div>
-
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: 40, textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={filteredStudents.length > 0 && filteredStudents.every((s) => selectedIds.has(s.id))}
-                        onChange={toggleSelectAll}
-                        title="Tümünü seç/kaldır"
-                      />
-                    </th>
-                    <th>Okul No</th>
-                    <th>Ad Soyad</th>
-                    <th>Durum</th>
-                    <th>Veli</th>
-                    <th>İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                        Bu sınıfta öğrenci bulunamadı.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map((s) => (
-                      <tr key={s.id} style={selectedIds.has(s.id) ? { background: '#eff6ff' } : undefined}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(s.id)}
-                            onChange={() => toggleSelect(s.id)}
-                          />
-                        </td>
-                        <td>{s.schoolNumber}</td>
-                        <td><strong>{s.fullName}</strong></td>
-                        <td>
-                          <span className={`badge ${s.status === 'ACTIVE' ? 'badge-success' : 'badge-danger'}`}>
-                            {s.status === 'ACTIVE' ? 'Aktif' : 'Pasif'}
-                          </span>
-                        </td>
-                        <td>
-                          {s.parents.length > 0
-                            ? s.parents.map((p, pi) => (
-                                <div key={pi} style={{ fontSize: 13, marginBottom: pi < s.parents.length - 1 ? 4 : 0 }}>
-                                  <strong>{p.fullName}</strong>
-                                  {p.phone && (
-                                    <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>
-                                      {p.phone}
-                                    </span>
-                                  )}
-                                </div>
-                              ))
-                            : <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          }
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button
-                              className="btn btn-outline btn-sm"
-                              onClick={() => openEditModal(s)}
-                            >
-                              Düzenle
-                            </button>
-                            <button
-                              className="btn btn-outline btn-sm"
-                              onClick={() => handleDelete(s.id, s.fullName)}
-                              style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                            >
-                              Sil
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+            
+            <div className="flex items-center gap-4">
+              {selectedIds.size > 0 && (
+                <button 
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="px-3 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded flex items-center gap-1 font-medium transition disabled:opacity-50"
+                >
+                  {bulkDeleting ? 'Siliniyor...' : <><Trash2 size={14}/> {selectedIds.size} Öğrenciyi Sil</>}
+                </button>
+              )}
+              <span className="text-gray-500">Toplam {students.length} Kayıt</span>
             </div>
+          </div>
+        )}
 
-            {pagination && pagination.totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                <button
-                  className="btn btn-outline btn-sm"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  ← Önceki
-                </button>
-                <span style={{ padding: '6px 12px', fontSize: 13 }}>
-                  {page} / {pagination.totalPages}
-                </span>
-                <button
-                  className="btn btn-outline btn-sm"
-                  disabled={page === pagination.totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Sonraki →
-                </button>
-              </div>
-            )}
-          </>
+        {/* Data Table */}
+        <DataTable
+          data={filteredStudents}
+          columns={columns}
+          loading={loading}
+          emptyMessage="Bu sınıfta öğrenci bulunamadı veya hiç öğrenci kaydı yok."
+          rowClassName={(s) => selectedIds.has(s.id) ? 'bg-indigo-50/30' : ''}
+        />
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="p-4 border-t border-gray-100 flex items-center justify-center gap-3">
+            <button 
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+              className="px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Geri
+            </button>
+            <span className="text-sm text-gray-600 font-medium">Sayfa {page} / {pagination.totalPages}</span>
+            <button 
+              disabled={page === pagination.totalPages}
+              onClick={() => setPage(page + 1)}
+              className="px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              İleri
+            </button>
+          </div>
         )}
       </div>
 
-      {/* ——— Excel Import Modal ——— */}
-      {showImportModal && (
-        <div className="modal-overlay" onMouseDown={() => setShowImportModal(false)}>
-          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 700 }}>
-            <div className="modal-header">
-              <h2>📥 Excel'den Öğrenci Aktar</h2>
-              <button className="modal-close" onClick={() => setShowImportModal(false)}>×</button>
+      {/* ─── MODALS ─── */}
+
+      {/* New Student Modal */}
+      <ActionModal
+        isOpen={showNewModal}
+        onClose={() => setShowNewModal(false)}
+        title="Yeni Öğrenci Ekle"
+        submitText="Öğrenciyi Kaydet"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setNewLoading(true);
+          setNewError('');
+          try {
+            const validParents = newParents.filter(p => p.fullName.trim() && p.phone.trim());
+            await api.post('/students', {
+              schoolNumber: newForm.schoolNumber,
+              fullName: newForm.fullName,
+              className: newForm.className,
+              ...(validParents.length > 0 ? { parents: validParents } : {}),
+            });
+            setShowNewModal(false);
+            loadStudents();
+          } catch (err: any) {
+            setNewError(err?.response?.data?.message || 'Öğrenci eklenemedi.');
+          } finally {
+            setNewLoading(false);
+          }
+        }}
+      >
+        <div className="space-y-4">
+          {newError && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100 flex items-center gap-2"><ShieldAlert size={16}/> {newError}</div>}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Okul Numarası</label>
+            <input type="text" value={newForm.schoolNumber} onChange={e => setNewForm({...newForm, schoolNumber: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required autoFocus />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
+              <input type="text" value={newForm.fullName} onChange={e => setNewForm({...newForm, fullName: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sınıf</label>
+              <input type="text" value={newForm.className} onChange={e => setNewForm({...newForm, className: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required placeholder="ör: 9/A" />
+            </div>
+          </div>
 
-            {importError && <div className="alert alert-danger">{importError}</div>}
+          <div className="mt-6 border-t pt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-semibold text-gray-800">Veli Bilgileri</h4>
+              {newParents.length < 2 && (
+                <button type="button" onClick={() => setNewParents([...newParents, { fullName: '', phone: '' }])} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">+ Veli Ekle</button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-4">Telefon numarası ile veli hesabı otomatik oluşturulacaktır.</p>
 
-            {/* File Selection */}
-            {!importPreview && !importDone && (
-              <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                <div
-                  style={{
-                    border: '2px dashed var(--border)',
-                    borderRadius: 'var(--radius)',
-                    padding: '40px 20px',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s',
-                  }}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary)'; }}
-                  onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.style.borderColor = 'var(--border)';
-                    const file = e.dataTransfer.files[0];
-                    if (file) handleFileSelect(file);
-                  }}
-                >
-                  {importLoading ? (
-                    <div className="spinner spinner-dark" />
-                  ) : (
-                    <>
-                      <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
-                      <p style={{ margin: 0, fontWeight: 500 }}>Excel dosyasını sürükleyin veya tıklayarak seçin</p>
-                      <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: 13 }}>
-                        .xlsx veya .xls formatında
-                      </p>
-                    </>
-                  )}
+            {newParents.map((p, idx) => (
+              <div key={idx} className="flex items-end gap-3 p-3 bg-white border rounded-lg mb-3 shadow-sm">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{idx+1}. Veli Adı</label>
+                  <input type="text" value={p.fullName} onChange={e => { const up = [...newParents]; up[idx].fullName = e.target.value; setNewParents(up); }} className="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="Ad Soyad" />
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect(file);
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Preview Table */}
-            {importPreview && !importDone && (
-              <div>
-                <div style={{
-                  background: '#f1f5f9',
-                  padding: '12px 16px',
-                  borderRadius: 'var(--radius)',
-                  marginBottom: 16,
-                  fontSize: 14,
-                }}>
-                  <strong>{importPreview.totalParsed}</strong> öğrenci bulundu.
-                  {importFile && (
-                    <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>
-                      ({importFile.name})
-                    </span>
-                  )}
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
+                  <input type="text" value={p.phone} onChange={e => { const up = [...newParents]; up[idx].phone = e.target.value; setNewParents(up); }} className="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="05XX XXX XX XX" />
                 </div>
-
-                <div className="table-container" style={{ maxHeight: 350, overflowY: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Okul No</th>
-                        <th>Ad Soyad</th>
-                        <th>Sınıf</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {importPreview.students.map((s, i) => (
-                        <tr key={i}>
-                          <td>{i + 1}</td>
-                          <td>{s.schoolNumber}</td>
-                          <td>{s.fullName}</td>
-                          <td>{s.className}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                  <button className="btn btn-outline" onClick={resetImportModal}>
-                    Farklı Dosya Seç
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleImportConfirm}
-                    disabled={importLoading}
-                  >
-                    {importLoading ? (
-                      <><span className="spinner" /> Aktarılıyor...</>
-                    ) : (
-                      `${importPreview.totalParsed} Öğrenciyi Aktar`
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Import Done */}
-            {importDone && (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-                <h3 style={{ marginBottom: 16 }}>Aktarım Tamamlandı</h3>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: 12,
-                  marginBottom: 16,
-                }}>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{importDone.created}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Yeni Eklenen</small>
-                  </div>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{importDone.skipped}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Güncellenen</small>
-                  </div>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{importDone.errors.length}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Hata</small>
-                  </div>
-                </div>
-
-                {importDone.errors.length > 0 && (
-                  <div className="alert alert-danger" style={{ textAlign: 'left', fontSize: 13, maxHeight: 120, overflowY: 'auto' }}>
-                    {importDone.errors.map((e, i) => <div key={i}>{e}</div>)}
-                  </div>
+                {newParents.length > 1 && (
+                  <button type="button" onClick={() => setNewParents(newParents.filter((_, i) => i !== idx))} className="p-2 text-red-500 hover:bg-red-50 rounded-md border border-red-100 shrink-0"><Trash2 size={16}/></button>
                 )}
-
-                <button className="btn btn-primary" onClick={() => setShowImportModal(false)}>
-                  Kapat
-                </button>
               </div>
+            ))}
+          </div>
+        </div>
+      </ActionModal>
+
+      {/* Edit Student Modal */}
+      <ActionModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Öğrenciyi Düzenle"
+        onSubmit={handleEditSubmit}
+      >
+        <div className="space-y-4">
+          {editError && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100 flex items-center gap-2"><ShieldAlert size={16}/> {editError}</div>}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Okul Numarası</label>
+            <input type="text" value={editForm.schoolNumber} disabled className="w-full p-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-lg" />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
+              <input type="text" value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sınıf</label>
+              <input type="text" value={editForm.className} onChange={e => setEditForm({...editForm, className: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" required />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+            <select value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg">
+              <option value="ACTIVE">Aktif</option>
+              <option value="INACTIVE">Pasif</option>
+            </select>
+          </div>
+
+          <div className="mt-6 border-t pt-4">
+            <h4 className="font-semibold text-gray-800 mb-3">Veli Bilgileri</h4>
+            
+            {editParents.map((p, idx) => (
+              <div key={p.id} className="flex items-end gap-3 p-3 bg-white border rounded-lg mb-3 shadow-sm">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{idx+1}. Veli Adı</label>
+                  <input type="text" value={p.fullName} onChange={e => { const up = [...editParents]; up[idx].fullName = e.target.value; setEditParents(up); }} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
+                  <input type="text" value={p.phone} onChange={e => { const up = [...editParents]; up[idx].phone = e.target.value; setEditParents(up); }} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <button type="button" onClick={() => handleRemoveParent(p.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-md border border-red-100 shrink-0" title="Kaldır"><Trash2 size={16}/></button>
+              </div>
+            ))}
+
+            {newEditParent ? (
+              <div className="flex items-end gap-3 p-3 bg-green-50 border border-green-200 border-dashed rounded-lg mb-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-green-800 mb-1">Yeni Veli Adı</label>
+                  <input type="text" value={newEditParent.fullName} onChange={e => setNewEditParent({...newEditParent, fullName: e.target.value})} className="w-full p-2 border border-green-300 rounded-md text-sm bg-white" placeholder="Ad Soyad" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-green-800 mb-1">Telefon</label>
+                  <input type="text" value={newEditParent.phone} onChange={e => setNewEditParent({...newEditParent, phone: e.target.value})} className="w-full p-2 border border-green-300 rounded-md text-sm bg-white" placeholder="05XX XXX XX XX" />
+                </div>
+                <button type="button" onClick={() => setNewEditParent(null)} className="p-2 text-red-500 hover:bg-red-50 rounded-md shrink-0">İptal</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setNewEditParent({ fullName: '', phone: '' })} className="text-sm px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">+ Yeni Veli Ekle</button>
             )}
           </div>
         </div>
-      )}
+      </ActionModal>
 
-      {/* ——— Parent Import Modal ——— */}
-      {showParentModal && (
-        <div className="modal-overlay" onMouseDown={() => setShowParentModal(false)}>
-          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 800 }}>
-            <div className="modal-header">
-              <h2>👨‍👩‍👧 Veli Bilgisi Aktar</h2>
-              <button className="modal-close" onClick={() => setShowParentModal(false)}>×</button>
+      {/* Excel Import Modal */}
+      <ActionModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        title="Excel'den Öğrenci Aktar"
+        width="lg"
+      >
+        <div className="space-y-4">
+          {importError && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100 flex items-center gap-2"><ShieldAlert size={16}/> {importError}</div>}
+          
+          {!importPreview && !importDone && (
+            <div 
+              className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {importLoading ? (
+                <div className="animate-pulse text-indigo-600 font-medium">Excel Dosyası Okunuyor...</div>
+              ) : (
+                <>
+                  <Upload className="mx-auto text-gray-400 mb-3" size={40} />
+                  <p className="font-semibold text-gray-800">Excel dosyasını tıklayarak seçin</p>
+                  <p className="text-xs text-gray-500 mt-2">Sadece .xls ve .xlsx formatları desteklenir.</p>
+                </>
+              )}
             </div>
+          )}
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { if(e.target.files?.[0]) handleFileSelect(e.target.files[0]) }} />
 
-            {parentError && <div className="alert alert-danger">{parentError}</div>}
-
-            {/* File Selection */}
-            {!parentPreview && !parentDone && (
-              <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                <p style={{ marginBottom: 16, color: 'var(--text-muted)', fontSize: 13 }}>
-                  Excel sütunları: Okul No | Öğr. Ad Soyad | Sınıf/Grup | 1. Veli Telefon | 1. Veli Ad Soyad | 1. Veli Yakınlık | 2. Veli Telefon | 2. Veli Adı
-                </p>
-                <div
-                  style={{
-                    border: '2px dashed var(--border)',
-                    borderRadius: 'var(--radius)',
-                    padding: '40px 20px',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s',
-                  }}
-                  onClick={() => parentFileRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary)'; }}
-                  onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.style.borderColor = 'var(--border)';
-                    const file = e.dataTransfer.files[0];
-                    if (file) handleParentFileSelect(file);
-                  }}
-                >
-                  {parentLoading ? (
-                    <div className="spinner spinner-dark" />
-                  ) : (
-                    <>
-                      <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
-                      <p style={{ margin: 0, fontWeight: 500 }}>Veli Excel dosyasını sürükleyin veya tıklayarak seçin</p>
-                      <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: 13 }}>
-                        .xlsx veya .xls formatında
-                      </p>
-                    </>
-                  )}
-                </div>
-                <input
-                  ref={parentFileRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleParentFileSelect(file);
-                  }}
-                />
+          {importPreview && !importDone && (
+            <div className="space-y-4">
+              <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100 text-sm text-indigo-800 flex justify-between items-center">
+                <span><strong>{importPreview.totalParsed}</strong> öğrenci bulundu.</span>
+                <span className="text-xs bg-white px-2 py-1 rounded shadow-sm">{importFile?.name}</span>
               </div>
-            )}
-
-            {/* Preview Table */}
-            {parentPreview && !parentDone && (
-              <div>
-                <div style={{
-                  display: 'flex',
-                  gap: 12,
-                  marginBottom: 16,
-                  flexWrap: 'wrap',
-                }}>
-                  <div style={{ background: '#dcfce7', padding: '8px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>
-                    ✅ <strong>{parentPreview.matched}</strong> öğrenci eşleşti
-                  </div>
-                  <div style={{ background: '#fef3c7', padding: '8px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>
-                    ⚠️ <strong>{parentPreview.unmatched}</strong> öğrenci bulunamadı
-                  </div>
-                  {parentFile && (
-                    <div style={{ background: '#f1f5f9', padding: '8px 14px', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--text-muted)' }}>
-                      {parentFile.name}
-                    </div>
-                  )}
-                </div>
-
-                <div className="table-container" style={{ maxHeight: 350, overflowY: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Okul No</th>
-                        <th>Öğrenci</th>
-                        <th>Durum</th>
-                        <th>1. Veli</th>
-                        <th>1. Veli Tel</th>
-                        <th>2. Veli</th>
-                        <th>2. Veli Tel</th>
+              
+              <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg shadow-inner">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-600">Okul No</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-600">Ad Soyad</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-600">Sınıf</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {importPreview.students.map((s, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-2">{s.schoolNumber}</td>
+                        <td className="px-4 py-2">{s.fullName}</td>
+                        <td className="px-4 py-2">{s.className}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {parentPreview.preview.map((r, i) => (
-                        <tr key={i} style={{ opacity: r.matched ? 1 : 0.5 }}>
-                          <td>{r.schoolNumber}</td>
-                          <td>{r.studentName}</td>
-                          <td>
-                            {r.matched ? (
-                              <span className="badge badge-success">Eşleşti</span>
-                            ) : (
-                              <span className="badge badge-danger">Bulunamadı</span>
-                            )}
-                          </td>
-                          <td>{r.parent1Name || '-'}</td>
-                          <td style={{ fontSize: 12 }}>{r.parent1Phone || '-'}</td>
-                          <td>{r.parent2Name || '-'}</td>
-                          <td style={{ fontSize: 12 }}>{r.parent2Phone || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                  <button className="btn btn-outline" onClick={resetParentModal}>
-                    Farklı Dosya Seç
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleParentImportConfirm}
-                    disabled={parentLoading || parentPreview.matched === 0}
-                  >
-                    {parentLoading ? (
-                      <><span className="spinner" /> Aktarılıyor...</>
-                    ) : (
-                      `${parentPreview.matched} Öğrencinin Velisini Aktar`
-                    )}
-                  </button>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
 
-            {/* Import Done */}
-            {parentDone && (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-                <h3 style={{ marginBottom: 16 }}>Veli Aktarımı Tamamlandı</h3>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr 1fr',
-                  gap: 12,
-                  marginBottom: 16,
-                }}>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{parentDone.parentsCreated}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Yeni Veli</small>
-                  </div>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--warning)' }}>{parentDone.parentsUpdated}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Güncellenen</small>
-                  </div>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700 }}>{parentDone.matched}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Eşleşen</small>
-                  </div>
-                  <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--danger)' }}>{parentDone.errors.length}</div>
-                    <small style={{ color: 'var(--text-muted)' }}>Hata</small>
-                  </div>
-                </div>
-
-                {parentDone.errors.length > 0 && (
-                  <div className="alert alert-danger" style={{ textAlign: 'left', fontSize: 13, maxHeight: 120, overflowY: 'auto' }}>
-                    {parentDone.errors.map((e, i) => <div key={i}>{e}</div>)}
-                  </div>
-                )}
-
-                <button className="btn btn-primary" onClick={() => setShowParentModal(false)}>
-                  Kapat
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={resetImportModal} className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Farklı Dosya Seç</button>
+                <button type="button" onClick={handleImportConfirm} disabled={importLoading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+                  {importLoading ? 'Aktarılıyor...' : `${importPreview.totalParsed} Öğrenciyi Aktar`}
                 </button>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ——— New Student Modal ——— */}
-      {showNewModal && (
-        <div className="modal-overlay" onMouseDown={() => setShowNewModal(false)}>
-          <div className="modal" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
-            <div className="modal-header">
-              <h2>➕ Yeni Öğrenci Ekle</h2>
-              <button className="modal-close" onClick={() => setShowNewModal(false)}>×</button>
             </div>
+          )}
 
-            {newError && <div className="alert alert-danger">{newError}</div>}
-
-            <form onSubmit={async (e: FormEvent) => {
-              e.preventDefault();
-              setNewLoading(true);
-              setNewError('');
-              try {
-                const validParents = newParents.filter(p => p.fullName.trim() && p.phone.trim());
-                await api.post('/students', {
-                  schoolNumber: newForm.schoolNumber,
-                  fullName: newForm.fullName,
-                  className: newForm.className,
-                  ...(validParents.length > 0 ? { parents: validParents } : {}),
-                });
-                setShowNewModal(false);
-                loadStudents();
-              } catch (err: any) {
-                setNewError(err?.response?.data?.message || 'Öğrenci eklenemedi.');
-              } finally {
-                setNewLoading(false);
-              }
-            }}>
-              <div className="form-group">
-                <label>Okul Numarası</label>
-                <input
-                  type="text"
-                  value={newForm.schoolNumber}
-                  onChange={(e) => setNewForm({ ...newForm, schoolNumber: e.target.value })}
-                  placeholder="ör: 1234"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Ad Soyad</label>
-                  <input
-                    type="text"
-                    value={newForm.fullName}
-                    onChange={(e) => setNewForm({ ...newForm, fullName: e.target.value })}
-                    required
-                  />
+          {importDone && (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✓</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Aktarım Tamamlandı</h3>
+              
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-2xl font-bold text-green-600">{importDone.created}</div>
+                  <div className="text-xs text-gray-500 font-medium">Yeni Eklenen</div>
                 </div>
-                <div className="form-group">
-                  <label>Sınıf</label>
-                  <input
-                    type="text"
-                    value={newForm.className}
-                    onChange={(e) => setNewForm({ ...newForm, className: e.target.value })}
-                    placeholder="ör: 9/A"
-                    required
-                  />
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-2xl font-bold text-yellow-600">{importDone.skipped}</div>
+                  <div className="text-xs text-gray-500 font-medium">Güncellenen</div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-2xl font-bold text-red-600">{importDone.errors.length}</div>
+                  <div className="text-xs text-gray-500 font-medium">Hatalı Satır</div>
                 </div>
               </div>
 
-              {/* Parent Section */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ fontSize: 15, margin: 0 }}>👨‍👩‍👧 Veli Bilgileri</h3>
-                  {newParents.length < 2 && (
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={() => setNewParents([...newParents, { fullName: '', phone: '' }])}
-                    >
-                      + Veli Ekle
-                    </button>
-                  )}
+              {importDone.errors.length > 0 && (
+                <div className="text-left text-xs text-red-600 bg-red-50 p-3 rounded-lg max-h-32 overflow-y-auto mb-6">
+                  {importDone.errors.map((e,i) => <div key={i}>{e}</div>)}
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 12 }}>
-                  Veli bilgileri opsiyoneldir. Telefon numarası ile veli hesabı oluşturulacaktır.
-                </p>
-
-                {newParents.map((p, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      alignItems: 'flex-end',
-                      marginBottom: 12,
-                      padding: 12,
-                      background: '#f8fafc',
-                      borderRadius: 'var(--radius)',
-                    }}
-                  >
-                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                      <label>{idx + 1}. Veli Adı</label>
-                      <input
-                        type="text"
-                        value={p.fullName}
-                        onChange={(e) => {
-                          const updated = [...newParents];
-                          updated[idx] = { ...updated[idx], fullName: e.target.value };
-                          setNewParents(updated);
-                        }}
-                        placeholder="Ad Soyad"
-                      />
-                    </div>
-                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                      <label>Telefon</label>
-                      <input
-                        type="text"
-                        value={p.phone}
-                        onChange={(e) => {
-                          const updated = [...newParents];
-                          updated[idx] = { ...updated[idx], phone: e.target.value };
-                          setNewParents(updated);
-                        }}
-                        placeholder="05XX XXX XX XX"
-                      />
-                    </div>
-                    {newParents.length > 1 && (
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() => setNewParents(newParents.filter((_, i) => i !== idx))}
-                        title="Veliyi kaldır"
-                        style={{ flexShrink: 0, marginBottom: 2, color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setShowNewModal(false)}
-                >
-                  İptal
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={newLoading}>
-                  {newLoading ? <><span className="spinner" /> Kaydediliyor...</> : 'Kaydet'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ——— Edit Student Modal ——— */}
-      {showEditModal && editStudent && (
-        <div className="modal-overlay" onMouseDown={() => setShowEditModal(false)}>
-          <div className="modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
-            <div className="modal-header">
-              <h2>✏️ Öğrenci Düzenle</h2>
-              <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
+              )}
+              
+              <button type="button" onClick={() => setShowImportModal(false)} className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 w-full">Kapat</button>
             </div>
+          )}
+        </div>
+      </ActionModal>
 
-            {editError && <div className="alert alert-danger">{editError}</div>}
-
-            <form onSubmit={handleEditSubmit}>
-              <div className="form-group">
-                <label>Okul Numarası</label>
-                <input type="text" value={editForm.schoolNumber} disabled style={{ opacity: 0.6 }} />
+      {/* Parent Import Modal */}
+      <ActionModal
+        isOpen={showParentModal}
+        onClose={() => setShowParentModal(false)}
+        title="Veli Bilgisi Aktar (Excel)"
+        width="lg"
+      >
+        <div className="space-y-4">
+          {parentError && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100 flex items-center gap-2"><ShieldAlert size={16}/> {parentError}</div>}
+          
+          {!parentPreview && !parentDone && (
+            <>
+              <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-800 mb-2">
+                <strong>Desteklenen Sütunlar:</strong> Okul No | Öğr. Ad Soyad | Sınıf/Grup | 1. Veli Telefon | 1. Veli Ad Soyad | 1. Veli Yakınlık | 2. Veli Telefon | 2. Veli Adı
               </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Ad Soyad</label>
-                  <input
-                    type="text"
-                    value={editForm.fullName}
-                    onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Sınıf</label>
-                  <input
-                    type="text"
-                    value={editForm.className}
-                    onChange={(e) => setEditForm({ ...editForm, className: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Durum</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                >
-                  <option value="ACTIVE">Aktif</option>
-                  <option value="INACTIVE">Pasif</option>
-                </select>
-              </div>
-
-              {/* Parent Section */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
-                <h3 style={{ fontSize: 15, marginBottom: 12 }}>👨‍👩‍👧 Veli Bilgileri</h3>
-
-                {editParents.length === 0 && !newEditParent ? (
-                  <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Kayıtlı veli bulunmuyor.</p>
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer"
+                onClick={() => parentFileRef.current?.click()}
+              >
+                {parentLoading ? (
+                  <div className="animate-pulse text-indigo-600 font-medium">Excel Dosyası Okunuyor...</div>
                 ) : (
-                  editParents.map((p, idx) => (
-                    <div
-                      key={p.id}
-                      style={{
-                        display: 'flex',
-                        gap: 8,
-                        alignItems: 'flex-end',
-                        marginBottom: 12,
-                        padding: '12px',
-                        background: '#f8fafc',
-                        borderRadius: 'var(--radius)',
-                      }}
-                    >
-                      <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                        <label>
-                          {idx + 1}. Veli Adı
-                        </label>
-                        <input
-                          type="text"
-                          value={p.fullName}
-                          onChange={(e) => {
-                            const updated = [...editParents];
-                            updated[idx] = { ...updated[idx], fullName: e.target.value };
-                            setEditParents(updated);
-                          }}
-                        />
-                      </div>
-                      <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                        <label>
-                          Telefon
-                        </label>
-                        <input
-                          type="text"
-                          value={p.phone}
-                          onChange={(e) => {
-                            const updated = [...editParents];
-                            updated[idx] = { ...updated[idx], phone: e.target.value };
-                            setEditParents(updated);
-                          }}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={() => handleRemoveParent(p.id)}
-                        title="Veliyi kaldır"
-                        style={{ flexShrink: 0, marginBottom: 2, color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))
-                )}
-
-                {/* New parent form */}
-                {newEditParent && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      alignItems: 'flex-end',
-                      marginBottom: 12,
-                      padding: '12px',
-                      background: '#f0fdf4',
-                      borderRadius: 'var(--radius)',
-                      border: '1px dashed #86efac',
-                    }}
-                  >
-                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                      <label>Yeni Veli Adı</label>
-                      <input
-                        type="text"
-                        placeholder="Ad Soyad"
-                        value={newEditParent.fullName}
-                        onChange={(e) => setNewEditParent({ ...newEditParent, fullName: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                      <label>Telefon</label>
-                      <input
-                        type="text"
-                        placeholder="05XX XXX XX XX"
-                        value={newEditParent.phone}
-                        onChange={(e) => setNewEditParent({ ...newEditParent, phone: e.target.value })}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={() => setNewEditParent(null)}
-                      title="İptal"
-                      style={{ flexShrink: 0, marginBottom: 2, color: 'var(--danger)', borderColor: 'var(--danger)' }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
-
-                {!newEditParent && (
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    style={{ marginTop: 8, fontSize: 13 }}
-                    onClick={() => setNewEditParent({ fullName: '', phone: '' })}
-                  >
-                    + Veli Ekle
-                  </button>
+                  <>
+                    <Upload className="mx-auto text-gray-400 mb-3" size={40} />
+                    <p className="font-semibold text-gray-800">Veli Excel dosyasını seçin</p>
+                    <p className="text-xs text-gray-500 mt-2">.xls, .xlsx</p>
+                  </>
                 )}
               </div>
+            </>
+          )}
+          <input ref={parentFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { if(e.target.files?.[0]) handleParentFileSelect(e.target.files[0]) }} />
 
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  İptal
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={editLoading}>
-                  {editLoading ? <><span className="spinner" /> Kaydediliyor...</> : 'Kaydet'}
+          {parentPreview && !parentDone && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2 text-sm">
+                <span className="bg-green-100 text-green-800 px-3 py-1.5 rounded-lg font-medium">{parentPreview.matched} Eşleşen</span>
+                <span className="bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-lg font-medium">{parentPreview.unmatched} Bulunamayan</span>
+              </div>
+              
+              <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg shadow-inner">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-600">Öğrenci</th>
+                      <th className="px-3 py-2 text-center font-semibold text-gray-600">Durum</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-600">Veli 1</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-600">Veli 2</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {parentPreview.preview.map((r, i) => (
+                      <tr key={i} className={r.matched ? '' : 'bg-red-50/50 opacity-60'}>
+                        <td className="px-3 py-2 font-medium">{r.schoolNumber} - {r.studentName}</td>
+                        <td className="px-3 py-2 text-center">{r.matched ? <span className="text-green-600 font-bold">✓</span> : <span className="text-red-500 font-bold">✕</span>}</td>
+                        <td className="px-3 py-2">{r.parent1Name} <br/><span className="text-gray-500">{r.parent1Phone}</span></td>
+                        <td className="px-3 py-2">{r.parent2Name} <br/><span className="text-gray-500">{r.parent2Phone}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={resetParentModal} className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Farklı Seç</button>
+                <button type="button" onClick={handleParentImportConfirm} disabled={parentLoading || parentPreview.matched === 0} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+                  {parentLoading ? 'Aktarılıyor...' : `${parentPreview.matched} Öğrenci Velisini Aktar`}
                 </button>
               </div>
-            </form>
-          </div>
+            </div>
+          )}
+
+          {parentDone && (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">✓</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Veli Aktarımı Tamamlandı</h3>
+              
+              <div className="grid grid-cols-4 gap-3 mb-6">
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-xl font-bold text-green-600">{parentDone.parentsCreated}</div>
+                  <div className="text-xs text-gray-500">Yeni Veli</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-xl font-bold text-yellow-600">{parentDone.parentsUpdated}</div>
+                  <div className="text-xs text-gray-500">Güncellenen</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-xl font-bold text-indigo-600">{parentDone.matched}</div>
+                  <div className="text-xs text-gray-500">Eşleşen</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="text-xl font-bold text-red-600">{parentDone.errors.length}</div>
+                  <div className="text-xs text-gray-500">Hata</div>
+                </div>
+              </div>
+              
+              <button type="button" onClick={() => setShowParentModal(false)} className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 w-full">Kapat</button>
+            </div>
+          )}
         </div>
-      )}
+      </ActionModal>
+      
       {confirmModal}
     </div>
   );

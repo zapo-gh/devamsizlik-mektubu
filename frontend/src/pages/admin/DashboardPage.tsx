@@ -25,16 +25,19 @@ interface DashboardData {
   waStatus: 'disconnected' | 'qr' | 'connecting' | 'connected';
   schoolName: string;
   principalName: string;
+  fieldTripsCount: number;
+  commissionsCount: number;
+  dutyCount: number;
 }
 
 const WA_STATUS_LABELS: Record<
   string,
-  { label: string; icon: React.ElementType; color: string; bg: string }
+  { label: string; icon: React.ElementType; color: string; bg: string; border: string }
 > = {
-  connected: { label: 'Bağlı', icon: CheckCircle2, color: '#16a34a', bg: '#dcfce7' },
-  connecting: { label: 'Bağlanıyor...', icon: Clock, color: '#b45309', bg: '#fef9c3' },
-  qr: { label: 'QR Bekleniyor', icon: QrCode, color: '#1d4ed8', bg: '#dbeafe' },
-  disconnected: { label: 'Bağlı Değil', icon: XCircle, color: '#dc2626', bg: '#fee2e2' },
+  connected: { label: 'Bağlı', icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100', border: 'border-green-600/35' },
+  connecting: { label: 'Bağlanıyor...', icon: Clock, color: 'text-amber-700', bg: 'bg-yellow-100', border: 'border-amber-700/35' },
+  qr: { label: 'QR Bekleniyor', icon: QrCode, color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-700/35' },
+  disconnected: { label: 'Bağlı Değil', icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', border: 'border-red-600/35' },
 };
 
 export default function DashboardPage() {
@@ -47,27 +50,36 @@ export default function DashboardPage() {
   }, []);
 
   const loadAll = async () => {
+    setLoading(true);
     try {
-      const [studentsRes, staffRes, absStatsRes, warnStatsRes, violStatsRes, waRes, settingsRes] =
-        await Promise.all([
-          api.get('/students?limit=1&status=ACTIVE'),
-          api.get('/staff'),
-          api.get('/absenteeism/stats'),
-          api.get('/warnings/stats'),
-          api.get('/violations/stats'),
+      const [
+        studentsRes, staffRes, absStatsRes, warnStatsRes, violStatsRes, waRes, settingsRes,
+        fieldTripRes, commissionRes, dutyRes
+      ] = await Promise.all([
+          api.get('/students?limit=1&status=ACTIVE').catch((e: any) => { console.warn('Dashboard: /students failed:', e.message); return null; }),
+          api.get('/staff').catch((e: any) => { console.warn('Dashboard: /staff failed:', e.message); return null; }),
+          api.get('/absenteeism/stats').catch((e: any) => { console.warn('Dashboard: /absenteeism/stats failed:', e.message); return null; }),
+          api.get('/warnings/stats').catch((e: any) => { console.warn('Dashboard: /warnings/stats failed:', e.message); return null; }),
+          api.get('/violations/stats').catch((e: any) => { console.warn('Dashboard: /violations/stats failed:', e.message); return null; }),
           api.get('/whatsapp/status').catch(() => ({ data: { data: { status: 'disconnected' } } })),
-          api.get('/settings'),
+          api.get('/settings').catch((e: any) => { console.warn('Dashboard: /settings failed:', e.message); return null; }),
+          api.get('/field-trip').catch(() => null),
+          api.get('/commission').catch(() => null),
+          api.get('/duty-schedule/stations').catch(() => null),
         ]);
 
       setData({
-        totalStudents: studentsRes.data.data.pagination?.total ?? 0,
-        totalStaff: staffRes.data.data?.staff?.length ?? 0,
-        absenteeism: absStatsRes.data.data,
-        warnings: warnStatsRes.data.data,
-        violations: violStatsRes.data.data,
-        waStatus: waRes.data.data.status,
-        schoolName: settingsRes.data.data.schoolName || '',
-        principalName: settingsRes.data.data.principalName || '',
+        totalStudents: studentsRes?.data?.data?.pagination?.total ?? 0,
+        totalStaff: staffRes?.data?.data?.staff?.length ?? 0,
+        absenteeism: absStatsRes?.data?.data ?? { total: 0, sentCount: 0, notSentCount: 0 },
+        warnings: warnStatsRes?.data?.data ?? { total: 0, studentsWithWarnings: 0 },
+        violations: violStatsRes?.data?.data ?? { totalUploads: 0, totalViolations: 0, confirmedViolations: 0 },
+        waStatus: waRes?.data?.data?.status ?? 'disconnected',
+        schoolName: settingsRes?.data?.data?.schoolName || '',
+        principalName: settingsRes?.data?.data?.principalName || '',
+        fieldTripsCount: fieldTripRes?.data?.data?.length || 0,
+        commissionsCount: commissionRes?.data?.data?.length || 0,
+        dutyCount: dutyRes?.data?.data?.length || 0,
       });
     } catch (error) {
       console.error('Dashboard load error:', error);
@@ -78,17 +90,20 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 64 }}>
-        <div className="spinner spinner-dark" />
+      <div className="flex justify-center items-center p-16 h-full" >
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"   />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div style={{ textAlign: 'center', padding: 64, color: 'var(--danger)' }}>
-        <p style={{ fontSize: 16, fontWeight: 600 }}>Veriler yüklenemedi.</p>
-        <button className="btn btn-outline" onClick={loadAll} style={{ marginTop: 12 }}>
+      <div className="text-center p-16 text-red-600" >
+        <p className="text-base font-semibold mb-3" >Veriler yüklenemedi.</p>
+        <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+          
+          onClick={loadAll}
+        >
           Tekrar Dene
         </button>
       </div>
@@ -100,12 +115,12 @@ export default function DashboardPage() {
   const WaIcon = waInfo.icon;
 
   return (
-    <div style={{ animation: 'fade-in 0.25s ease-out' }}>
+    <div className="p-2 md:p-6 max-w-[1600px] mx-auto animate-[fade-in_0.25s_ease-out]" >
       {/* Header */}
-      <div className="page-header">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 bg-white p-5 rounded-2xl border border-slate-300 shadow-md" >
         <div>
-          <h1 className="page-title">Gösterge Paneli</h1>
-          <p className="page-subtitle">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight" >Gösterge Paneli</h1>
+          <p className="text-[13px] text-slate-500 mt-1" >
             {d.schoolName ? (
               <>
                 <strong>{d.schoolName}</strong>
@@ -116,39 +131,17 @@ export default function DashboardPage() {
             )}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            className="btn btn-outline"
+        <div className="flex gap-2.5" >
+          <button className="flex items-center gap-1.5 py-2 px-3.5 text-[13px] font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-md"
+            
             onClick={() => navigate('/admin/settings')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              fontSize: 13,
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'white',
-              cursor: 'pointer',
-            }}
           >
             <Settings size={15} />
             <span>Ayarlar</span>
           </button>
-          <button
-            className="btn btn-outline"
+          <button className="flex items-center gap-1.5 py-2 px-3.5 text-[13px] font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-md"
+            
             onClick={loadAll}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              fontSize: 13,
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'white',
-              cursor: 'pointer',
-            }}
           >
             <RefreshCw size={15} />
             <span>Yenile</span>
@@ -157,252 +150,169 @@ export default function DashboardPage() {
       </div>
 
       {/* Ana İstatistik Kartları (5 Adet Kompakt Shadcn Tarzı) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-          gap: 16,
-          marginBottom: 20,
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5" >
         <StatCard
           icon={Users}
           value={d.totalStudents}
           label="Aktif Öğrenci"
-          accent="#3b82f6"
-          bgTint="rgba(59,130,246,0.1)"
+          color="text-blue-500"
+          bgTint="bg-blue-500/10"
           onClick={() => navigate('/admin/students')}
         />
         <StatCard
           icon={UserCheck}
           value={d.totalStaff}
           label="Personel"
-          accent="#0891b2"
-          bgTint="rgba(8,145,178,0.1)"
+          color="text-indigo-500"
+          bgTint="bg-indigo-500/10"
+          onClick={() => navigate('/admin/staff')}
+        />
+        <StatCard
+          icon={CheckCircle2}
+          value={d.fieldTripsCount}
+          label="Planlı Geziler"
+          color="text-emerald-500"
+          bgTint="bg-emerald-500/10"
+          onClick={() => navigate('/admin/field-trip')}
+        />
+        <StatCard
+          icon={ShieldAlert}
+          value={d.commissionsCount}
+          label="Komisyonlar"
+          color="text-orange-500"
+          bgTint="bg-orange-500/10"
+          onClick={() => navigate('/admin/commission')}
+        />
+        <StatCard
+          icon={Clock}
+          value={d.dutyCount}
+          label="Nöbet Yerleri"
+          color="text-purple-500"
+          bgTint="bg-purple-500/10"
+          onClick={() => navigate('/admin/duty-schedule')}
+        />
+        <StatCard
+          icon={UserCheck}
+          value={d.totalStaff}
+          label="Personel"
+          color="text-cyan-600"
+          bgTint="bg-cyan-600/10"
           onClick={() => navigate('/admin/staff')}
         />
         <StatCard
           icon={FileText}
           value={d.absenteeism.total}
           label="Devamsızlık Kaydı"
-          accent="#7c3aed"
-          bgTint="rgba(124,58,237,0.1)"
+          color="text-purple-600"
+          bgTint="bg-purple-600/10"
           onClick={() => navigate('/admin/absenteeism')}
         />
         <StatCard
           icon={AlertTriangle}
           value={d.warnings.total}
           label="Yazılı Uyarı"
-          accent="#d97706"
-          bgTint="rgba(217,119,6,0.1)"
+          color="text-amber-600"
+          bgTint="bg-amber-600/10"
           onClick={() => navigate('/admin/warnings')}
         />
         <StatCard
           icon={ShieldAlert}
           value={d.violations.confirmedViolations}
           label="Onaylı İhlal"
-          accent="#dc2626"
-          bgTint="rgba(220,38,38,0.1)"
+          color="text-red-600"
+          bgTint="bg-red-600/10"
           onClick={() => navigate('/admin/violations')}
         />
       </div>
 
       {/* Alt Satır: Detay Kartları (4 Adet Kompakt Kart) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" >
         {/* Devamsızlık Detayı */}
-        <div
-          className="card"
-          style={{ cursor: 'pointer' }}
+        <div className="bg-white rounded-xl border border-slate-300 p-5 shadow-md hover:shadow-md transition-shadow cursor-pointer"
+          
           onClick={() => navigate('/admin/absenteeism')}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: 'rgba(99,102,241,0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <FileText size={18} color="#6366f1" />
+          <div className="flex items-center justify-between mb-4" >
+            <div className="flex items-center gap-2.5" >
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center" >
+                <FileText className="text-indigo-500"  size={18}  />
               </div>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Devamsızlık Durumu</h3>
+              <h3 className="m-0 text-sm font-semibold text-slate-900" >Devamsızlık Durumu</h3>
             </div>
-            <span
-              style={{
-                fontSize: 11,
-                background: 'hsl(210 40% 95%)',
-                padding: '2px 8px',
-                borderRadius: 12,
-                color: 'var(--text-muted)',
-              }}
-            >
+            <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-medium" >
               Mektup
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <MiniStat value={d.absenteeism.notSentCount} label="Gönderilmedi" color="#dc2626" />
-            <MiniStat value={d.absenteeism.sentCount} label="Gönderildi" color="#16a34a" />
-            <MiniStat value={d.absenteeism.total} label="Toplam" color="#4f46e5" />
+          <div className="flex flex-wrap gap-2" >
+            <MiniStat value={d.absenteeism.notSentCount} label="Gönderilmedi" color="text-red-600" />
+            <MiniStat value={d.absenteeism.sentCount} label="Gönderildi" color="text-green-600" />
+            <MiniStat value={d.absenteeism.total} label="Toplam" color="text-indigo-600" />
           </div>
         </div>
 
         {/* Yazılı Uyarı Detayı */}
-        <div
-          className="card"
-          style={{ cursor: 'pointer' }}
+        <div className="bg-white rounded-xl border border-slate-300 p-5 shadow-md hover:shadow-md transition-shadow cursor-pointer"
+          
           onClick={() => navigate('/admin/warnings')}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: 'rgba(217,119,6,0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <AlertTriangle size={18} color="#d97706" />
+          <div className="flex items-center justify-between mb-4" >
+            <div className="flex items-center gap-2.5" >
+              <div className="w-8 h-8 rounded-lg bg-amber-600/10 flex items-center justify-center" >
+                <AlertTriangle className="text-amber-600"  size={18}  />
               </div>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Yazılı Uyarılar</h3>
+              <h3 className="m-0 text-sm font-semibold text-slate-900" >Yazılı Uyarılar</h3>
             </div>
-            <span
-              style={{
-                fontSize: 11,
-                background: 'hsl(210 40% 95%)',
-                padding: '2px 8px',
-                borderRadius: 12,
-                color: 'var(--text-muted)',
-              }}
-            >
+            <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-medium" >
               Uyarı
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <MiniStat value={d.warnings.total} label="Toplam Uyarı" color="#d97706" />
-            <MiniStat value={d.warnings.studentsWithWarnings} label="Etkilenen Öğrenci" color="#7c3aed" />
+          <div className="flex flex-wrap gap-2" >
+            <MiniStat value={d.warnings.total} label="Toplam Uyarı" color="text-amber-600" />
+            <MiniStat value={d.warnings.studentsWithWarnings} label="Etkilenen Öğrenci" color="text-purple-600" />
           </div>
         </div>
 
         {/* İhlal Detayı */}
-        <div
-          className="card"
-          style={{ cursor: 'pointer' }}
+        <div className="bg-white rounded-xl border border-slate-300 p-5 shadow-md hover:shadow-md transition-shadow cursor-pointer"
+          
           onClick={() => navigate('/admin/violations')}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: 'rgba(220,38,38,0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ShieldAlert size={18} color="#dc2626" />
+          <div className="flex items-center justify-between mb-4" >
+            <div className="flex items-center gap-2.5" >
+              <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center" >
+                <ShieldAlert className="text-red-600"  size={18}  />
               </div>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>İhlal Takibi</h3>
+              <h3 className="m-0 text-sm font-semibold text-slate-900" >İhlal Takibi</h3>
             </div>
-            <span
-              style={{
-                fontSize: 11,
-                background: 'hsl(210 40% 95%)',
-                padding: '2px 8px',
-                borderRadius: 12,
-                color: 'var(--text-muted)',
-              }}
-            >
+            <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-medium" >
               Disiplin
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <MiniStat value={d.violations.totalViolations} label="Toplam İhlal" color="#dc2626" />
-            <MiniStat value={d.violations.confirmedViolations} label="Onaylı" color="#16a34a" />
-            <MiniStat value={d.violations.totalUploads} label="Yükleme" color="#0891b2" />
+          <div className="flex flex-wrap gap-2" >
+            <MiniStat value={d.violations.totalUploads} label="İhlal Yüklemesi" color="text-blue-600" />
+            <MiniStat value={d.violations.totalViolations} label="Toplam İhlal" color="text-orange-600" />
+            <MiniStat value={d.violations.confirmedViolations} label="Onaylı" color="text-red-600" />
           </div>
         </div>
 
         {/* WhatsApp Durumu */}
         <div
-          className="card"
-          style={{
-            cursor: 'pointer',
-            background: waInfo.bg,
-            border: `1px solid ${waInfo.color}35`,
-          }}
+          className={`rounded-xl border ${waInfo.bg} ${waInfo.border} p-5 shadow-md hover:shadow-md transition-shadow cursor-pointer`}
           onClick={() => navigate('/admin/whatsapp')}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-                }}
-              >
-                <MessageSquare size={18} color="#16a34a" />
+          <div className="flex items-center justify-between mb-4" >
+            <div className="flex items-center gap-2.5" >
+              <div className="w-8 h-8 rounded-lg bg-white shadow-md flex items-center justify-center" >
+                <MessageSquare className="text-green-600"  size={18}  />
               </div>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>WhatsApp</h3>
+              <h3 className="m-0 text-sm font-semibold text-slate-900" >WhatsApp</h3>
             </div>
-            <WaIcon size={18} color={waInfo.color} />
+            <WaIcon size={18} className={waInfo.color} />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: waInfo.color }}>
+          <div className={`text-base font-bold ${waInfo.color}`}>
             {waInfo.label}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+          <div className="text-[12px] text-slate-500 mt-1" >
             {d.waStatus === 'connected'
               ? 'Velilere anlık bildirim gönderilebilir'
               : 'Bağlanmak için tıklayın'}
@@ -417,50 +327,32 @@ function StatCard({
   icon: Icon,
   value,
   label,
-  accent,
+  color,
   bgTint,
   onClick,
 }: {
   icon: React.ElementType;
   value: number;
   label: string;
-  accent: string;
+  color: string;
   bgTint: string;
   onClick: () => void;
 }) {
   return (
-    <div
-      className="stat-card"
+    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-md hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between select-none"
+      
       onClick={onClick}
-      style={{
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        userSelect: 'none',
-      }}
     >
       <div>
-        <div className="stat-label" style={{ marginBottom: 4 }}>
+        <div className="text-[12px] text-slate-500 font-medium mb-1" >
           {label}
         </div>
-        <div className="stat-value" style={{ color: accent }}>
+        <div className={`text-xl font-bold ${color}`}>
           {value}
         </div>
       </div>
-      <div
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: bgTint,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={22} color={accent} />
+      <div className={`w-11 h-11 rounded-xl ${bgTint} flex items-center justify-center shrink-0`}>
+        <Icon size={22} className={color} />
       </div>
     </div>
   );
@@ -468,18 +360,9 @@ function StatCard({
 
 function MiniStat({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <div
-      style={{
-        flex: 1,
-        textAlign: 'center',
-        background: 'white',
-        padding: '10px 8px',
-        borderRadius: 8,
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div style={{ fontSize: 20, fontWeight: 700, color, lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{label}</div>
+    <div className="flex-1 min-w-[75px] text-center bg-white py-2.5 px-2 rounded-lg border border-slate-200 shadow-sm overflow-hidden" >
+      <div className={`text-[20px] font-bold leading-tight ${color}`}>{value}</div>
+      <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 font-medium truncate" title={label} >{label}</div>
     </div>
   );
 }

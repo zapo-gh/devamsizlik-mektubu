@@ -437,4 +437,16 @@ export const whatsappController = {
       });
     } catch (err) { next(err); }
   },
+
+  sendConsentRequestToParent: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { parentId } = req.body;
+      const parent = await prisma.parent.findUnique({ where: { id: parentId } });
+      if (!parent) return res.status(404).json({ message: 'Veli bulunamadı.' });
+
+      await whatsappService.sendConsentRequest(parent.phone);
+      
+      res.json({ message: 'Onay isteği gönderildi.' });
+    } catch (err) { next(err); }
+  },
 };

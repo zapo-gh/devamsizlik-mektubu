@@ -20,6 +20,22 @@ import gradeReportRoutes from './modules/gradeReport/gradeReport.routes';
 import parentMeetingRoutes from './modules/parentMeeting/parentMeeting.routes';
 import parentNotificationRoutes from './modules/parentNotification/parentNotification.routes';
 import tebligRoutes from './modules/teblig/teblig.routes';
+import dutyScheduleRoutes from './modules/dutySchedule/dutySchedule.routes';
+import boardMeetingRoutes from './modules/boardMeeting/boardMeeting.routes';
+import commissionRoutes from './modules/commission/commission.routes';
+import holidayRoutes from './modules/holiday/holiday.routes';
+import annualPlanRoutes from './modules/annualPlan/annualPlan.routes';
+import commemorativeDaysRoutes from './modules/commemorativeDays/commemorativeDays.routes';
+import socialActivityRoutes from './modules/socialActivity/socialActivity.routes';
+import parentAssociationRoutes from './modules/parentAssociation/parentAssociation.routes';
+import fieldTripRoutes from './modules/fieldTrip/fieldTrip.routes';
+import extracurricularRoutes from './modules/extracurricular/extracurricular.routes';
+import travelAllowanceRoutes from './modules/travelAllowance/travelAllowance.routes';
+import staffTransferRoutes from './modules/staffTransfer/staffTransfer.routes';
+import studentClubRoutes from './modules/studentClub/studentClub.routes';
+import procurementRoutes from './modules/procurement/procurement.routes';
+import supplierRoutes from './modules/supplier/supplier.routes';
+import orderLetterRoutes from './modules/orderLetter/orderLetter.routes';
 
 const app = express();
 
@@ -81,6 +97,22 @@ app.use('/api/grade-reports', gradeReportRoutes);
 app.use('/api/parent-meeting', parentMeetingRoutes);
 app.use('/api/parent-notification', parentNotificationRoutes);
 app.use('/api/teblig', tebligRoutes);
+app.use('/api/duty-schedule', dutyScheduleRoutes);
+app.use('/api/board-meeting', boardMeetingRoutes);
+app.use('/api/commission', commissionRoutes);
+app.use('/api/holiday', holidayRoutes);
+app.use('/api/annual-plan', annualPlanRoutes);
+app.use('/api/commemorative-days', commemorativeDaysRoutes);
+app.use('/api/social-activity', socialActivityRoutes);
+app.use('/api/parent-association', parentAssociationRoutes);
+app.use('/api/field-trip', fieldTripRoutes);
+app.use('/api/extracurricular', extracurricularRoutes);
+app.use('/api/travel-allowance', travelAllowanceRoutes);
+app.use('/api/staff-transfer', staffTransferRoutes);
+app.use('/api/student-club', studentClubRoutes);
+app.use('/api/procurement', procurementRoutes);
+app.use('/api/supplier', supplierRoutes);
+app.use('/api/order-letter', orderLetterRoutes);
 
 // WhatsApp: önceki oturum varsa otomatik bağlan
 // WhatsApp otomatik bağlantı devre dışı — kullanıcı /admin/whatsapp sayfasından Bağlan butonuna basmalı
@@ -89,9 +121,16 @@ app.use('/api/teblig', tebligRoutes);
 // Frontend statik dosyaları (Electron/production build)
 const frontendDist = path.resolve(__dirname, 'public');
 if (fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    setHeaders: (res, filepath) => {
+      if (filepath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      }
+    }
+  }));
   // SPA için catch-all: yalnızca /api dışı GET'lere — React Router'ın çalışması için
   app.get(/^(?!\/api)/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }

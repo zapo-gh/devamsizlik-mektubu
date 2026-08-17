@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İdareci Yıllık Çalışma Programı Yönetim Sistemi</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #2563eb;
+            --primary-dark: #0f172a;
+            --secondary: #0f766e;
+            --success: #059669;
+            --danger: #dc2626;
+            --bg-gray: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --border-color: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            line-height: 1.5;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        /* Top Bar Controls */
+        .app-header {
+            background: linear-gradient(135deg, #1e3a8a, #0f766e);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .app-title h1 {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-title p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.18);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 9px 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 40px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-light);
+            color: white;
+        }
+        .btn-primary:hover { background-color: #1d4ed8; }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        .btn-success:hover { background-color: #047857; }
+
+        .btn-outline {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .btn-outline:hover { background-color: rgba(255,255,255,0.2); }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover { background-color: #b91c1c; }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 11px;
+            min-height: auto;
+            border-radius: 6px;
+        }
+
+        /* Mobile View Switcher Tabs */
+        .mobile-tab-bar {
+            display: none;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #64748b;
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.2);
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* Form Controls Sidebar */
+        .editor-panel {
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .panel-section h3 {
+            font-size: 15px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 4px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 11px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 50px;
+        }
+
+        .month-accordion {
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+        }
+
+        .accordion-header {
+            padding: 10px 12px;
+            background: #e2e8f0;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .accordion-header:hover {
+            background: #cbd5e1;
+        }
+
+        .accordion-body {
+            padding: 12px;
+            display: none;
+            background: white;
+        }
+
+        .item-list-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+
+        .item-list-row input {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        .sub-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin: 10px 0 6px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 4px;
+        }
+
+        /* Document Preview Page (A4 Format) */
+        .preview-panel {
+            background: #cbd5e1;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+        }
+
+        .document-paper {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 16mm 14mm;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+            color: #000;
+            position: relative;
+        }
+
+        /* Official Document Typography & Tables */
+        .doc-header {
+            text-align: center;
+            margin-bottom: 18px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .doc-header h2 {
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .doc-header h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .doc-header h4 {
+            font-size: 10.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #1e3a8a;
+            margin-top: 6px;
+        }
+
+        .month-block {
+            margin-bottom: 22px;
+            page-break-inside: avoid;
+        }
+
+        .month-header-bar {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 6px 12px;
+            font-size: 10.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 4px 4px 0 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .month-celebrations {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-top: none;
+            padding: 6px 10px;
+            font-size: 8.5pt;
+            line-height: 1.35;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .month-celebrations strong {
+            color: #0f172a;
+        }
+
+        /* Dynamic Calendar Grid Table */
+        .cal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .cal-table th {
+            background-color: #e2e8f0;
+            color: #0f172a;
+            font-weight: bold;
+            padding: 4px;
+            border: 1px solid #94a3b8;
+            width: 14.28%;
+        }
+
+        .cal-table td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 2px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+
+        .cal-table td.weekend {
+            background-color: #fef2f2;
+            color: #dc2626;
+        }
+
+        .cal-table td.empty {
+            background-color: #f8fafc;
+        }
+
+        /* Tasks 3-Column Table */
+        .tasks-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8.5pt;
+        }
+
+        .tasks-table th {
+            background-color: #1e293b;
+            color: white;
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 8pt;
+            text-transform: uppercase;
+            width: 33.33%;
+            border: 1px solid #0f172a;
+        }
+
+        .tasks-table td {
+            border: 1px solid #94a3b8;
+            padding: 6px 8px;
+            vertical-align: top;
+            background: #ffffff;
+        }
+
+        .task-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .task-list li {
+            margin-bottom: 4px;
+            line-height: 1.3;
+            color: #1e293b;
+        }
+
+        .doc-signatures {
+            margin-top: 35px;
+            display: table;
+            width: 100%;
+            page-break-inside: avoid;
+        }
+
+        .sig-cell {
+            display: table-cell;
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
+            font-size: 9.5pt;
+        }
+
+        .sig-title {
+            font-weight: bold;
+            margin-bottom: 40px;
+        }
+
+        .sig-name {
+            font-weight: bold;
+        }
+
+        .sig-sub {
+            font-size: 8.5pt;
+            color: #475569;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 960px) {
+            body {
+                padding: 10px;
+            }
+
+            .app-header {
+                padding: 14px 18px;
+            }
+
+            .mobile-tab-bar {
+                display: flex;
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .editor-panel.tab-hidden,
+            .preview-panel.tab-hidden {
+                display: none;
+            }
+
+            .preview-panel {
+                padding: 10px;
+            }
+
+            .document-paper {
+                width: 100%;
+                min-height: auto;
+                padding: 15px;
+            }
+        }
+
+        /* Print Override Styles */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+
+            .app-header, .editor-panel, .mobile-tab-bar, .no-print {
+                display: none !important;
+            }
+
+            .workspace {
+                display: block !important;
+            }
+
+            .preview-panel {
+                background: white !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+
+            .document-paper {
+                box-shadow: none !important;
+                width: 100% !important;
+                padding: 0 !important;
+                min-height: auto !important;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 12mm 10mm;
+            }
+
+            .month-header-bar {
+                background-color: #1e3a8a !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .cal-table th {
+                background-color: #e2e8f0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .tasks-table th {
+                background-color: #1e293b !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hidden File Input for JSON Import -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSON(event)">
+
+    <!-- Upper App Header -->
+    <header class="app-header no-print">
+        <div class="app-title">
+            <h1>📋 İdareci Yıllık Çalışma Programı</h1>
+            <p>Dinamik takvim hesabı, elektrik kesintisine karşı otomatik kayıt ve JSON aktarımı</p>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span id="saveStatusText">Veriler Taranıyor...</span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-outline" onclick="triggerImport()" title="JSON Dosyasından Yükle">📥 İçeri Aktar</button>
+            <button class="btn btn-success" onclick="exportJSON()" title="JSON Olarak Bilgisayara Kaydet">📤 Dışarı Aktar</button>
+            <button class="btn btn-primary" onclick="window.print()" title="Resmi Belgeyi Yazdır veya PDF Kaydet">🖨️ Yazdır / PDF</button>
+            <button class="btn btn-outline" onclick="resetToDefault()" style="border-color: rgba(239,68,68,0.5); color: #fca5a5;" title="Varsayılan Verilere Sıfırla">🔄 Sıfırla</button>
+        </div>
+    </header>
+
+    <!-- Mobile View Switcher Tab Bar -->
+    <div class="mobile-tab-bar no-print">
+        <button class="tab-btn active" id="tabEditorBtn" onclick="switchTab('editor')">✏️ Plan Düzenle</button>
+        <button class="tab-btn" id="tabPreviewBtn" onclick="switchTab('preview')">👁️ Rapor Önizleme</button>
+    </div>
+
+    <!-- Main Workspace Layout -->
+    <div class="workspace">
+        
+        <!-- Left Side: Interactive Form Editor Panel -->
+        <aside class="editor-panel no-print" id="editorPanel">
+            
+            <div class="panel-section">
+                <h3>🏛️ Genel Okul Bilgileri</h3>
+                <div class="form-group">
+                    <label>Eğitim-Öğretim Yılı (Takvimi Günceller)</label>
+                    <input type="text" id="inputSchoolYear" class="form-control" value="2025 - 2026" placeholder="Örn: 2025 - 2026" oninput="onDataChanged()">
+                </div>
+                <div class="form-group" style="background:#f0f9ff; border:1px solid #bae6fd; padding:10px; border-radius:8px;">
+                    <label style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <input type="checkbox" id="autoCalcIsGunu" checked style="width:auto;">
+                        <span>Yıl değiştiğinde iş günü sayılarını otomatik güncelle</span>
+                    </label>
+                    <div style="font-size:11px; color:#475569; margin-bottom:8px; line-height:1.4;">
+                        Hafta içi (Pzt-Cuma) gün sayısından sabit tarihli resmi/milli bayramlar (1 Ocak, 23 Nisan, 1-19 Mayıs, 30 Ağustos, 29 Ekim) düşülerek hesaplanır. Yarıyıl tatili ve dini bayramlar (Ramazan/Kurban) her yıl değiştiği için otomatik hesaba dahil edilmez — o aylardaki değeri elle düzeltmeniz gerekir.
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="manualRecalcIsGunu()">🔄 İş Günü Sayılarını Şimdi Hesapla</button>
+                </div>
+                <div class="form-group">
+                    <label>İl / Valilik Adı</label>
+                    <input type="text" id="inputProvince" class="form-control" value="ELAZIĞ" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>İlçe / İl MEM Adı</label>
+                    <input type="text" id="inputDistrict" class="form-control" value="İl Milli Eğitim Müdürlüğü" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Okul / Kurum Adı</label>
+                    <input type="text" id="inputSchoolName" class="form-control" value="KOÇ İLKOKULU MÜDÜRLÜĞÜ" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Program Başlığı</label>
+                    <input type="text" id="inputReportTitle" class="form-control" value="YÖNETİCİ YILLIK ÇALIŞMA PROGRAMI" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Okul Müdürü (Onaylayan)</label>
+                    <input type="text" id="inputPrincipalName" class="form-control" value="KAZIM ATICI" oninput="onDataChanged()">
+                </div>
+                <div class="form-group">
+                    <label>Düzenleme Tarihi</label>
+                    <input type="text" id="inputDocDate" class="form-control" value="04.08.2025" oninput="onDataChanged()">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>
+                    <span>📅 Aylık Çalışma Planları (12 Ay)</span>
+                </h3>
+                <div id="monthsFormList">
+                    <!-- Dynamic Month Accordions Rendered Here -->
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Right Side: Official Document Live Preview Panel -->
+        <main class="preview-panel" id="previewPanel">
+            <div class="document-paper" id="documentPaper">
+                
+                <!-- Official Document Header -->
+                <div class="doc-header">
+                    <h2>T.C.</h2>
+                    <h2 id="docProvince">ELAZIĞ VALİLİĞİ</h2>
+                    <h3 id="docDistrict">İl Milli Eğitim Müdürlüğü</h3>
+                    <h3 id="docSchoolName">KOÇ İLKOKULU MÜDÜRLÜĞÜ</h3>
+                    <h4 id="docYearTitle">2025 - 2026 EĞİTİM VE ÖĞRETİM YILI</h4>
+                    <h4 id="docMainTitle" style="color:#1e3a8a; margin-top:6px;">YÖNETİCİ YILLIK ÇALIŞMA PROGRAMI</h4>
+                </div>
+
+                <!-- Months Reports Rendered Here -->
+                <div id="docMonthsContainer">
+                    <!-- Dynamic Month Report Blocks Generated by JS -->
+                </div>
+
+                <!-- Official Signature Block -->
+                <div class="doc-signatures">
+                    <div class="sig-cell">
+                        <div class="sig-title">Düzenleyen</div>
+                        <div class="sig-name" id="docDateDisplay">04.08.2025</div>
+                        <div class="sig-sub">Müdür Yardımcısı</div>
+                    </div>
+                    <div class="sig-cell">
+                        <div class="sig-title">ONAY</div>
+                        <div class="sig-name" id="docPrincipalName">KAZIM ATICI</div>
+                        <div class="sig-sub" id="docPrincipalTitle">Okul Müdürü</div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Default 12 Months Initial Plan Data Extracted from Excel
+        const defaultPlanData = {
+    "province": "ELAZIĞ",
+    "district": "MERKEZ",
+    "schoolName": "KOÇ İLKOKULU MÜDÜRLÜĞÜ",
+    "schoolYear": "2025 - 2026",
+    "principalName": "KAZIM ATICI",
+    "principalTitle": "Okul Müdürü",
+    "reportTitle": "İDARECİ YILLIK ÇALIŞMA PROGRAMI VE UYGULAMA TAKVİMİ",
+    "docDate": "04.08.2025",
+    "months": [
+        {
+            "id": "m_1",
+            "name": "EYLÜL",
+            "monthIndex": 0,
+            "isGunu": "17",
+            "kutlanacakGunler": [
+                "15 Temmuz Demokrasi ve Milli Birlik Günü ( Ders yılının başladığı ikinci Hafta )",
+                "İlköğretim Hatası (Eylül ayının 3.haftası )",
+                "Gaziler Günü ( 19  Eylül )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci kayıtlarına devam edilmesi.",
+                "2-Brifing dosyasının güncellenmesi",
+                "3-Sınıf tertip ve düzenlerinin yapılması",
+                "4-Okulun açılış töreni hazırlıkları",
+                "5-Öğretmenler kurulu toplantısının yapıl-",
+                "6-Haftalık ders programının hazırlanması",
+                "7-Zümre öğretmenleri toplantısı",
+                "8-Ek ders ücret onayının alınması",
+                "9-İdari görev dağılımının yapılması",
+                "10-Milli Bayramlar  görevli öğret- menlerin belirlenmesi",
+                "11-Belirli gün ve haftalar görev dağılım- larının yapılması.",
+                "12-Okula yeni gelen öğrenciler için tanı- tım ve bilgilendirme (oryantasyon) çalışmalarının yapılması.",
+                "13-KBS Sistemi",
+                "14-Taşınır taleplerinin KBS girilmesi"
+            ],
+            "egitim": [
+                "1-Sınıf defterlerinin hazırlanması",
+                "2-Ücretsiz ders kitapları işlemleri",
+                "3-Sınıf başkan ve yard. seçimleri",
+                "4-Sınıf yerleşim planlarının yapılması.",
+                "5- Komisyonların seçimi",
+                "6-Rehberlik ve psikolojik danışma hiz- metleri yürütme komisyonunun seçimi.",
+                "7-Rehberlik çalışma planı",
+                "8-Öğrenci kulüplerinin oluşumu"
+            ],
+            "destek": [
+                "1-Öğretmen nöbet çizelgelerinin hazır- lanması",
+                "2-Öğretmen nöbet defterinin tutulması",
+                "3-Okulun rehberlik hizmetleri sınıf planının hazırlanması",
+                "4-Öğrenci bilgilerinin e-okula giril.",
+                "5-İçme suyu analizlerinin yaptırılması",
+                "6-Afet,acil ve riskli durumlarla ilgili öğrencilere yönelik eğitim faaliyetleri.",
+                "7-Koruyucu sağlık eğitimi faaliyetleri"
+            ]
+        },
+        {
+            "id": "m_2",
+            "name": "EKİM",
+            "monthIndex": 1,
+            "isGunu": "22.5",
+            "kutlanacakGunler": [
+                "Hayvanları Koruma Günü ( 04 Ekim )",
+                "Ahilik Kültürü Haftası. ( 08-12 Ekim)",
+                "Cumhuriyet Bayramı ( 29 Ekim )",
+                "Kızılay Haftası (29 Ekim- 04 Kasım )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Okul müdürünün ders denetimleri",
+                "3- Öğretmen ders denetim raporlarının tutulması.",
+                "4-Veli toplantısının yapılması",
+                "5-Okul aile birliği yönetim kurulu toplantısının yapılması",
+                "6-Okul internet sayfasının hazırlanması ve güncel tutulması.",
+                "7- Kulüp dosyalarının kont.",
+                "8-Taşınır taleplerinin KBS işlenmesi.",
+                "9-Öğretmen nöbetlerinin kontrolü.",
+                "10- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Öğrencilerin e-okuldaki gelişim bilgilerinin güncellenmesi.",
+                "2-Öğrencileri tanımaya yönelik veli ziyaretlerinin yapılması",
+                "3-Her sınıfın eğitsel rehberlik planının hazırlanması ve uygulanması.",
+                "4-Öğrencilerde çevre bilincini geliştir- meye yönelik etkinlik,proje ve uygulama çalışmalarının yapılması.",
+                "5-Sosyal,sanatsal,kültürel ve sportif etkinliklere ilişkin planlamanın yapılması.",
+                "6-Kaynaştırma eğitimi uygulamaların- da BEP birimi ile işbirliği yapılması.",
+                "7-Cumhuriyet bayramı hazırlıkları ve Bayramın kutlanması."
+            ],
+            "destek": [
+                "1-Yangın tüplerinin rutin bakım ve dolum işlemlerinin yapılması.",
+                "2-Bina içi yönlendirme levha larının uygun yerlere konulması.",
+                "3-Kat yerleşim planlarının uygun lere asılması.",
+                "4-İlk yardım dolabının kontrolü ve eksikliklerinin giderilmesi.",
+                "5-Okulun her katına ve uygun birimlere yangın tüplerinin konulması.",
+                "6-e-okul sistemine öğrencilerin sağlık bilgilerinin işlenmesi",
+                "7-Rehberlik hizmetleri çerçeve programının hazırlanması ve RAM a gönderilmesi.",
+                "8-Sivil savunma ve sabotajlara karşı korunma tedbirleri planının hazırlanması ve İl MEM sunulması.",
+                "9-Okulun yakın çevresindeki risk faktörleri ve bunlardan korunma yollarına ilişkin personel,çocuklar ve velilere yönelik bilgilendirme faaliyetleri",
+                "10-Afet,acil ve riskli durumlarla ilgili Velilere yönelik eğitim faaliyetleri."
+            ]
+        },
+        {
+            "id": "m_3",
+            "name": "KASIM",
+            "monthIndex": 2,
+            "isGunu": "15",
+            "kutlanacakGunler": [
+                "Atatürk Haftası ( 10-16 Kasım )                                  Öğretmenler Günü ( 24 Kasım )",
+                "Afet Eğitimi Hazırlık Günü ( 12 Kasım )",
+                "Dünya Çocuk Hakları Haftası (20 Kasım )",
+                "Ağız ve Diş Sağlığı Haftası ( 21-27 Kasım )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Okul müdürünün ders denetimleri",
+                "3-Yönetici, öğretmen ve destek personelinin HİE çalışmalarına katılım- larının teşvik edilmesi.",
+                "4- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Fakir öğrencilerin ihtiyaçlarının giderilmesi",
+                "2-Atatürk Haftası ve anma programı",
+                "3-Öğretmenler gününün kutlanması izlenmesi",
+                "5-Kulüp çalışmalarının izlenmesi",
+                "6-Öğrencilerde çevre bilincini geliştir- meye yönelik etkinlik,proje ve uygulama çalışmalarının yapılması.",
+                "7-Eğitsel rehberlik etkinlikleri formla- rının tutulması",
+                "8-Kaynaştırma eğitimi uygulamaların- da BEP birimi ile işbirliği yapılması."
+            ],
+            "destek": [
+                "1-Su ve enerji israfını önlemeye yönelik bilgilendirme çalışmalarının yapılması",
+                "2-Okulun temizlik işlerinin kontrol edilmesi."
+            ]
+        },
+        {
+            "id": "m_4",
+            "name": "ARALIK",
+            "monthIndex": 3,
+            "isGunu": "23",
+            "kutlanacakGunler": [
+                "Dünya Engelliler Günü ( 03 Aralık )",
+                "İnsan Hakları ve Demokrasi Haftası ( 10 Aralık gününü içine alan hafta )",
+                "Tutum, Yarım ve Türk Malları Haftası ( 12-18 Aralık )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Okul müdürünün ders denetimleri",
+                "3-Sınıf/şube veli toplantılarının yapılm.",
+                "4-Öğrencilerin sosyal-kültürel ve sanatsal etkinliklere katılımlarını sağlamak.",
+                "5-Taşınır mal sayım tutanaklarının Milli Eğitim Müdürlüğüne gönderilmesi",
+                "6-2025 yılı desimal dosya ve defterle- rinin kapanması-kaldırılması ( 31 Aralık 2025 akşamı )",
+                "7 -Tefbis Yıl Sonu İşlemleri",
+                "8- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Deprem ve doğal afet tatbikatının yapılması.",
+                "2-Öğrencilerde çevre bilincini geliştir- meye yönelik etkinlik,proje ve uygulama"
+            ],
+            "destek": [
+                "1-Okulun temizlik işlerinin kontrol edilmesi.Wc lavabolarda sıvı sabun bulundurulması.",
+                "2-Okulun yakın çevresindeki riskler"
+            ]
+        },
+        {
+            "id": "m_5",
+            "name": "OCAK",
+            "monthIndex": 4,
+            "isGunu": "11",
+            "kutlanacakGunler": [
+                "Enerji Tasarrufu Haftası ( Ocak Ayının 2. Haftası )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Düşümü yapılacak taşınırlara onay alınarak düşümü yapılması.",
+                "3-Yeni mali yılı ekders ücret onayları- nın alınması.",
+                "4-Sınıf ve bölümlerin taşınır  listele- rinin yenilenmesi.",
+                "5-E-okul not girişi işlemlerinin tamam- lanması.",
+                "6-Karne,ödül belgelerinin hazırlanması belgelerinin hazırlanması.",
+                "7-Karnelerin dağıtılması 20 Ocak",
+                "8-Okulun genel temizliği ve 2.döneme hazırlanması.",
+                "9- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Kaynaştırma eğitimi uygulamaların- da BEP birimi ile işbirliği yapılması.",
+                "2-Dönem sonu öğrenci kulüp ve reh- berlik faaliyetlerinin raporları."
+            ],
+            "destek": [
+                "1-Okulun temizlik işlerinin kontrol edilmesi.Wc lavabolarda sıvı sabun bulundurulması.",
+                "2-Su ve enerji israfını önlemeye yönelik bilgilendirme çalışmalarının yapılması",
+                "3-Afet,acil ve riskli durumlarla ilgili öğrencilere yönelik eğitim faaliyetleri.",
+                "4-Koruyucu sağlık eğitimi faaliyetleri"
+            ]
+        },
+        {
+            "id": "m_6",
+            "name": "ŞUBAT",
+            "monthIndex": 5,
+            "isGunu": "20",
+            "kutlanacakGunler": [
+                "Sivil Savunma Günü ( 28 Şubat )"
+            ],
+            "yonetsel": [
+                "1-Okulun genel temizliğinin yapılması",
+                "2-Küçük onarımların yapılması",
+                "3-İkinci dönemin başlaması",
+                "4-İkinci dönem ders programının hazırlanması",
+                "5-Nöbet çizelgesinin hazırlanması",
+                "6-Öğretmenler kurulu toplantısı",
+                "7-Zümre öğretmenler kurulu topl.",
+                "8-Okul rehberlik yürütme kurulu topl.",
+                "9-Okul aile birliği yönetim kurulu topl.",
+                "10-Veli toplantısının yapılması",
+                "11-Taşınır taleplerinin ilsise girilmesi.",
+                "12-Ders kitaplarının ilsis üzerinden girilmesi",
+                "13- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Eksik araç ve gereçlerin tespiti ve temin edilmesi"
+            ],
+            "destek": [
+                "1-Su ve enerji israfını önlemeye yönelik bilgilendirme çalışmalarının yapılması",
+                "2-Okulun temizlik işlerinin kontrol edilmesi.Wc lavabolarda sıvı sabun bulundurulması.",
+                "3-Çocuk Hakları Sözleşmesinin panolara asılması.",
+                "4-Şiddet ve istismar konusunda risk altındaki çocukların belirlenmesine yönelik çalışmaların yapılması",
+                "5-Sivil savunma tatbikatı."
+            ]
+        },
+        {
+            "id": "m_7",
+            "name": "MART",
+            "monthIndex": 6,
+            "isGunu": "17",
+            "kutlanacakGunler": [
+                "Yeşilay Haftası (1 Mart gününü içine alan hafta )",
+                "Girişimcilik Haftası ( Mart ayının ilk haftası )",
+                "Dünya Kadınlar Günü 8 Mart )",
+                "Bilim ve Teknoloji Haftası ( 08-14 Mart )",
+                "İstiklal Marşı' nın Kabulu ve Mehmet Akif ERSOY' u Anma Günü ( 12 Mart )",
+                "18 Mart Çanakkale Şehitleri Anma Günü",
+                "Oman Haftası (21-26 Mart )",
+                "Kütüphaneler Haftası ( Mart ayının son pazartesi gününü içine alan hafta )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Okul müdürünün ders denetimleri",
+                "3-Yönetici, öğretmen ve destek personelinin HİE çalışmalarına katılım- larının teşvik edilmesi.",
+                "4-Sınıf/şube veli toplantılarının yapılm.",
+                "5-Velilere yönelik tanıtım çalışmaları",
+                "6-Velilerin katılımını arttırıcı faaliyet- lerin planlanması",
+                "7-Okul internet sayfasının hazırlanması ve güncel tutulması.",
+                "8-Öğrenciler için sosyal-kültürel etkinliklerin planlanması",
+                "9-Okul personeli için sosyal-kültürel etkinliklerin planlanması",
+                "10-Öğrencilerin sosyal-kültürel ve sanatsal etkinliklere katılımlarını sağlamak.",
+                "11-Taşınır taleplerinin KBS girilmesi.",
+                "12- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Öğretmen,yönetici ve destek per- soneli hakkında veli ve öğrenci memnu- niyet anketlerinin yapılması.",
+                "3-Sportif ve sosyal faaliyetlerin izlenmesi",
+                "4-Kulüp çalışmalarının izlenmesi",
+                "5-Rehberlik test ve envanterlerinin uygulanması",
+                "6-Ana-baba eğitimi semineri",
+                "7-Kaynaştırma eğitimi uygulamaların- da BEP birimi ile işbirliği yapılması.",
+                "8-Öğrencilere yönelik mesleki tanıtım faaliyetlerinin yapılması.",
+                "9-Velilere yönelik  rehberlik kapsamında bilgilendirme ve tanıtım faaliyetlerinin yapılması."
+            ],
+            "destek": [
+                "1-İlk yardım dolabının kontrolü ve eksikliklerinin giderilmesi.",
+                "2-Deprem ve personel tahliye tadbika- tının yapılması."
+            ]
+        },
+        {
+            "id": "m_8",
+            "name": "NİSAN",
+            "monthIndex": 7,
+            "isGunu": "22",
+            "kutlanacakGunler": [
+                "Kanser Haftası ( 01 - 07 Nisan)                       23 Nisan Ulusal Egemenlik ve Çocuk Bayramı (23 Nisan)",
+                "Dünya Otizm Fakındalık günü ( 2 Nisan)",
+                "Dünya Sağlık Haftası ( 07- 13 Nisan )",
+                "Turizm Haftası ( 15-22 Nisan )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Öğrenci ve sınıf gözlem formları",
+                "3-Taşınır taleplerinin KBS girilmesi.",
+                "4- Kantin Denetimi"
+            ],
+            "egitim": [
+                "2-Sınıfların süslenmesi ve bayram hazırlıklarının yapılmsı.",
+                "2-Öğrencilerde çevre bilincini geliştir- meye yönelik etkinlik,proje ve uygulama çalışmalarının yapılması."
+            ],
+            "destek": [
+                "1-Su ve enerji israfını önlemeye yönelik bilgilendirme çalışmalarının yapılması",
+                "2-Okulun temizlik işlerinin kontrol edilmesi.Wc lavabolarda sıvı sabun bulundurulması.",
+                "4-Çocuk Hakları Sözleşmesinin panolara asılması.",
+                "5-Şiddet ve istismar konusunda risk altındaki çocukların belirlenmesine yönelik çalışmaların yapılması",
+                "6-Şiddet ve istismarı önleme konu- sunda eğitim verilmesi.",
+                "7-Okulun yakın çevresindeki risk faktörleri ve bunlardan korunma yollarına ilişkin personel,çocuklar ve velilere yönelik bilgilendirme faaliyetleri"
+            ]
+        },
+        {
+            "id": "m_9",
+            "name": "MAYIS",
+            "monthIndex": 8,
+            "isGunu": "16.5",
+            "kutlanacakGunler": [
+                "Bilişim haftası ( Mayıs ayının ilk haftası ) )",
+                "Trafik ve İlk Yardım Haftası ( Mayıs ayının ilk haftası )",
+                "Anneler Günü ( Mayıs ayının 2. Pazar günü )",
+                "Engelliler Haftası ( 10- 16 Mayıs )",
+                "Müzeler Haftası ( 18-24 Mayıs )",
+                "Atatürk' ü Anma Gençlik ve Spor Bayramı (19 Mayıs )",
+                "Etik Günü ( 25 Mayıs )"
+            ],
+            "yonetsel": [
+                "1-Öğrenci devam - takiplerinin yapılması ve devamsız öğrencilerin velilerine bildirilmesi.",
+                "2-Okula kayıt bölgesindeki Çağ nufusu tespit çalışmalarının yapılması.",
+                "3-Okul müdürünün ders denetimleri",
+                "4-Yönetici, öğretmen ve destek personelinin HİE çalışmalarına katılım- larının teşvik edilmesi.",
+                "5- Kantin Denetimi"
+            ],
+            "egitim": [
+                "1-Kulüp çalışmalarının izlenmesi",
+                "2-Öğrencilerde çevre bilincini geliştir- çalışmalarının yapılması.",
+                "3-Kaynaştırma eğitimi uygulamaların- da BEP birimi ile işbirliği yapılması.",
+                "4-Rehberlik test ve envanterlerinin uygulanması",
+                "4-Öğrencilerde çevre bilincini geliştir- meye yönelik etkinlik,proje ve uygulama çalışmalarının yapılması."
+            ],
+            "destek": []
+        },
+        {
+            "id": "m_10",
+            "name": "HAZİRAN",
+            "monthIndex": 9,
+            "isGunu": "20",
+            "kutlanacakGunler": [
+                "Çevre Koruma Haftası ( Haziran ayının 2.haftası )"
+            ],
+            "yonetsel": [
+                "1-e-okul not girişi işlemlerinin tamam- lanması.",
+                "2-Karne,takdir,teşekkür ve onur bel- gelerinin hazırlanması.",
+                "3-Karnelerin dağıtılması",
+                "4-Yıl sonu öğretmenler kurulu toplan- tısının yapılması.",
+                "5-Yıl sonu Zümre öğretmenler kurulu toplantısının yapılması",
+                "6-Sınıf geçme defterlerinin hazırlanması",
+                "7-Yazılı kağıtları,sınıf defterleri vb. evrakların öğretmenlerden geri alınması",
+                "8-Kayıtlarının silinmesi gereken öğrencilerin kayıtlarının silinmesi.",
+                "9-Yaz tatili adres ve telefon bilgilerinin öğretmenlerden alınması."
+            ],
+            "egitim": [
+                "1-Kulüp çalışmaları sene sonu faaliyet raporlarının hazırlanması",
+                "2-Rehberlik yürütme kurulunun yıl sonu toplantısı ve rapor hazırlaması",
+                "3-Öğretmenlerin seminer çalışmaları",
+                "4-Ders kesim raporları",
+                "5-Okul çevre iş birliği faaliyet raporunun hazırlanması."
+            ],
+            "destek": []
+        },
+        {
+            "id": "m_11",
+            "name": "TEMMUZ",
+            "monthIndex": 10,
+            "isGunu": "",
+            "kutlanacakGunler": [],
+            "yonetsel": [
+                "1-Öğrenci kayıtlarının yapılması",
+                "2-Yaz Okulu Öğrenci Başvurularının alınması"
+            ],
+            "egitim": [],
+            "destek": [
+                "1-Elektrik,su ve kalorifer tesisatının gözden geçirilmesi.",
+                "2-Yıllık kalorifer baca temizliği",
+                "3-Tamirat ve boya badana işlerinin yapılması.",
+                "4-Okulun genel temizliğinin yapılması"
+            ]
+        },
+        {
+            "id": "m_12",
+            "name": "AĞUSTOS",
+            "monthIndex": 11,
+            "isGunu": "22",
+            "kutlanacakGunler": [
+                "30 Ağustos Zafer Bayramı"
+            ],
+            "yonetsel": [
+                "1-Öğrenci kayıtlarının yapılması"
+            ],
+            "egitim": [
+                "1-Okulun eğitim öğretim materyalleri ihtiyaçlarının temin edilmesi."
+            ],
+            "destek": [
+                "1-Elektrik ve su tesisatının gözden geçirilmesi.",
+                "2-Yıllık wc bakımı",
+                "3-Tamirat ve boya badana işlerinin yapılması.",
+                "4-Okulun genel temizliğinin yapılması UYGUNDUR Okul Müdürü"
+            ]
+        }
+    ]
+};
+
+        let currentData = null;
+        let autoSaveTimer = null;
+        let lastSchoolYear = null;
+
+        const monthNamesTr = ['EYLÜL', 'EKİM', 'KASIM', 'ARALIK', 'OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS'];
+
+        window.onload = function() {
+            loadDataFromStorage();
+            renderEditorForms();
+            updateDocument();
+        };
+
+        function loadDataFromStorage() {
+            try {
+                const saved = localStorage.getItem('idareci_calisma_plani_v1');
+                if (saved) {
+                    currentData = JSON.parse(saved);
+                    updateStatusText('🟢 Otomatik Kayıt Yüklendi (' + getFormattedTime() + ')');
+                } else {
+                    currentData = JSON.parse(JSON.stringify(defaultPlanData));
+                    updateStatusText('🟢 Varsayılan Veriler Hazır');
+                }
+            } catch (e) {
+                currentData = JSON.parse(JSON.stringify(defaultPlanData));
+                updateStatusText('⚠️ Varsayılan Veriler Hazır');
+            }
+
+            // Sync Header Inputs
+            document.getElementById('inputProvince').value = currentData.province || defaultPlanData.province;
+            document.getElementById('inputDistrict').value = currentData.district || defaultPlanData.district;
+            document.getElementById('inputSchoolName').value = currentData.schoolName || defaultPlanData.schoolName;
+            document.getElementById('inputSchoolYear').value = currentData.schoolYear || defaultPlanData.schoolYear;
+            document.getElementById('inputReportTitle').value = currentData.reportTitle || defaultPlanData.reportTitle;
+            document.getElementById('inputPrincipalName').value = currentData.principalName || defaultPlanData.principalName;
+            document.getElementById('inputDocDate').value = currentData.docDate || defaultPlanData.docDate;
+
+            lastSchoolYear = currentData.schoolYear;
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('idareci_calisma_plani_v1', JSON.stringify(currentData));
+                updateStatusText('🟢 Otomatik Kaydedildi (' + getFormattedTime() + ')');
+            } catch (e) {
+                updateStatusText('❌ Depolama Hatası');
+            }
+        }
+
+        function onDataChanged() {
+            updateStatusText('🟡 Kaydediliyor...');
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                syncHeaderFields();
+
+                const autoCalcBox = document.getElementById('autoCalcIsGunu');
+                if (autoCalcBox && autoCalcBox.checked && currentData.schoolYear !== lastSchoolYear) {
+                    recalcAllIsGunu();
+                    renderEditorForms();
+                }
+                lastSchoolYear = currentData.schoolYear;
+
+                saveToLocalStorage();
+                updateDocument();
+            }, 300);
+        }
+
+        // Sabit tarihli resmi/milli bayram tatilleri (ay, gün)
+        function isFixedHoliday(calMonth, day) {
+            const fixedHolidays = [
+                { m: 1, d: 1 },   // Yılbaşı
+                { m: 4, d: 23 },  // 23 Nisan Ulusal Egemenlik ve Çocuk Bayramı
+                { m: 5, d: 1 },   // Emek ve Dayanışma Günü
+                { m: 5, d: 19 },  // Atatürk'ü Anma Gençlik ve Spor Bayramı
+                { m: 8, d: 30 },  // Zafer Bayramı
+                { m: 10, d: 29 }  // Cumhuriyet Bayramı
+            ];
+            return fixedHolidays.some(f => f.m === calMonth && f.d === day);
+        }
+
+        // Bir ay için hafta içi gün sayısını (sabit resmi tatiller hariç) hesaplar
+        function calculateIsGunu(schoolYearStr, monthIdx) {
+            const calInfo = getCalendarGrid(schoolYearStr, monthIdx);
+            let count = 0;
+            calInfo.weeks.forEach(week => {
+                week.forEach((dayVal, dIdx) => {
+                    // dIdx: 0=Pzt ... 4=Cuma, 5=Cmt, 6=Paz
+                    if (dayVal && dIdx <= 4 && !isFixedHoliday(calInfo.calMonth, dayVal)) {
+                        count++;
+                    }
+                });
+            });
+            return String(count);
+        }
+
+        // Tüm ayların iş günü sayısını mevcut eğitim-öğretim yılına göre yeniden hesaplar
+        function recalcAllIsGunu() {
+            if (!currentData || !currentData.months) return;
+            currentData.months.forEach((m, idx) => {
+                m.isGunu = calculateIsGunu(currentData.schoolYear, idx);
+            });
+        }
+
+        // "İş Günü Sayılarını Şimdi Hesapla" butonu için
+        function manualRecalcIsGunu() {
+            syncHeaderFields();
+            recalcAllIsGunu();
+            lastSchoolYear = currentData.schoolYear;
+            renderEditorForms();
+            saveToLocalStorage();
+            updateDocument();
+        }
+
+        function syncHeaderFields() {
+            currentData.province = document.getElementById('inputProvince').value;
+            currentData.district = document.getElementById('inputDistrict').value;
+            currentData.schoolName = document.getElementById('inputSchoolName').value;
+            currentData.schoolYear = document.getElementById('inputSchoolYear').value;
+            currentData.reportTitle = document.getElementById('inputReportTitle').value;
+            currentData.principalName = document.getElementById('inputPrincipalName').value;
+            currentData.docDate = document.getElementById('inputDocDate').value;
+        }
+
+        function updateStatusText(msg) {
+            document.getElementById('saveStatusText').innerText = msg;
+        }
+
+        function getFormattedTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        // Dynamic Calendar Calculator
+        function getCalendarGrid(schoolYearStr, monthIdx) {
+            let y1 = 2025, y2 = 2026;
+            const matches = schoolYearStr.match(/\d{4}/g);
+            if (matches && matches.length >= 2) {
+                y1 = parseInt(matches[0]);
+                y2 = parseInt(matches[1]);
+            } else if (matches && matches.length === 1) {
+                y1 = parseInt(matches[0]);
+                y2 = y1 + 1;
+            }
+
+            let calYear, calMonth;
+            if (monthIdx < 4) {
+                calYear = y1;
+                calMonth = monthIdx + 9; // 9, 10, 11, 12
+            } else {
+                calYear = y2;
+                calMonth = monthIdx - 3; // 1, 2, 3, 4, 5, 6, 7, 8
+            }
+
+            const totalDays = new Date(calYear, calMonth, 0).getDate();
+            const firstDayObj = new Date(calYear, calMonth - 1, 1);
+            let firstDayOfWeek = firstDayObj.getDay(); // 0 = Sun, 1 = Mon ... 6 = Sat
+            
+            // Shift to Monday start: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+            let mondayOffset = (firstDayOfWeek === 0) ? 6 : firstDayOfWeek - 1;
+
+            let weeks = [];
+            let currentWeek = [];
+
+            // Leading empty cells
+            for (let i = 0; i < mondayOffset; i++) {
+                currentWeek.push('');
+            }
+
+            // Month days
+            for (let day = 1; day <= totalDays; day++) {
+                currentWeek.push(day);
+                if (currentWeek.length === 7) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
+                }
+            }
+
+            // Trailing empty cells
+            if (currentWeek.length > 0) {
+                while (currentWeek.length < 7) {
+                    currentWeek.push('');
+                }
+                weeks.push(currentWeek);
+            }
+
+            return { calYear, calMonth, weeks };
+        }
+
+        // Render Document Preview
+        function updateDocument() {
+            syncHeaderFields();
+
+            document.getElementById('docProvince').innerText = (currentData.province || 'ELAZIĞ').toUpperCase() + ' VALİLİĞİ';
+            document.getElementById('docDistrict').innerText = currentData.district || 'İl Milli Eğitim Müdürlüğü';
+            document.getElementById('docSchoolName').innerText = currentData.schoolName || 'KOÇ İLKOKULU MÜDÜRLÜĞÜ';
+            document.getElementById('docYearTitle').innerText = (currentData.schoolYear || '2025 - 2026') + ' EĞİTİM VE ÖĞRETİM YILI';
+            document.getElementById('docMainTitle').innerText = currentData.reportTitle || 'YÖNETİCİ YILLIK ÇALIŞMA PROGRAMI';
+            document.getElementById('docPrincipalName').innerText = currentData.principalName || 'KAZIM ATICI';
+            document.getElementById('docDateDisplay').innerText = currentData.docDate || '04.08.2025';
+
+            const container = document.getElementById('docMonthsContainer');
+            container.innerHTML = '';
+
+            currentData.months.forEach((m, idx) => {
+                const block = document.createElement('div');
+                block.className = 'month-block';
+
+                const calInfo = getCalendarGrid(currentData.schoolYear, idx);
+
+                // Celebrations text
+                const kutHtml = m.kutlanacakGunler && m.kutlanacakGunler.length > 0
+                    ? m.kutlanacakGunler.join(' • ')
+                    : 'Belirtilmedi';
+
+                // Render Calendar Rows
+                let calRowsHtml = '';
+                calInfo.weeks.forEach(w => {
+                    calRowsHtml += '<tr>';
+                    w.forEach((dayVal, dIdx) => {
+                        const isWeekend = (dIdx === 5 || dIdx === 6);
+                        const cellClass = !dayVal ? 'empty' : (isWeekend ? 'weekend' : '');
+                        calRowsHtml += `<td class="${cellClass}">${dayVal || ''}</td>`;
+                    });
+                    calRowsHtml += '</tr>';
+                });
+
+                // Render Tasks
+                const makeList = (arr) => {
+                    if (!arr || arr.length === 0) return '<em>Görev eklenmedi</em>';
+                    return '<ul class="task-list">' + arr.map(t => `<li>${t}</li>`).join('') + '</ul>';
+                };
+
+                block.innerHTML = `
+                    <div class="month-header-bar">
+                        <span>AY: ${m.name} ${calInfo.calYear}</span>
+                        <span>İŞ GÜNÜ: ${m.isGunu || '0'}</span>
+                    </div>
+                    <div class="month-celebrations">
+                        <strong>KUTLANACAK GÜN VE HAFTALAR:</strong> ${kutHtml}
+                    </div>
+
+                    <table class="cal-table">
+                        <thead>
+                            <tr>
+                                <th>Pazartesi</th>
+                                <th>Salı</th>
+                                <th>Çarşamba</th>
+                                <th>Perşembe</th>
+                                <th>Cuma</th>
+                                <th style="color:#dc2626;">Cumartesi</th>
+                                <th style="color:#dc2626;">Pazar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${calRowsHtml}
+                        </tbody>
+                    </table>
+
+                    <table class="tasks-table">
+                        <thead>
+                            <tr>
+                                <th>YÖNETSEL İŞLER</th>
+                                <th>EĞİTİM ÖĞRETİM İŞLERİ</th>
+                                <th>DESTEK HİZMETLER</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${makeList(m.yonetsel)}</td>
+                                <td>${makeList(m.egitim)}</td>
+                                <td>${makeList(m.destek)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(block);
+            });
+        }
+
+        // Render Accordion Forms for Editor
+        function renderEditorForms() {
+            const container = document.getElementById('monthsFormList');
+            container.innerHTML = '';
+
+            currentData.months.forEach((m, idx) => {
+                const acc = document.createElement('div');
+                acc.className = 'month-accordion';
+
+                // Kutlanacak Günler inputs
+                let kutInputs = '';
+                (m.kutlanacakGunler || []).forEach((k, kIdx) => {
+                    kutInputs += `
+                        <div class="item-list-row">
+                            <input type="text" class="form-control" value="${k}" placeholder="Gün / Hafta Adı" oninput="updateMonthItem(${idx}, 'kutlanacakGunler', ${kIdx}, this.value)">
+                            <button class="btn btn-danger btn-sm" onclick="removeMonthItem(${idx}, 'kutlanacakGunler', ${kIdx})">✕</button>
+                        </div>
+                    `;
+                });
+
+                // Yönetsel Inputs
+                let yonInputs = '';
+                (m.yonetsel || []).forEach((y, yIdx) => {
+                    yonInputs += `
+                        <div class="item-list-row">
+                            <input type="text" class="form-control" value="${y}" placeholder="Yönetsel Görev" oninput="updateMonthItem(${idx}, 'yonetsel', ${yIdx}, this.value)">
+                            <button class="btn btn-danger btn-sm" onclick="removeMonthItem(${idx}, 'yonetsel', ${yIdx})">✕</button>
+                        </div>
+                    `;
+                });
+
+                // Eğitim Inputs
+                let egInputs = '';
+                (m.egitim || []).forEach((e, eIdx) => {
+                    egInputs += `
+                        <div class="item-list-row">
+                            <input type="text" class="form-control" value="${e}" placeholder="Eğitim Görevi" oninput="updateMonthItem(${idx}, 'egitim', ${eIdx}, this.value)">
+                            <button class="btn btn-danger btn-sm" onclick="removeMonthItem(${idx}, 'egitim', ${eIdx})">✕</button>
+                        </div>
+                    `;
+                });
+
+                // Destek Inputs
+                let desInputs = '';
+                (m.destek || []).forEach((d, dIdx) => {
+                    desInputs += `
+                        <div class="item-list-row">
+                            <input type="text" class="form-control" value="${d}" placeholder="Destek Görevi" oninput="updateMonthItem(${idx}, 'destek', ${dIdx}, this.value)">
+                            <button class="btn btn-danger btn-sm" onclick="removeMonthItem(${idx}, 'destek', ${dIdx})">✕</button>
+                        </div>
+                    `;
+                });
+
+                acc.innerHTML = `
+                    <div class="accordion-header" onclick="toggleAccordion('m_acc_${idx}')">
+                        <span>📅 ${idx + 1}. ${m.name} (${m.isGunu || '0'} İş Günü)</span>
+                        <span style="font-size: 11px; opacity: 0.8;">Düzenle ▼</span>
+                    </div>
+                    <div class="accordion-body" id="m_acc_${idx}">
+                        <div class="form-group">
+                            <label>İş Günü Sayısı</label>
+                            <input type="text" class="form-control" value="${m.isGunu || ''}" placeholder="Örn: 17 veya 22.5" oninput="updateMonthField(${idx}, 'isGunu', this.value)">
+                        </div>
+
+                        <div class="sub-section-title">
+                            <span>🎉 Kutlanacak Gün ve Haftalar</span>
+                            <button class="btn btn-success btn-sm" onclick="addMonthItem(${idx}, 'kutlanacakGunler')">+ Ekle</button>
+                        </div>
+                        ${kutInputs || '<p style="font-size:11px; color:#94a3b8; margin-bottom:8px;">Kayıt yok</p>'}
+
+                        <div class="sub-section-title">
+                            <span>🏢 Yönetsel İşler</span>
+                            <button class="btn btn-success btn-sm" onclick="addMonthItem(${idx}, 'yonetsel')">+ Görev Ekle</button>
+                        </div>
+                        ${yonInputs || '<p style="font-size:11px; color:#94a3b8; margin-bottom:8px;">Kayıt yok</p>'}
+
+                        <div class="sub-section-title">
+                            <span>📚 Eğitim Öğretim İşleri</span>
+                            <button class="btn btn-success btn-sm" onclick="addMonthItem(${idx}, 'egitim')">+ Görev Ekle</button>
+                        </div>
+                        ${egInputs || '<p style="font-size:11px; color:#94a3b8; margin-bottom:8px;">Kayıt yok</p>'}
+
+                        <div class="sub-section-title">
+                            <span>🛠️ Destek Hizmetleri</span>
+                            <button class="btn btn-success btn-sm" onclick="addMonthItem(${idx}, 'destek')">+ Görev Ekle</button>
+                        </div>
+                        ${desInputs || '<p style="font-size:11px; color:#94a3b8; margin-bottom:8px;">Kayıt yok</p>'}
+                    </div>
+                `;
+                container.appendChild(acc);
+            });
+        }
+
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            const isVisible = el.style.display === 'block';
+            document.querySelectorAll('.accordion-body').forEach(b => b.style.display = 'none');
+            if (!isVisible) el.style.display = 'block';
+        }
+
+        function updateMonthField(mIdx, field, value) {
+            if (currentData.months[mIdx]) {
+                currentData.months[mIdx][field] = value;
+                onDataChanged();
+            }
+        }
+
+        function updateMonthItem(mIdx, listName, itemIdx, value) {
+            if (currentData.months[mIdx] && currentData.months[mIdx][listName]) {
+                currentData.months[mIdx][listName][itemIdx] = value;
+                onDataChanged();
+            }
+        }
+
+        function addMonthItem(mIdx, listName) {
+            if (currentData.months[mIdx]) {
+                if (!currentData.months[mIdx][listName]) currentData.months[mIdx][listName] = [];
+                currentData.months[mIdx][listName].push("Yeni Madde");
+                renderEditorForms();
+                onDataChanged();
+                toggleAccordion('m_acc_' + mIdx);
+            }
+        }
+
+        function removeMonthItem(mIdx, listName, itemIdx) {
+            if (currentData.months[mIdx] && currentData.months[mIdx][listName]) {
+                currentData.months[mIdx][listName].splice(itemIdx, 1);
+                renderEditorForms();
+                onDataChanged();
+                toggleAccordion('m_acc_' + mIdx);
+            }
+        }
+
+        // Import & Export Logic
+        function triggerImport() {
+            document.getElementById('importFileInput').click();
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData && importedData.months && Array.isArray(importedData.months)) {
+                        currentData = importedData;
+                        
+                        document.getElementById('inputProvince').value = currentData.province || '';
+                        document.getElementById('inputDistrict').value = currentData.district || '';
+                        document.getElementById('inputSchoolName').value = currentData.schoolName || '';
+                        document.getElementById('inputSchoolYear').value = currentData.schoolYear || '';
+                        document.getElementById('inputReportTitle').value = currentData.reportTitle || '';
+                        document.getElementById('inputPrincipalName').value = currentData.principalName || '';
+                        document.getElementById('inputDocDate').value = currentData.docDate || '';
+
+                        lastSchoolYear = currentData.schoolYear;
+                        renderEditorForms();
+                        saveToLocalStorage();
+                        updateDocument();
+                        alert('✅ İdareci Çalışma Planı verileri başarıyla içeri aktarıldı!');
+                    } else {
+                        alert('❌ Geçersiz JSON formatı! "months" dizisi bulunamadı.');
+                    }
+                } catch (err) {
+                    alert('❌ Dosya okunurken hata oluştu: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function exportJSON() {
+            syncHeaderFields();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "idareci_yillik_calisma_plani_" + (currentData.schoolYear || '2025-2026').replace(/\s+/g, '') + ".json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function resetToDefault() {
+            if (confirm("⚠️ Tüm değişiklikler sıfırlanıp varsayılan çalışma planına dönülecek. Onaylıyor musunuz?")) {
+                localStorage.removeItem('idareci_calisma_plani_v1');
+                currentData = JSON.parse(JSON.stringify(defaultPlanData));
+                
+                document.getElementById('inputProvince').value = currentData.province;
+                document.getElementById('inputDistrict').value = currentData.district;
+                document.getElementById('inputSchoolName').value = currentData.schoolName;
+                document.getElementById('inputSchoolYear').value = currentData.schoolYear;
+                document.getElementById('inputReportTitle').value = currentData.reportTitle;
+                document.getElementById('inputPrincipalName').value = currentData.principalName;
+                document.getElementById('inputDocDate').value = currentData.docDate;
+
+                lastSchoolYear = currentData.schoolYear;
+                renderEditorForms();
+                saveToLocalStorage();
+                updateDocument();
+            }
+        }
+
+        // Mobile Tab Switcher Logic
+        function switchTab(tabName) {
+            const editorPanel = document.getElementById('editorPanel');
+            const previewPanel = document.getElementById('previewPanel');
+            const tabEditorBtn = document.getElementById('tabEditorBtn');
+            const tabPreviewBtn = document.getElementById('tabPreviewBtn');
+
+            if (tabName === 'editor') {
+                editorPanel.classList.remove('tab-hidden');
+                previewPanel.classList.add('tab-hidden');
+                tabEditorBtn.classList.add('active');
+                tabPreviewBtn.classList.remove('active');
+            } else {
+                editorPanel.classList.add('tab-hidden');
+                previewPanel.classList.remove('tab-hidden');
+                tabEditorBtn.classList.remove('active');
+                tabPreviewBtn.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

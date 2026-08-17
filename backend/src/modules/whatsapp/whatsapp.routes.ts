@@ -12,5 +12,6 @@ router.post('/preview/absenteeism/:id', authMiddleware, adminOnly, whatsappContr
 router.get('/full-image/absenteeism/:id', authMiddleware, adminOnly, whatsappController.fullImageAbsenteeism);
 router.post('/send/warning/:id', authMiddleware, adminOnly, whatsappController.sendWarning);
 router.post('/preview/warning/:id', authMiddleware, adminOnly, whatsappController.previewWarning);
+router.post('/send-consent', authMiddleware, adminOnly, whatsappController.sendConsentRequestToParent);
 
 export default router;

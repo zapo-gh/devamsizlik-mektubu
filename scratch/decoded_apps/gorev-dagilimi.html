@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Görev Dağılımı">
+    <title>Okul İdarecileri Görev Dağılım Programı</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f46e5'/%3E%3Ctext x='50' y='63' font-size='40' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EMEB%3C/text%3E%3C/svg%3E">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --primary-light: #eef2ff;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-body: #f4f5fb;
+            --bg-gradient: linear-gradient(180deg, #f8f9ff 0%, #f0f1fb 100%);
+            --surface: #ffffff;
+            --surface-2: #f8f9fc;
+            --text-main: #14162b;
+            --text-muted: #6b7089;
+            --border: #e6e7f2;
+            --radius-sm: 10px;
+            --radius: 16px;
+            --radius-lg: 22px;
+            --shadow-sm: 0 1px 2px 0 rgba(20, 22, 43, 0.05);
+            --shadow-md: 0 6px 16px -4px rgba(20, 22, 43, 0.10), 0 2px 6px -2px rgba(20, 22, 43, 0.06);
+            --shadow-lg: 0 20px 40px -12px rgba(20, 22, 43, 0.18);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        [data-theme="dark"] {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --primary-light: #232244;
+            --bg-body: #12131f;
+            --bg-gradient: linear-gradient(180deg, #14152a 0%, #101120 100%);
+            --surface: #1b1d33;
+            --surface-2: #22243d;
+            --text-main: #f1f2f8;
+            --text-muted: #9497b5;
+            --border: #2d2f4c;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.45);
+            --shadow-lg: 0 20px 40px -12px rgba(0, 0, 0, 0.55);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding-bottom: calc(96px + var(--safe-bottom));
+            min-height: 100vh;
+            transition: background-color .25s ease, color .25s ease;
+        }
+
+        ::selection { background: var(--primary); color: white; }
+
+        /* NAVBAR */
+        .navbar {
+            background: color-mix(in srgb, var(--surface) 88%, transparent);
+            backdrop-filter: blur(14px) saturate(160%);
+            -webkit-backdrop-filter: blur(14px) saturate(160%);
+            border-bottom: 1px solid var(--border);
+            padding: calc(10px + var(--safe-top)) 18px 10px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .navbar-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            box-shadow: 0 3px 8px -2px rgba(79, 70, 229, 0.5);
+        }
+
+        .brand-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+        }
+
+        .save-indicator {
+            font-size: 0.72rem;
+            color: var(--success);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0.85;
+            transition: opacity .3s;
+        }
+
+        .offline-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            margin-left: 6px;
+        }
+
+        .offline-pill.is-offline {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        .offline-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--success);
+        }
+        .offline-pill.is-offline .offline-dot { background: #dc2626; }
+
+        /* SEKME VE VERİ YÖNETİMİ DÜĞMELERİ */
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tab-group {
+            display: flex;
+            background: var(--surface-2);
+            padding: 3px;
+            border-radius: 10px;
+            gap: 2px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 7px 14px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--surface);
+            color: var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .icon-btn {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            transition: all .2s;
+        }
+        .icon-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+        .icon-btn:active { transform: scale(0.92); }
+
+        /* ANA KONTEYNER */
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 14px;
+        }
+
+        .tab-content { display: none; animation: fadeIn .3s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* KART TASARIMI */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            padding: 20px;
+            margin-bottom: 18px;
+            transition: box-shadow .25s ease, border-color .25s ease;
+        }
+
+        .card:hover { box-shadow: var(--shadow-md); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .card-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+        }
+
+        .badge {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid transparent;
+        }
+
+        /* FORM DÜZENİ */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.73rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 10px 13px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.92rem;
+            font-family: inherit;
+            color: var(--text-main);
+            transition: all 0.2s;
+            background-color: var(--surface-2);
+        }
+
+        input[type="text"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: var(--surface);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent);
+        }
+
+        input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+        /* ARAMA VE FİLTRELEME */
+        .search-box {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-box input {
+            padding-left: 36px;
+            background-color: var(--surface);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px;
+        }
+
+        .checkbox-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--surface-2);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+            font-size: 0.85rem;
+            line-height: 1.35;
+        }
+
+        .checkbox-card:hover {
+            background: var(--primary-light);
+            border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+        }
+
+        .checkbox-card:has(input:checked) {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .checkbox-card input[type="checkbox"] {
+            margin-top: 2px;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* BUTONLAR */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 16px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 38px;
+        }
+        .btn:active { transform: scale(0.97); }
+
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 10px -3px rgba(79, 70, 229, 0.5); }
+        .btn-primary:hover { filter: brightness(1.08); }
+
+        .btn-secondary { background: var(--surface-2); color: var(--text-main); border: 1.5px solid var(--border); }
+        .btn-secondary:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary-dark); }
+
+        .btn-danger { background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; }
+        [data-theme="dark"] .btn-danger { background: #3a1a1a; border-color: #5c2323; color: #f87171; }
+        .btn-danger:hover { background: #dc2626; color: white; border-color: #dc2626; }
+
+        .btn-sm { padding: 6px 12px; font-size: 0.78rem; min-height: 32px; }
+
+        /* MOBİL UYUMLU KİBAR YÜZEN YAZDIR BAR */
+        .action-bar {
+            position: fixed;
+            bottom: calc(16px + var(--safe-bottom));
+            right: 16px;
+            left: 16px;
+            z-index: 40;
+            display: flex;
+            justify-content: flex-end;
+            pointer-events: none;
+        }
+
+        .btn-print-compact {
+            pointer-events: auto;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 13px 22px;
+            border-radius: 30px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            box-shadow: var(--shadow-lg);
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-print-compact:active { transform: scale(0.96); }
+
+        /* EKRANDA CANLI ÖNİZLEME ALANI */
+        .preview-container {
+            background: white;
+            color: #14162b;
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 15mm;
+            box-shadow: var(--shadow-lg);
+            border-radius: 6px;
+        }
+
+        /* RESMİ YAZI STİLLERİ (GİZLİ ALAN & BASKI) */
+        #print-area { display: none; }
+
+        .official-header {
+            text-align: center;
+            font-weight: bold;
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.3;
+            font-size: 11pt;
+            margin-bottom: 20px;
+        }
+
+        .official-meta {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            margin-bottom: 12px;
+        }
+
+        .official-subject {
+            text-align: center;
+            font-weight: bold;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            margin: 15px 0;
+            text-decoration: underline;
+        }
+
+        .official-text {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            text-align: justify;
+            text-indent: 30px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .official-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 8.5pt;
+            margin-top: 12px;
+            margin-bottom: 15px;
+        }
+
+        .official-table th, .official-table td {
+            border: 1px solid #000;
+            padding: 5px 6px;
+            vertical-align: top;
+        }
+
+        .official-table th {
+            background-color: #f2f2f2;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .signature-area {
+            float: right;
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            margin-top: 15px;
+            padding-right: 25px;
+        }
+
+        /* BASKI AYARLARI (@media print) */
+        @media print {
+            body { background: white; padding: 0; }
+            .no-print, .navbar, .action-bar { display: none !important; }
+            #print-area { display: block !important; padding: 0; }
+            @page { size: A4; margin: 12mm; }
+
+            table { page-break-inside: auto; }
+            thead { display: table-header-group; }
+            tr, td, th, li, .official-header, .official-meta, .official-subject, .official-text, .signature-area {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .navbar { padding-left: 14px; padding-right: 14px; }
+            .navbar-content { flex-direction: column; align-items: stretch; }
+            .nav-actions { justify-content: space-between; width: 100%; }
+            .checkbox-grid { grid-template-columns: 1fr; }
+            .preview-container { padding: 8mm; }
+            .card { padding: 16px; border-radius: var(--radius-sm); }
+            .form-grid { grid-template-columns: 1fr; }
+            .action-bar { justify-content: center; }
+            .btn-print-compact { width: 100%; text-align: center; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar no-print">
+    <div class="navbar-content">
+        <div class="brand">
+            <div class="brand-icon">MEB</div>
+            <div>
+                <div class="brand-title">Okul İdarecileri Görev Dağılımı</div>
+                <div style="display:flex; align-items:center;">
+                    <span class="save-indicator" id="save-status">✓ Otomatik Kaydedildi</span>
+                    <span class="offline-pill" id="offline-pill"><span class="offline-dot"></span><span id="offline-pill-text">Çevrimdışı Hazır</span></span>
+                </div>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <div class="tab-group">
+                <button class="tab-btn active" onclick="sekmeDegistir('edit-tab', this)">✏️ Düzenle</button>
+                <button class="tab-btn" onclick="sekmeDegistir('preview-tab', this); canliOnizlemeGuncelle();">📄 Önizleme</button>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="disariAktar()" title="Verileri JSON dosyası olarak bilgisayara indir">⬇️ Dışarı Aktar</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()" title="Yedek JSON dosyasını yükle">⬆️ İçeri Aktar</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="iceriAktar(event)">
+            <button class="icon-btn" id="theme-toggle" onclick="temaDegistir()" title="Koyu / Açık Tema">🌙</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- DÜZENLEME SEKMESİ -->
+    <div id="edit-tab" class="tab-content active no-print">
+
+        <!-- 1. RESMİ ÜST YAZI BİLGİLERİ -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-title">1. Resmi Evrak ve Kurum Bilgileri</span>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm" onclick="verileriSifirla()">🔄 Sıfırla</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Mülki İdare Başlığı</label>
+                    <input type="text" id="kaymakamlik" value="KOZLUK KAYMAKAMLIĞI" oninput="otomatikKaydet()">
+                </div>
+                <div class="form-group">
+                    <label>İlçe Milli Eğitim Müdürlüğü</label>
+                    <input type="text" id="ilceMem" value="İlçe Milli Eğitim Müdürlüğü" oninput="otomatikKaydet()">
+                </div>
+                <div class="form-group">
+                    <label>Okul Adı</label>
+                    <input type="text" id="okulAdi" value="Selahaddin Eyyubi İlkokulu Müdürlüğü" oninput="otomatikKaydet()">
+                </div>
+                <div class="form-group">
+                    <label>Eğitim-Öğretim Yılı</label>
+                    <input type="text" id="egitimYili" value="2026-2027" oninput="otomatikKaydet()">
+                </div>
+                <div class="form-group">
+                    <label>Evrak Sayı / Desimal Kod</label>
+                    <input type="text" id="evrakSayi" value="E-90526580-903.07.05-" oninput="otomatikKaydet()">
+                </div>
+                <div class="form-group">
+                    <label>Düzenleme Tarihi</label>
+                    <input type="date" id="evrakTarih" onchange="otomatikKaydet()">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. OKUL MÜDÜRÜ KARTI -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-title">2. Okul Müdürü Görev Dağılımı</span>
+                    <span class="badge" id="mudur-badge">0 Görev Seçildi</span>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="topluSec('mudur-gorevler-container', true)">Tümünü Seç</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="topluSec('mudur-gorevler-container', false)">Temizle</button>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Okul Müdürü Adı Soyadı</label>
+                <input type="text" id="okulMuduru" value="Abdullah BOZOK" oninput="otomatikKaydet()">
+            </div>
+
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="form-control" placeholder="Müdür görevleri içinde ara..." onkeyup="gorevAra(this, 'mudur-gorevler-container')">
+            </div>
+
+            <div id="mudur-gorevler-container" class="checkbox-grid"></div>
+
+            <div class="form-group" style="margin-top: 12px;">
+                <label>Özel / Ek Görev (İsteğe Bağlı)</label>
+                <input type="text" id="mudurCustomTask" placeholder="Virgülle ayırarak ilave görev yazabilirsiniz" oninput="otomatikKaydet()">
+            </div>
+        </div>
+
+        <!-- 3. MÜDÜR YARDIMCILARI KARTLARI -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <span class="card-title">3. Müdür Yardımcıları Görev Dağılımı</span>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="müdürYardimcisiEkle()">+ Müdür Yardımcısı Ekle</button>
+            </div>
+            <div id="my-list"></div>
+        </div>
+
+    </div>
+
+    <!-- CANLI ÖNİZLEME SEKMESİ -->
+    <div id="preview-tab" class="tab-content no-print">
+        <div class="preview-container" id="screen-preview-area">
+            <!-- JavaScript ile doldurulacak -->
+        </div>
+    </div>
+
+</div>
+
+<!-- MOBİL VE MASAÜSTÜ İÇİN KİBAR YÜZEN YAZDIR BAR -->
+<div class="action-bar no-print">
+    <button class="btn-print-compact" onclick="hazirlaYazdir()">
+        🖨️ Görev Çizelgesini Yazdır
+    </button>
+</div>
+
+<!-- YAZDIRILACAK RESMİ YAZI ALANI (BASKI ANINDA KULLANILIR) -->
+<div id="print-area"></div>
+
+<script>
+    // Okul Müdürü Görev Maddeleri (Yönetmelik ve Belgeler)[span_0](start_span)[span_0](end_span)
+    const mudurGorevleri = [
+        "Personel Özlük işlerini yürütmek",
+        "Planlama, teşkilatlandırma ve değerlendirme işlerini yapmak",
+        "Öğretmenler Kurulu toplantılarına başkanlık etmek",
+        "Okul adına tüm kurum ve kuruluşlarla genel irtibatı sağlamak",
+        "Öğretmenlerin planlarının kontrol ve denetimini yapmak",
+        "İdareci, öğretmen ve personelin görevlendirilmesi, göreve başlama/ayrılış, sevk ve izin işlemlerini yürütmek",
+        "Personelin disiplin amirliği görevini yürütmek",
+        "Öğretmenlerin ders denetimlerini yapmak",
+        "Öğretmenlerin ve diğer personelin kılık-kıyafet ve düzeni ile tahkikat ve soruşturma işlemlerini yürütmek",
+        "Stajyer (Aday) personelin yetiştirilmesi ile ilgili iş ve işlemleri yürütmek",
+        "Okul Aile Birliği toplantılarını organize etmek ve ilgili dosyaları düzenlemek",
+        "Okul Rehberlik hizmetlerini organize etmek",
+        "Sivil Savunma ve Yangından Korunma hizmetlerini yürütmek, güvenlik önlemlerini almak",
+        "Sınıf ve Şube dağılımları ile Öğrenci sayılarını planlamak",
+        "Haftalık ders programlarını hazırlamak",
+        "MEBBİS ve TEBBİS ile ilgili iş ve işlemleri yapmak",
+        "Ders defterlerini kontrol etmek",
+        "TİF ve TEFBİS ile ilgili tüm iş ve işlemleri yapmak",
+        "Nöbet çizelge ve defterlerini kontrol etmek, nöbetlerin titizlikle tutulmasını sağlamak",
+        "Gelen evrak ve emirlerin görevlilere havalesini sağlamak",
+        "Karne, sınıf geçme defterleri, öğrenim belgesi, diplomalar ve e-Okul/İLSİS onaylarını yapmak",
+        "Milli Bayram, tören ve kutlamaların genel koordinasyonu ve görev dağılımını yapmak",
+        "Ders araç-gereçlerinin temini, verimli kullanılması, korunması, bakımı ve temizliği için tedbirler almak",
+        "Binaların genel demirbaş/donanımı ile su, elektrik, yangın vb. tesislerin kontrolünü yapmak",
+        "Okul ve okul bahçesinin tanzimini ve bakımını kontrol etmek",
+        "Öğretmenlerin mesleki çalışmalarını koordine etmek ve takibini yapmak",
+        "Okulun Web sitesini güncellemek ve site ile ilgili çalışmaları yürütmek",
+        "Teslim edilen gizli ya da şahıslarla ilgili yazıları saklamak ve gizliliği sağlamak",
+        "İlköğretim Kurumları Yönetmeliğinin 102. maddesindeki Teftiş, İzin, Karar, TİF, Brifing, Özlük ve Yıllık Plan dosya/defterlerini tutmak",
+        "İlgili mevzuatta Okul Müdürü görev tanımında belirtilen diğer görevleri yapmak"
+    ];
+
+    // Müdür Yardımcısı Görev Maddeleri (Yönetmelik ve Belgeler)[span_1](start_span)[span_1](end_span)
+    const myGorevleri = [
+        "Öğrenci kayıt nakiller, devam - takip işlerini yapmak",
+        "E-Okul ile ilgili tüm iş ve işlemleri yapmak",
+        "Ana Sınıfı ile ilgili her türlü iş ve işlemleri yürütmek",
+        "Öğrenci izinleri, Öğrenci Hasta sevk işlemleri ve geç gelen öğrencilerin takibini yapmak",
+        "Öğrenci Kurulları, Sosyal Etkinlikler Kurulu, Okul-Seçim Kurulu ve Verilen diğer kurullarla ilgili işlemleri yürütmek",
+        "Covid-19 / Hijyen süreçleri ile ilgili iş ve işlemleri yapmak",
+        "Gelen-giden yazılarla ilgili dosya ve defterleri tutmak. Gelen-Giden yazıların ilgili mail adresinden takibini yapmak",
+        "Yazılanların asıl veya örneklerini dosyalamak/saklamak, cevap hazırlamak ve zimmet defteri ile götürüp getirmek",
+        "Milli Bayramlar ile belirli gün ve haftaların zamanında kutlanmasını, gazete, broşür, afiş vb. düzenlemelerin takibini yapmak",
+        "Sosyal Etkinlik çalışmaları ile ilgili dosyalarını tutmak ve ilgili işlemleri yapmak",
+        "Okul içinde ve dışında yapılacak olan tören, yarışma, toplantı, gezi vb. etkinliklerle ilgili müdürün vereceği görevleri yapmak",
+        "Ders kitaplarının dağıtımını ve toplanmasını, sınıfların ve okul kitaplığının kontrolünü yapmak",
+        "Zümre toplantılarına başkanlık etmek, alınacak kararları müdürün onayına sunmak",
+        "Öğretmenler Kurulunda verilecek Kurul başkanlıklarını yapmak",
+        "Sınav hizmetleri, karne, öğretmen not çizelgeleri, not cetvelleri ile sınıf geçme ve diploma defterlerinin düzenlenmesi ve kontrolünü yapmak",
+        "Rehberlik Hizmetleri ve Stratejik Plan çalışmalarını yürütmek",
+        "Okulum Temiz Belgesi iş ve işlemlerini yürütmek",
+        "Sınıf Öğretmenlerinin raporlu, sevkli, izinli vb. nedenlerle gelmediği günlerde 1-4. sınıfların dersine girmek",
+        "Okulun arşiv işlerini düzenlemek",
+        "İKS (İlköğretim Kurum Standartları) ile ilgili iş ve işlemleri yapmak",
+        "Herhangi bir sebeple boş geçen sınıf veya dersleri doldurmak",
+        "İlköğretim Kurumları Yönetmeliğinin 102. maddesi gereğince tutulması gereken Defter, Çizelge ve Dosyaları tutmak/düzenlemek",
+        "Öğretmen ve diğer personellerin göreve devamını izlemek, devam-devamsızlık defter ve kayıtlarını tutmak",
+        "Personelin aylık, ücret, ek ders, sosyal yardım, yolluk, özlük hakları, tahakkuk ve mutemetlik işlerini yürütmek",
+        "Öğretmen nöbet çizelgelerinin düzenlenmesini ve takibini yapmak",
+        "Hizmetlinin çalışmalarını ve okulun iç/dış temizliğini kontrol etmek, aksaklıkları uyarmak",
+        "Müdürün okulda bulunmadığı zamanlarda, personelin diğer işlemlerini yürütmek",
+        "Okul binası ile araç-gereçlerin tertip, düzen, temizlik, bakım, korunma ve ısınması ile ilgilenmek",
+        "Okul ecza dolabını düzenlemek ve kontrol etmek",
+        "Atatürk büst ve köşelerinin tertip ve düzenini sağlamak ve kontrol etmek",
+        "Müdürün okulda bulunmadığı zamanlarda müdüre vekâlet etmek",
+        "Müdür tarafından sözlü veya yazılı olarak verilen hizmete yönelik diğer görevleri yapmak"
+    ];
+
+    let mySayaci = 0;
+
+    // Okul Müdürü görev kutucuklarını oluşturur.
+    // hepsiIsaretli=true: ilk açılışta hepsi işaretli gelir.
+    // hepsiIsaretli=false: "Sıfırla" işleminde hepsi boş gelir.
+    function mudurKutularınıOlustur(hepsiIsaretli = true) {
+        const mudurContainer = document.getElementById('mudur-gorevler-container');
+        mudurContainer.innerHTML = '';
+        const isaretli = hepsiIsaretli ? 'checked' : '';
+        mudurGorevleri.forEach((gorev, index) => {
+            mudurContainer.innerHTML += `
+                <label class="checkbox-card" for="m_g_${index}">
+                    <input type="checkbox" id="m_g_${index}" value="${gorev}" ${isaretli} onchange="otomatikKaydet()">
+                    <span>${gorev}</span>
+                </label>
+            `;
+        });
+    }
+
+    window.onload = function() {
+        document.getElementById('evrakTarih').valueAsDate = new Date();
+
+        // Okul Müdürü Kutucuklarını Oluştur
+        mudurKutularınıOlustur();
+
+        // Kayıtlı verileri yükle veya varsayılan oluştur
+        if(!verileriYukle()) {
+            müdürYardimcisiEkle("Seda AKPINAR", Array.from({length: 32}, (_, i) => i));
+            otomatikKaydet();
+        }
+    };
+
+    function sekmeDegistir(tabId, element) {
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        element.classList.add('active');
+    }
+
+    function sayaclariGuncelle() {
+        const mudurSecili = document.querySelectorAll('#mudur-gorevler-container input[type="checkbox"]:checked').length;
+        document.getElementById('mudur-badge').innerText = `${mudurSecili} Görev Seçildi`;
+
+        document.querySelectorAll('#my-list .card').forEach(card => {
+            const count = card.querySelectorAll('input[type="checkbox"]:checked').length;
+            const badge = card.querySelector('.my-badge');
+            if(badge) badge.innerText = `${count} Görev Seçildi`;
+        });
+    }
+
+    function topluSec(containerId, secimDurumu) {
+        const container = document.getElementById(containerId);
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            if(cb.parentElement.style.display !== 'none') {
+                cb.checked = secimDurumu;
+            }
+        });
+        otomatikKaydet();
+    }
+
+    function gorevAra(input, containerId) {
+        const filter = input.value.toLocaleLowerCase('tr-TR');
+        const container = document.getElementById(containerId);
+        const cards = container.querySelectorAll('.checkbox-card');
+
+        cards.forEach(card => {
+            const text = card.innerText.toLocaleLowerCase('tr-TR');
+            card.style.display = text.includes(filter) ? "flex" : "none";
+        });
+    }
+
+    function müdürYardimcisiEkle(isim = "", seciliGorevIndeksleri = []) {
+        mySayaci++;
+        const container = document.getElementById('my-list');
+
+        let checkboxHTML = '';
+        myGorevleri.forEach((gorev, index) => {
+            const isChecked = seciliGorevIndeksleri.includes(index) ? 'checked' : '';
+            checkboxHTML += `
+                <label class="checkbox-card" for="my_${mySayaci}_g_${index}">
+                    <input type="checkbox" id="my_${mySayaci}_g_${index}" value="${gorev}" ${isChecked} onchange="otomatikKaydet()">
+                    <span>${gorev}</span>
+                </label>
+            `;
+        });
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.borderLeft = '4px solid var(--primary)';
+        card.style.marginBottom = '16px';
+        card.id = `my_card_${mySayaci}`;
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="card-title-group" style="flex:1; margin-right:15px;">
+                    <div class="form-group" style="width:100%;">
+                        <label>Müdür Yardımcısı Adı Soyadı</label>
+                        <input type="text" class="my-name" value="${isim}" placeholder="Ad Soyad Giriniz" oninput="otomatikKaydet()">
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="badge my-badge">0 Görev Seçildi</span>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="topluSec('my_grid_${mySayaci}', true)">Tümünü Seç</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="topluSec('my_grid_${mySayaci}', false)">Temizle</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="kartSil('my_card_${mySayaci}')">Sil</button>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="form-control" placeholder="Görevler içinde ara..." onkeyup="gorevAra(this, 'my_grid_${mySayaci}')">
+            </div>
+
+            <div id="my_grid_${mySayaci}" class="checkbox-grid">
+                ${checkboxHTML}
+            </div>
+
+            <div class="form-group" style="margin-top: 12px;">
+                <label>Özel / Ek Görev (İsteğe Bağlı)</label>
+                <input type="text" class="my-custom-task" placeholder="Virgülle ayırarak ilave görev yazabilirsiniz" oninput="otomatikKaydet()">
+            </div>
+        `;
+        container.appendChild(card);
+        otomatikKaydet();
+    }
+
+    function kartSil(cardId) {
+        document.getElementById(cardId).remove();
+        otomatikKaydet();
+    }
+
+    /* OTO KAYIT & VERİ YÖNETİMİ (LOCAL STORAGE, IMPORT / EXPORT) */
+    function verileriTopla() {
+        const mudurCheckboxes = [];
+        document.querySelectorAll('#mudur-gorevler-container input[type="checkbox"]').forEach((cb, idx) => {
+            if(cb.checked) mudurCheckboxes.push(idx);
+        });
+
+        const myCardsData = [];
+        document.querySelectorAll('#my-list .card').forEach(card => {
+            const name = card.querySelector('.my-name').value;
+            const customTask = card.querySelector('.my-custom-task').value;
+            const checkboxes = [];
+            card.querySelectorAll('input[type="checkbox"]').forEach((cb, idx) => {
+                if(cb.checked) checkboxes.push(idx);
+            });
+            myCardsData.push({ name, customTask, checkboxes });
+        });
+
+        return {
+            kaymakamlik: document.getElementById('kaymakamlik').value,
+            ilceMem: document.getElementById('ilceMem').value,
+            okulAdi: document.getElementById('okulAdi').value,
+            egitimYili: document.getElementById('egitimYili').value,
+            evrakSayi: document.getElementById('evrakSayi').value,
+            evrakTarih: document.getElementById('evrakTarih').value,
+            okulMuduru: document.getElementById('okulMuduru').value,
+            mudurCustomTask: document.getElementById('mudurCustomTask').value,
+            mudurCheckboxes,
+            myCardsData
+        };
+    }
+
+    function otomatikKaydet() {
+        const data = verileriTopla();
+        localStorage.setItem('meb_gorev_dagilimi_data', JSON.stringify(data));
+        sayaclariGuncelle();
+        
+        const status = document.getElementById('save-status');
+        status.innerText = "✓ Otomatik Kaydedildi";
+        status.style.opacity = "1";
+    }
+
+    function verileriYukle(externalData = null) {
+        const dataRaw = externalData || localStorage.getItem('meb_gorev_dagilimi_data');
+        if(!dataRaw) return false;
+
+        const data = typeof dataRaw === 'string' ? JSON.parse(dataRaw) : dataRaw;
+
+        if(data.kaymakamlik !== undefined) document.getElementById('kaymakamlik').value = data.kaymakamlik;
+        if(data.ilceMem !== undefined) document.getElementById('ilceMem').value = data.ilceMem;
+        if(data.okulAdi !== undefined) document.getElementById('okulAdi').value = data.okulAdi;
+        if(data.egitimYili !== undefined) document.getElementById('egitimYili').value = data.egitimYili;
+        if(data.evrakSayi !== undefined) document.getElementById('evrakSayi').value = data.evrakSayi;
+        if(data.evrakTarih !== undefined) document.getElementById('evrakTarih').value = data.evrakTarih;
+        if(data.okulMuduru !== undefined) document.getElementById('okulMuduru').value = data.okulMuduru;
+        if(data.mudurCustomTask !== undefined) document.getElementById('mudurCustomTask').value = data.mudurCustomTask;
+
+        // Müdür Checkbox
+        if(data.mudurCheckboxes) {
+            document.querySelectorAll('#mudur-gorevler-container input[type="checkbox"]').forEach((cb, idx) => {
+                cb.checked = data.mudurCheckboxes.includes(idx);
+            });
+        }
+
+        // Müdür Yardımcıları
+        if(data.myCardsData) {
+            document.getElementById('my-list').innerHTML = '';
+            mySayaci = 0;
+            data.myCardsData.forEach(my => {
+                müdürYardimcisiEkle(my.name, my.checkboxes);
+                const lastCard = document.querySelector('#my-list .card:last-child');
+                if(lastCard) {
+                    lastCard.querySelector('.my-custom-task').value = my.customTask || '';
+                }
+            });
+        }
+
+        sayaclariGuncelle();
+        return true;
+    }
+
+    function disariAktar() {
+        const data = verileriTopla();
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Gorev_Dagilimi_Yedek_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function iceriAktar(event) {
+        const file = event.target.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                verileriYukle(parsed);
+                otomatikKaydet();
+                alert("Veriler başarıyla içeri aktarıldı!");
+            } catch(err) {
+                alert("Geçersiz veya bozuk dosya formatı!");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function verileriSifirla() {
+        if(confirm("Girilmiş tüm veriler kalıcı olarak silinecek. Emin misiniz?")) {
+            localStorage.removeItem('meb_gorev_dagilimi_data');
+
+            // 1. Üst bilgi alanlarını tamamen boşalt
+            document.getElementById('kaymakamlik').value = "";
+            document.getElementById('ilceMem').value = "";
+            document.getElementById('okulAdi').value = "";
+            document.getElementById('egitimYili').value = "";
+            document.getElementById('evrakSayi').value = "";
+            document.getElementById('evrakTarih').value = "";
+            document.getElementById('okulMuduru').value = "";
+            document.getElementById('mudurCustomTask').value = "";
+
+            // 2. Okul Müdürü kutucuklarını sıfırdan oluştur (hepsi boş/işaretsiz)
+            mudurKutularınıOlustur(false);
+
+            // 3. Tüm Müdür Yardımcısı kartlarını sil (hiçbirini ekleme)
+            document.getElementById('my-list').innerHTML = '';
+            mySayaci = 0;
+
+            otomatikKaydet();
+        }
+    }
+
+    function resmiHTMLOlustur() {
+        const kaymakamlik = document.getElementById('kaymakamlik').value.toUpperCase();
+        const ilceMem = document.getElementById('ilceMem').value;
+        const okulAdi = document.getElementById('okulAdi').value.toUpperCase();
+        const evrakSayi = document.getElementById('evrakSayi').value;
+        
+        const rawDate = document.getElementById('evrakTarih').value;
+        const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString('tr-TR') : '';
+
+        const egitimYili = document.getElementById('egitimYili').value;
+        const mudurAdi = document.getElementById('okulMuduru').value;
+
+        // Okul Müdürü Görevleri
+        const mudurGorevler = [];
+        document.querySelectorAll('#mudur-gorevler-container input[type="checkbox"]:checked').forEach(cb => mudurGorevler.push(cb.value));
+        const mudurCustom = document.getElementById('mudurCustomTask').value;
+        if(mudurCustom.trim()) mudurCustom.split(',').forEach(t => { if(t.trim()) mudurGorevler.push(t.trim()); });
+
+        let mudurTaskHTML = '<ol style="margin: 0; padding-left: 15px;">';
+        mudurGorevler.forEach(task => { mudurTaskHTML += `<li style="margin-bottom: 2px;">${task}</li>`; });
+        mudurTaskHTML += '</ol>';
+
+        let tableRowsHTML = `
+            <tr>
+                <td><strong>${mudurAdi}</strong><br><span style="font-size:0.85em; color:#333;">Okul Müdürü</span></td>
+                <td>${mudurTaskHTML}</td>
+                <td style="text-align: center; vertical-align: middle;"><strong>Aslaten Yürütür</strong><br><br>İmza</td>
+            </tr>
+        `;
+
+        // Müdür Yardımcıları Görevleri
+        const myCards = document.querySelectorAll('#my-list .card');
+        myCards.forEach(card => {
+            const name = card.querySelector('.my-name').value;
+            if(!name.trim()) return;
+
+            const selectedTasks = [];
+            card.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => selectedTasks.push(cb.value));
+
+            const customTask = card.querySelector('.my-custom-task').value;
+            if(customTask.trim()) customTask.split(',').forEach(t => { if(t.trim()) selectedTasks.push(t.trim()); });
+
+            let taskListHTML = '<ol style="margin: 0; padding-left: 15px;">';
+            selectedTasks.forEach(task => { taskListHTML += `<li style="margin-bottom: 2px;">${task}</li>`; });
+            taskListHTML += '</ol>';
+
+            tableRowsHTML += `
+                <tr>
+                    <td><strong>${name}</strong><br><span style="font-size:0.85em; color:#333;">Müdür Yardımcısı</span></td>
+                    <td>${taskListHTML}</td>
+                    <td style="text-align: center; vertical-align: bottom;"><br>..../..../2026<br>Tebellüğü Edildi<br>İmza:</td>
+                </tr>
+            `;
+        });
+
+        return `
+            <div class="official-header">
+                T.C.<br>
+                ${kaymakamlik}<br>
+                ${ilceMem}<br>
+                ${okulAdi}
+            </div>
+
+            <div class="official-meta">
+                <div><strong>Sayı :</strong> ${evrakSayi}</div>
+                <div><strong>Tarih :</strong> ${formattedDate}</div>
+            </div>
+
+            <div style="font-family: 'Times New Roman'; font-size: 10pt;"><strong>Konu :</strong> Yönetim Görev Dağılımı</div>
+
+            <div class="official-subject">
+                OKUL İDARECİLERİ GÖREV DAĞILIM ÇİZELGESİ
+            </div>
+
+            <div class="official-text">
+                <strong>DAĞITIM YERLERİNE:</strong> Okul Öncesi ve İlköğretim Kurumları Yönetmeliği hükümleri gereğince, ${egitimYili} Eğitim-Öğretim Yılında okulumuz bünyesindeki eğitim, öğretim, yönetim, personel, öğrenci ve büro hizmetlerinin düzenli, verimli ve mevzuata uygun yürütülmesi amacıyla okul idarecileri arasındaki görev dağılımı aşağıda belirtildiği şekilde düzenlenmiştir.
+            </div>
+
+            <div class="official-text">
+                Yürütülecek çalışmalarda mevzuat hükümlerine titizlikle uyulmasını, görevlerin aksatılmadan zamanında yerine getirilmesini önemle rica ederim.
+            </div>
+
+            <table class="official-table">
+                <thead>
+                    <tr>
+                        <th style="width: 22%;">Adı Soyadı / Unvanı</th>
+                        <th>Sorumlu Olduğu Görevler ve İşlemler</th>
+                        <th style="width: 18%;">Tebliğ Tarihi / İmza</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHTML}
+                </tbody>
+            </table>
+
+            <div class="signature-area">
+                <strong>${mudurAdi}</strong><br>
+                Okul Müdürü
+            </div>
+        `;
+    }
+
+    function canliOnizlemeGuncelle() {
+        document.getElementById('screen-preview-area').innerHTML = resmiHTMLOlustur();
+    }
+
+    function hazirlaYazdir() {
+        document.getElementById('print-area').innerHTML = resmiHTMLOlustur();
+        window.print();
+    }
+</script><script>
+    /* ============ TEMA (KOYU / AÇIK) ============ */
+    function temaUygula(tema) {
+        document.documentElement.setAttribute('data-theme', tema);
+        document.getElementById('theme-toggle').innerText = tema === 'dark' ? '☀️' : '🌙';
+        try { localStorage.setItem('meb_gorev_dagilimi_tema', tema); } catch (e) {}
+    }
+
+    function temaDegistir() {
+        const mevcut = document.documentElement.getAttribute('data-theme');
+        temaUygula(mevcut === 'dark' ? 'light' : 'dark');
+    }
+
+    (function temaBaslat() {
+        let kayitli = null;
+        try { kayitli = localStorage.getItem('meb_gorev_dagilimi_tema'); } catch (e) {}
+        if (kayitli) {
+            temaUygula(kayitli);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            temaUygula('dark');
+        } else {
+            temaUygula('light');
+        }
+    })();
+
+    /* ============ ÇEVRİMDIŞI DURUM GÖSTERGESİ ============ */
+    function baglantiDurumunuGuncelle() {
+        const pill = document.getElementById('offline-pill');
+        const text = document.getElementById('offline-pill-text');
+        if (navigator.onLine) {
+            pill.classList.remove('is-offline');
+            text.innerText = 'Çevrimdışı Hazır';
+        } else {
+            pill.classList.add('is-offline');
+            text.innerText = 'Çevrimdışı Mod';
+        }
+    }
+    window.addEventListener('online', baglantiDurumunuGuncelle);
+    window.addEventListener('offline', baglantiDurumunuGuncelle);
+    document.addEventListener('DOMContentLoaded', baglantiDurumunuGuncelle);
+
+    /* ============ PWA: SUNUCUDA BARINDIRILIRSA ÇEVRİMDIŞI ÖNBELLEK ============
+       Bu dosya tamamen kendi kendine yeterlidir (harici hiçbir dosya/CDN çağrısı
+       yapmaz), bu yüzden bilgisayara kaydedilip doğrudan çift tıklayarak
+       (file://) açıldığında zaten internetsiz çalışır. Aşağıdaki servis çalışanı
+       kaydı yalnızca dosya bir web sunucusunda (http/https) barındırılırsa devreye
+       girer ve "Ana Ekrana Ekle" ile uygulama gibi kurulabilmesini sağlar. */
+    if ('serviceWorker' in navigator && (location.protocol === 'http:' || location.protocol === 'https:')) {
+        window.addEventListener('load', function () {
+            const swKodu = `
+                const CACHE_ADI = 'gorev-dagilimi-v1';
+                self.addEventListener('install', e => {
+                    e.waitUntil(caches.open(CACHE_ADI).then(c => c.add(self.registration.scope)));
+                    self.skipWaiting();
+                });
+                self.addEventListener('activate', e => self.clients.claim());
+                self.addEventListener('fetch', e => {
+                    e.respondWith(
+                        caches.match(e.request).then(cached => {
+                            const agFetch = fetch(e.request).then(resp => {
+                                caches.open(CACHE_ADI).then(c => c.put(e.request, resp.clone()));
+                                return resp;
+                            }).catch(() => cached);
+                            return cached || agFetch;
+                        })
+                    );
+                });
+            `;
+            try {
+                const blob = new Blob([swKodu], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(function () {
+                    /* Sunucu blob service worker kaydına izin vermiyorsa sessizce geç */
+                });
+            } catch (e) {
+                /* Servis çalışanı desteklenmiyorsa uygulama yine de normal çalışır */
+            }
+        });
+    }
+</script>
+</body>
+</html>

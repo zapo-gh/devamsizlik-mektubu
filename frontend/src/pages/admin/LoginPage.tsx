@@ -59,121 +59,41 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(217 32% 17%) 100%)',
-        padding: 20,
-      }}
-    >
-      <div
-        className="login-card"
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: '36px 40px',
-          width: '100%',
-          maxWidth: 410,
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-          animation: 'fade-in 0.3s ease-out',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              background: 'linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)',
-              borderRadius: 14,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 14px',
-              boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
-            }}
-          >
-            <GraduationCap size={28} color="#ffffff" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-5" >
+      <div className="bg-white rounded-2xl py-9 px-10 w-full max-w-[410px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.35)] animate-[fade-in_0.3s_ease-out]" >
+        
+        <div className="text-center mb-7" >
+          <div className="w-[52px] h-[52px] bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3.5 shadow-[0_4px_12px_rgba(59,130,246,0.3)]" >
+            <GraduationCap className="text-white"  size={28}  />
           </div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: 'hsl(222.2 84% 4.9%)',
-              margin: 0,
-              letterSpacing: '-0.02em',
-            }}
-          >
+          <h1 className="text-[22px] font-bold text-slate-900 m-0 tracking-tight" >
             OkulDesk
           </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: 'var(--text-muted)',
-              marginTop: 4,
-            }}
-          >
+          <p className="text-[13px] text-slate-500 mt-1" >
             Yönetim Sistemine Giriş Yapın
           </p>
         </div>
 
         {error && (
-          <div
-            className="alert alert-error"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 13,
-              padding: '10px 14px',
-              borderRadius: 8,
-              marginBottom: 16,
-            }}
-          >
+          <div className="flex items-center gap-2 text-[13px] px-3.5 py-2.5 rounded-lg mb-4 bg-red-50 text-red-700 border border-red-200" >
             <span>⚠️</span>
             <span>{error}</span>
           </div>
         )}
 
         {slowWarning && (
-          <div
-            className="alert alert-warning"
-            style={{
-              fontSize: 12,
-              padding: '10px 14px',
-              borderRadius: 8,
-              marginBottom: 16,
-            }}
-          >
+          <div className="text-xs px-3.5 py-2.5 rounded-lg mb-4 bg-yellow-50 text-yellow-700 border border-yellow-200" >
             ⏳ Sunucu uyandırılıyor, lütfen bekleyin (ilk girişte 20–40 saniye sürebilir)...
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--text)',
-                marginBottom: 6,
-              }}
-            >
+          <div className="mb-4" >
+            <label className="block text-[13px] font-semibold text-slate-900 mb-1.5" >
               Kullanıcı Adı
             </label>
-            <div style={{ position: 'relative' }}>
-              <span
-                style={{
-                  position: 'absolute',
-                  left: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              >
+            <div className="relative" >
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" >
                 <User size={16} />
               </span>
               <input
@@ -183,40 +103,17 @@ export default function LoginPage() {
                 placeholder="Kullanıcı adınızı giriniz"
                 required
                 ref={usernameRef}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 36px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  fontSize: 13,
-                  outline: 'none',
-                }}
+                className="w-full py-2.5 pr-3 pl-9 rounded-lg border border-slate-200 text-[13px] outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 18 }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--text)',
-                marginBottom: 6,
-              }}
-            >
+          <div className="mb-6" >
+            <label className="block text-[13px] font-semibold text-slate-900 mb-1.5" >
               Şifre
             </label>
-            <div style={{ position: 'relative' }}>
-              <span
-                style={{
-                  position: 'absolute',
-                  left: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              >
+            <div className="relative" >
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" >
                 <Lock size={16} />
               </span>
               <input
@@ -226,71 +123,37 @@ export default function LoginPage() {
                 placeholder="Şifrenizi giriniz"
                 required
                 ref={passwordRef}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 36px',
-                  borderRadius: 8,
-                  border: '1px solid var(--border)',
-                  fontSize: 13,
-                  outline: 'none',
-                }}
+                className="w-full py-2.5 pr-3 pl-9 rounded-lg border border-slate-200 text-[13px] outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 20,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="flex items-center justify-between mb-5" >
+            <div className="flex items-center gap-2" >
               <input
                 id="rememberMe"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                style={{
-                  width: 16,
-                  height: 16,
-                  cursor: 'pointer',
-                  accentColor: 'var(--primary)',
-                }}
+                className="w-4 h-4 cursor-pointer accent-blue-600"
               />
-              <label
+              <label className="text-[13px] text-slate-900 cursor-pointer select-none"
                 htmlFor="rememberMe"
-                style={{
-                  fontSize: 13,
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
+                
               >
                 Beni hatırla
               </label>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: 11 }}>
+            <div className="flex items-center gap-1 text-slate-500 text-[11px]" >
               <ShieldCheck size={14} />
               <span>Güvenli Oturum</span>
             </div>
           </div>
 
-          <button
+          <button className="w-full py-2.5 px-4 text-[14px] rounded-lg flex items-center justify-center gap-2 bg-blue-600 text-white font-medium transition-colors hover:bg-blue-700 focus:ring-4 focus:ring-blue-100 disabled:opacity-70 disabled:cursor-not-allowed"
             type="submit"
-            className="btn btn-primary"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '11px 16px',
-              fontSize: 14,
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
+            
           >
             <span>
               {loading

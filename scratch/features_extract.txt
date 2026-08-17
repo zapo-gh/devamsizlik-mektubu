@@ -1,0 +1,44 @@
+const CATEGORIES = [
+const TOTAL = CATEGORIES.reduce((a,c)=>a+c.items.length,0);
+function getProgramHTML(file){
+const el = document.getElementById('data-' + file);
+const b64 = el.textContent;
+const binary = atob(b64);
+const bytes = new Uint8Array(binary.length);
+for(let i=0;i<binary.length;i++){ bytes[i] = binary.charCodeAt(i); }
+function iconWrap(pathSvg, size=16, stroke="currentColor"){
+const dashEl = document.getElementById('dashboard');
+let dashHTML = `
+const card = e.target.closest('.card');
+const file = card.dataset.file;
+const group = card.dataset.group;
+const cat = CATEGORIES.find(c=>c.id===group);
+const item = cat.items.find(i=>i.file===file);
+const frameview = document.getElementById('frameview');
+const dashboard = document.getElementById('dashboard');
+const frame = document.getElementById('programFrame');
+const frameLoading = document.getElementById('frameLoading');
+const crumb = document.getElementById('crumb');
+const topActions = document.getElementById('topActions');
+const subbar = document.getElementById('subbar');
+function showDashboard(){
+function openProgram(item, cat){
+const blob = new Blob([getProgramHTML(item.file)], {type:'text/html'});
+const url = URL.createObjectURL(blob);
+const APP_VERSION = "1.0";
+const data = {};
+for(let i=0; i<localStorage.length; i++){
+const key = localStorage.key(i);
+const payload = {
+const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+const file = e.target.files[0];
+const reader = new FileReader();
+const payload = JSON.parse(evt.target.result);
+const veriler = payload.veriler || payload;
+let count = 0;
+const searchInput = document.getElementById('searchInput');
+const q = searchInput.value.trim().toLowerCase();
+const grid = h.nextElementSibling;
+const visible = grid.querySelectorAll('.card:not([style*="display: none"])').length;

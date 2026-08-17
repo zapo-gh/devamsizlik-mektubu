@@ -11,8 +11,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <div className="spinner spinner-dark" style={{ width: 40, height: 40 }} />
+      <div className="flex justify-center items-center min-h-screen bg-slate-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900" />
       </div>
     );
   }

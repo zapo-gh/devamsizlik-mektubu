@@ -47,7 +47,7 @@ export class StudentsService {
           { schoolNumber: 'asc' },
         ],
         include: {
-          parents: { select: { id: true, fullName: true, phone: true } },
+          parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } },
           _count: { select: { absenteeisms: true } },
         },
       }),
@@ -69,7 +69,7 @@ export class StudentsService {
     const student = await (prisma.student.findUnique as any)({
       where: { id },
       include: {
-        parents: { select: { id: true, fullName: true, phone: true } },
+        parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } },
         absenteeisms: {
           orderBy: { createdAt: 'desc' },
           select: {
@@ -152,7 +152,7 @@ export class StudentsService {
 
       return tx.student.findUnique({
         where: { id: student.id },
-        include: { parents: { select: { id: true, fullName: true, phone: true } } },
+        include: { parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } } },
       });
     });
   }
@@ -201,7 +201,7 @@ export class StudentsService {
     return prisma.student.update({
       where: { id: studentId },
       data: { parents: { connect: { id: parentId } } },
-      include: { parents: { select: { id: true, fullName: true, phone: true } } },
+      include: { parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } } },
     });
   }
 
@@ -212,7 +212,7 @@ export class StudentsService {
     return prisma.parent.update({
       where: { id: parentId },
       data,
-      select: { id: true, fullName: true, phone: true },
+      select: { id: true, fullName: true, phone: true, waConsentStatus: true },
     });
   }
 
@@ -252,7 +252,7 @@ export class StudentsService {
 
       return tx.student.findUnique({
         where: { id: studentId },
-        include: { parents: { select: { id: true, fullName: true, phone: true } } },
+        include: { parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } } },
       });
     });
   }
@@ -268,7 +268,7 @@ export class StudentsService {
     return prisma.student.update({
       where: { id: studentId },
       data: { parents: { disconnect: { id: parentId } } },
-      include: { parents: { select: { id: true, fullName: true, phone: true } } },
+      include: { parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } } },
     });
   }
 }

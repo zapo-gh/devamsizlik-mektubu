@@ -5,14 +5,26 @@ import { z } from 'zod';
 
 const createSchema = z.object({
   name: z.string().min(2, 'Ad en az 2 karakter olmalıdır.').max(100),
-  role: z.enum(['MUDUR_YARDIMCISI', 'REHBER_OGRETMEN', 'SINIF_REHBER_OGRETMEN']),
+  role: z.enum(['KURUM_PERSONELI', 'MUDUR_YARDIMCISI', 'REHBER_OGRETMEN', 'SINIF_REHBER_OGRETMEN']),
   className: z.string().max(50).optional(),
+  tcKimlikNo: z.string().optional(),
+  brans: z.string().optional(),
+  kurumSicilNo: z.string().optional(),
+  emekliSicilNo: z.string().optional(),
+  unvan: z.string().optional(),
+  gorev: z.string().optional(),
 });
 
 const updateSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   className: z.string().max(50).optional(),
   isActive: z.boolean().optional(),
+  tcKimlikNo: z.string().optional(),
+  brans: z.string().optional(),
+  kurumSicilNo: z.string().optional(),
+  emekliSicilNo: z.string().optional(),
+  unvan: z.string().optional(),
+  gorev: z.string().optional(),
 });
 
 export class StaffController {
@@ -47,6 +59,16 @@ export class StaffController {
       if (!parsed.success) throw new AppError(parsed.error.errors[0].message, 400);
       const record = await staffService.update(req.params.id, parsed.data);
       res.json({ success: true, data: record });
+    } catch (e) { next(e); }
+  }
+
+  async bulkCreate(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.body.staff || !Array.isArray(req.body.staff)) {
+        throw new AppError('Geçersiz veri formatı. Dizi bekleniyor.', 400);
+      }
+      const result = await staffService.bulkCreate(req.body.staff);
+      res.status(201).json({ success: true, count: result.count });
     } catch (e) { next(e); }
   }
 
