@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../../services/api';
+import { useSettings } from '../../../context/SettingsContext';
 import { useConfirm } from '../../../hooks/useConfirm';
 import { Mail, Edit2, Trash2, Plus, Printer, Save, X, PlusCircle } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -35,7 +36,8 @@ export default function OrderLetterPage() {
   const [form, setForm] = useState<Partial<OrderLetter>>({ items: [] });
   const [itemsList, setItemsList] = useState<OrderItem[]>([]);
 
-  const academicYear = '2025-2026';
+  const { settings } = useSettings();
+  const academicYear = settings?.academicYear || '2024-2025';
 
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -284,3 +286,5 @@ export default function OrderLetterPage() {
     </div>
   );
 }
+
+

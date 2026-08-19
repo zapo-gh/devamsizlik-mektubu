@@ -7,6 +7,7 @@ const router = Router();
 router.use(authMiddleware, adminOnly);
 
 router.get('/classes', parentMeetingController.getClasses);
+router.post('/data', parentMeetingController.getData);
 router.post('/generate-pdf', parentMeetingController.generatePdf);
 
 export default router;

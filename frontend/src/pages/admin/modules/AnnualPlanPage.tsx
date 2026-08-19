@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../../services/api';
+import { useSettings } from '../../../context/SettingsContext';
 import { useConfirm } from '../../../hooks/useConfirm';
 import { CalendarDays, Edit2, Trash2, Plus, Printer, Save, X } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/PageHeader';
@@ -53,7 +54,8 @@ export default function AnnualPlanPage() {
     documentTitle: 'Yillik_Calisma_Plani'
   });
 
-  const academicYear = '2025-2026';
+  const { settings } = useSettings();
+  const academicYear = settings?.academicYear || '2024-2025';
 
   const fetchData = async () => {
     setLoading(true);
@@ -287,3 +289,5 @@ export default function AnnualPlanPage() {
     </div>
   );
 }
+
+

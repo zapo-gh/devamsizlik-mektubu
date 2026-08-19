@@ -1,3 +1,4 @@
+import { useSettings } from '../../../context/SettingsContext';
 import { useState, useEffect, useRef } from 'react';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { DataTable, Column } from '../../../components/ui/DataTable';
@@ -33,7 +34,8 @@ export default function ProcurementPage() {
     offers: []
   });
 
-  const academicYear = '2025-2026';
+  const { settings } = useSettings();
+  const academicYear = settings?.academicYear || '2024-2025';
 
   useEffect(() => {
     fetchData();
@@ -580,3 +582,5 @@ export default function ProcurementPage() {
     </div>
   );
 }
+
+

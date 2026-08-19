@@ -13,6 +13,41 @@ class ParentMeetingController {
       next(err);
     }
   }
+  /** POST /api/parent-meeting/data */
+  async getData(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { className, classNames, meetingDate, schoolYear, term, includeParentName } = req.body as {
+        className?: string;
+        classNames?: string[];
+        meetingDate?: string;
+        schoolYear?: string;
+        term?: string;
+        includeParentName?: boolean;
+      };
+
+      const resolvedNames =
+        classNames && classNames.length > 0
+          ? classNames
+          : className
+          ? [className]
+          : null;
+
+      if (!resolvedNames || resolvedNames.length === 0)
+        throw new AppError('En az bir sınıf seçilmelidir.', 400);
+
+      const data = await parentMeetingService.getData({
+        classNames: resolvedNames,
+        meetingDate: meetingDate ? new Date(meetingDate) : new Date(),
+        schoolYear: schoolYear || '2025-2026',
+        term: term || '1. DÖNEM',
+        includeParentName: includeParentName !== false,
+      });
+
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
 
   /** POST /api/parent-meeting/generate-pdf */
   async generatePdf(req: Request, res: Response, next: NextFunction) {

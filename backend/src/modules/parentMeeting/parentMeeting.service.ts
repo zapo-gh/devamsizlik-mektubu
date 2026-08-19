@@ -16,14 +16,13 @@ class ParentMeetingService {
     return rows.map(r => r.className);
   }
 
-  /** Verilen sınıflar için veli imza sirküsü PDF'i oluşturur (tek PDF, ayrı sayfalar) */
-  async generatePdf(params: {
+  async getData(params: {
     classNames: string[];
     meetingDate: Date;
     schoolYear: string;
     term: string;
     includeParentName?: boolean;
-  }): Promise<string> {
+  }): Promise<ParentMeetingPdfData[]> {
     // Okul adı ayarlardan
     const settings = await prisma.schoolSettings.findUnique({
       where: { id: 'singleton' },
@@ -52,6 +51,19 @@ class ParentMeetingService {
         })),
       });
     }
+    
+    return items;
+  }
+
+  /** Verilen sınıflar için veli imza sirküsü PDF'i oluşturur (tek PDF, ayrı sayfalar) */
+  async generatePdf(params: {
+    classNames: string[];
+    meetingDate: Date;
+    schoolYear: string;
+    term: string;
+    includeParentName?: boolean;
+  }): Promise<string> {
+    const items = await this.getData(params);
 
     const ts = Date.now();
     const outputPath = path.join(

@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { FileSignature, CheckSquare, Square, Download, Users, Calendar, BookOpen, UserCheck, Search, Loader2 } from 'lucide-react';
+import { useSettings } from '../../context/SettingsContext';
+import { useReactToPrint } from 'react-to-print';
+import { ParentMeetingPrintTemplate, ParentMeetingPdfData } from './print/ParentMeetingPrintTemplate';
+import { FileSignature, CheckSquare, Square, Download, Users, Calendar, BookOpen, UserCheck, Search, Loader2, Printer } from 'lucide-react';
 
 export default function ParentMeetingPage() {
+  const { settings } = useSettings();
   const [classes,         setClasses]         = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [meetingDate,     setMeetingDate]     = useState(new Date().toISOString().slice(0, 10));
-  const [schoolYear,      setSchoolYear]      = useState('2025-2026');
+  const [schoolYear,      setSchoolYear]      = useState(settings?.academicYear || '2025-2026');
   const [term,            setTerm]            = useState('2. DÖNEM');
   const [includeParent,   setIncludeParent]   = useState(true);
   const [loading,         setLoading]         = useState(false);
+  const [printData,       setPrintData]       = useState<ParentMeetingPdfData[]>([]);
+  const [isPrinting,      setIsPrinting]      = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   const [loadingClasses,  setLoadingClasses]  = useState(true);
   const [error,           setError]           = useState('');
   const [success,         setSuccess]         = useState('');
@@ -28,6 +35,12 @@ export default function ParentMeetingPage() {
       .finally(() => setLoadingClasses(false));
   }, []);
 
+  useEffect(() => {
+    if (settings?.academicYear) {
+      setSchoolYear(settings.academicYear);
+    }
+  }, [settings?.academicYear]);
+
   const filteredClasses = classes.filter(c => c.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const toggleClass = (c: string) =>
@@ -36,27 +49,41 @@ export default function ParentMeetingPage() {
   const selectAll = () => setSelectedClasses([...filteredClasses]);
   const clearAll  = () => setSelectedClasses([]);
 
-  const handleGenerate = async () => {
-    if (selectedClasses.length === 0) { setError('Lütfen en az bir sınıf seçin.'); return; }
-    setError(''); setSuccess(''); setLoading(true);
-    try {
-      const res = await api.post('/parent-meeting/generate-pdf', {
-        classNames: selectedClasses, meetingDate, schoolYear, term, includeParentName: includeParent,
-      }, { responseType: 'blob' });
-      const url  = URL.createObjectURL(res.data);
-      const a    = document.createElement('a');
-      a.href     = url;
-      const fileLabel = selectedClasses.length === 1 ? selectedClasses[0].replace(/[^a-zA-Z0-9]/g, '_') : `${selectedClasses.length}-sinif`;
-      a.download = `veli-imza-sirkusu-${fileLabel}.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setSuccess(selectedClasses.length === 1
-        ? `${selectedClasses[0]} sınıfı için imza sirküsü oluşturuldu.`
-        : `${selectedClasses.length} sınıf için imza sirküsü oluşturuldu.`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Bilinmeyen hata');
-    } finally {
+  const handlePrintAction = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: 'Veli_Toplantisi_Imza_Sirkusu',
+    onAfterPrint: () => {
+      setIsPrinting(false);
       setLoading(false);
+    },
+    onPrintError: () => {
+      setIsPrinting(false);
+      setLoading(false);
+      alert('Yazdırma işlemi iptal edildi veya bir hata oluştu.');
+    }
+  });
+
+  const handleGenerate = async () => {
+    if (selectedClasses.length === 0) return;
+    setLoading(true);
+    setIsPrinting(true);
+    try {
+      const response = await api.post('/parent-meeting/data', {
+        classNames: selectedClasses,
+        meetingDate,
+        schoolYear,
+        term,
+        includeParentName: includeParent
+      });
+      setPrintData(response.data.data);
+      // Data is set, wait a moment for React to render the hidden component before printing
+      setTimeout(() => {
+        handlePrintAction();
+      }, 100);
+    } catch (err: any) {
+      setLoading(false);
+      setIsPrinting(false);
+      alert('Bir hata oluştu.');
     }
   };
 
@@ -285,15 +312,19 @@ export default function ParentMeetingPage() {
                 disabled={loading || loadingClasses || !someSelected}
               >
                 {loading ? (
-                  <><Loader2 size={20} className="animate-spin" /> PDF oluşturuluyor...</>
+                  <><Loader2 size={20} className="animate-spin" /> {isPrinting ? 'Yazdırma Hazırlanıyor...' : 'Lütfen Bekleyin...'}</>
                 ) : (
-                  <><Download size={20} /> PDF Oluştur ve İndir {someSelected && `(${selectedClasses.length})`}</>
+                  <><Printer size={20} /> Yazdır {someSelected && `(${selectedClasses.length})`}</>
                 )}
               </button>
             </div>
           </div>
-
         </div>
+      </div>
+      
+      {/* Gizli Yazdırma Alanı */}
+      <div className="hidden">
+        <ParentMeetingPrintTemplate ref={printRef} data={printData} />
       </div>
     </div>
   );

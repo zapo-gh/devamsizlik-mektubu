@@ -49,7 +49,7 @@ export default function SettingsPage() {
     e.preventDefault();
     setSchoolSaving(true);
     try {
-      await api.post('/settings', { schoolName, principalName, academicYear });
+      await api.put('/settings', { schoolName, principalName, academicYear });
       toast.success('Kurum bilgileri güncellendi.');
       refreshSettings();
     } catch { 
