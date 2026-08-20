@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { violationsController } from './violations.controller';
 import { violationImageUpload } from './imageUpload.middleware';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
+import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
+import { compressImage } from '../shared/middleware/imageCompressor.middleware';
 
 const router = Router();
 
@@ -16,6 +18,8 @@ router.post(
   authMiddleware,
   adminOnly,
   violationImageUpload.single('image'),
+  validateMagicBytes(['image/jpeg', 'image/png']),
+  compressImage,
   violationsController.upload
 );
 

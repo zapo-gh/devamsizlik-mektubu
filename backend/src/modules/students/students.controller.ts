@@ -75,7 +75,8 @@ export class StudentsController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await studentsService.delete(req.params.id);
+      const userId = (req as any).user.id;
+      const result = await studentsService.delete(req.params.id, userId);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -92,7 +93,8 @@ export class StudentsController {
       if (!ids.every((id: unknown) => typeof id === 'string' && uuidRe.test(id))) {
         throw new AppError('Geçersiz öğrenci ID formatı.', 400);
       }
-      const result = await studentsService.bulkDelete(ids);
+      const userId = (req as any).user.id;
+      const result = await studentsService.bulkDelete(ids, userId);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

@@ -114,7 +114,7 @@ export class WarningsController {
       const safeName = toAsciiFn(student.fullName);
       const fileName = `yazili-uyari-${warningNumber}-${safeName}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
       res.sendFile(fullPath);
     } catch (error) {
       next(error);
@@ -141,3 +141,4 @@ export class WarningsController {
 }
 
 export const warningsController = new WarningsController();
+

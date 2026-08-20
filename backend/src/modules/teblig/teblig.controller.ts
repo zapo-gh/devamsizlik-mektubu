@@ -15,7 +15,7 @@ class TebligController {
 
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+        'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
         'Content-Length': String(pdfBuffer.length),
       });
       res.send(pdfBuffer);
@@ -26,3 +26,4 @@ class TebligController {
 }
 
 export const tebligController = new TebligController();
+

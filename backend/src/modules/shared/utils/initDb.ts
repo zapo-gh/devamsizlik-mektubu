@@ -542,15 +542,50 @@ export async function initializeDatabase(): Promise<void> {
   // ── Ders Dışı Egzersiz Planı ────────────────────
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "Extracurricular" (
-      "id"              TEXT     NOT NULL PRIMARY KEY,
-      "branch"          TEXT     NOT NULL,
-      "assignedStaffId" TEXT,
-      "schedule"        TEXT,
-      "academicYear"    TEXT     NOT NULL,
-      "notes"           TEXT,
-      "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      "id"                TEXT     NOT NULL PRIMARY KEY,
+      "branch"            TEXT     NOT NULL,
+      "assignedStaffId"   TEXT,
+      "assignedStaffName" TEXT,
+      "schedule"          TEXT,
+      "academicYear"      TEXT     NOT NULL,
+      "notes"             TEXT,
+      "status"            TEXT     NOT NULL DEFAULT 'ONAY_BEKLIYOR',
+      "extraData"         TEXT,
+      "createdAt"         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Eski şemayı yeni şemaya taşı: eski tabloda "branch" kolonu yoksa yeniden oluştur
+  {
+    const extCols = await prisma.$queryRawUnsafe<{ name: string }[]>(`PRAGMA table_info("Extracurricular")`);
+    const hasOldSchema = !extCols.some((c) => c.name === 'branch');
+    if (hasOldSchema) {
+      console.log('⚙️ Extracurricular tablosu eski şemada, yeniden oluşturuluyor...');
+      await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "Extracurricular"`);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE "Extracurricular" (
+          "id"                TEXT     NOT NULL PRIMARY KEY,
+          "branch"            TEXT     NOT NULL,
+          "assignedStaffId"   TEXT,
+          "assignedStaffName" TEXT,
+          "schedule"          TEXT,
+          "academicYear"      TEXT     NOT NULL,
+          "notes"             TEXT,
+          "status"            TEXT     NOT NULL DEFAULT 'ONAY_BEKLIYOR',
+          "extraData"         TEXT,
+          "createdAt"         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Extracurricular tablosu yeniden oluşturuldu.');
+    } else {
+      if (!extCols.some((c) => c.name === 'assignedStaffName'))
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Extracurricular" ADD COLUMN "assignedStaffName" TEXT`);
+      if (!extCols.some((c) => c.name === 'status'))
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Extracurricular" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'ONAY_BEKLIYOR'`);
+      if (!extCols.some((c) => c.name === 'extraData'))
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Extracurricular" ADD COLUMN "extraData" TEXT`);
+    }
+  }
 
   // ── Yolluk Hesaplama ────────────────────────────
   await prisma.$executeRawUnsafe(`

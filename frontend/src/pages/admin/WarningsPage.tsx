@@ -232,6 +232,7 @@ export default function WarningsPage() {
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const newWin = window.open(url, '_blank');
       if (!newWin) window.location.href = url;
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
     } catch {
       await alert('PDF görüntüleme başarısız.');
     }

@@ -19,6 +19,7 @@ model User {
   createdAt          DateTime @default(now())
 
   parent Parent?
+  auditLogs AuditLog[]
 }
 
 model Student {
@@ -469,4 +470,17 @@ model StaffTransfer {
   academicYear   String
   notes          String?
   extraData      String?
+}
+
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
 }

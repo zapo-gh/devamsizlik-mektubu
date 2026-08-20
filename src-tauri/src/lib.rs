@@ -1,14 +1,10 @@
-use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::path::PathBuf;
 use tauri::Manager;
+use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::ShellExt;
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
-const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-struct BackendProcess(Mutex<Option<Child>>);
+struct BackendProcess(Mutex<Option<CommandChild>>);
 
 fn find_sidecar_script() -> Option<PathBuf> {
     let mut candidates = vec![
@@ -20,6 +16,7 @@ fn find_sidecar_script() -> Option<PathBuf> {
         if let Some(exe_dir) = exe_path.parent() {
             candidates.push(exe_dir.join("backend/dist/tauri-sidecar.js"));
             candidates.push(exe_dir.join("../backend/dist/tauri-sidecar.js"));
+            candidates.push(exe_dir.join("_up_/backend/dist/tauri-sidecar.js"));
         }
     }
 
@@ -36,26 +33,39 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            if let Some(script_path) = find_sidecar_script() {
-                println!("🚀 [Tauri] Node.js backend başlatılıyor: {:?}", script_path);
+            let script_path = find_sidecar_script().unwrap_or_else(|| {
+                app.path().resource_dir().expect("failed to get resource dir").join("backend/dist/tauri-sidecar.js")
+            });
 
-                let mut cmd = Command::new("node");
-                cmd.arg(&script_path);
+            println!("🚀 [Tauri] Node.js backend başlatılıyor: {:?}", script_path);
 
-                #[cfg(target_os = "windows")]
-                cmd.creation_flags(CREATE_NO_WINDOW);
+            let sidecar_cmd = app.shell().sidecar("node")
+                .expect("failed to create node sidecar command")
+                .arg(script_path.to_string_lossy().as_ref());
 
-                match cmd.spawn() {
-                    Ok(child) => {
-                        println!("✅ [Tauri] Backend alt süreci başlatıldı (PID: {})", child.id());
-                        app.manage(BackendProcess(Mutex::new(Some(child))));
-                    }
-                    Err(err) => {
-                        eprintln!("❌ [Tauri] Backend başlatılamadı: {}", err);
-                    }
+            match sidecar_cmd.spawn() {
+                Ok((mut rx, child)) => {
+                    println!("✅ [Tauri] Backend alt süreci başlatıldı (PID: {})", child.pid());
+                    
+                    tauri::async_runtime::spawn(async move {
+                        while let Some(event) = rx.recv().await {
+                            match event {
+                                tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                                    println!("[Backend] {}", String::from_utf8_lossy(&line).trim_end());
+                                }
+                                tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                                    eprintln!("[Backend ERR] {}", String::from_utf8_lossy(&line).trim_end());
+                                }
+                                _ => {}
+                            }
+                        }
+                    });
+
+                    app.manage(BackendProcess(Mutex::new(Some(child))));
                 }
-            } else {
-                eprintln!("⚠️ [Tauri] tauri-sidecar.js dosyası bulunamadı. Lütfen 'npm run build:backend' komutunu çalıştırın.");
+                Err(err) => {
+                    eprintln!("❌ [Tauri] Backend başlatılamadı: {}", err);
+                }
             }
             Ok(())
         })

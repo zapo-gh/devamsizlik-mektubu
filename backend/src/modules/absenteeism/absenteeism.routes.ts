@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { absenteeismController } from './absenteeism.controller';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
 import { pdfUpload } from './pdfUpload.middleware';
+import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.post(
   authMiddleware,
   adminOnly,
   pdfUpload.single('pdf'),
+  validateMagicBytes(['application/pdf', 'image/jpeg', 'image/png']),
   absenteeismController.create
 );
 router.delete('/:id', authMiddleware, adminOnly, absenteeismController.delete);

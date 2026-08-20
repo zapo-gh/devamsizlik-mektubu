@@ -4,13 +4,13 @@ Okul yönetimi için geliştirilmiş masaüstü uygulaması. Devamsızlık takib
 
 ## Genel Bakış
 
-OkulDesk, **Electron** tabanlı bir masaüstü uygulamasıdır. Kurulum gerektirmeksizin Windows'ta tek `.exe` ile çalışır; internete ihtiyaç duymaz. Tüm veriler yerel SQLite veritabanında saklanır.
+OkulDesk, **Tauri v2** tabanlı, modern bir masaüstü uygulamasıdır. İnternete ihtiyaç duymaz. Tüm veriler yerel SQLite veritabanında saklanır. 
 
 ```
-Electron (shell)
-  └── Express.js (backend, port 4000)
-        └── SQLite (Prisma ORM, better-sqlite3)
-  └── React + Vite (frontend, backend üzerinden statik servis)
+Tauri v2 (Native Masaüstü Kabuğu)
+  ├── Node.js Sidecar (Express.js backend, port 4000)
+  │     └── SQLite (Prisma ORM, better-sqlite3)
+  └── React + Vite (Frontend)
 ```
 
 ## Özellikler

@@ -397,7 +397,9 @@ export default function AbsenteeismPage() {
                               try {
                                 const response = await api.get(`/absenteeism/${r.id}/pdf`, { responseType: 'blob' });
                                 const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-                                const a = document.createElement('a'); a.href = url; a.target = '_blank'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                const newWin = window.open(url, '_blank');
+                                if (!newWin) window.location.href = url;
+                                setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                               } catch (err) { alert('Mektup açılamadı.'); }
                             }}
                           />

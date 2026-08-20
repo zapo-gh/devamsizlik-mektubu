@@ -27,13 +27,18 @@ export class SettingsController {
     try {
       const data = updateSchema.parse(req.body);
       const result = await settingsService.update(data);
+      
+      const userId = (req as any).user.id;
+      const { AuditService } = require('../shared/utils/audit.service');
+      await AuditService.log(userId, 'UPDATE_SETTINGS', 'SchoolSettings', 'singleton', data);
+
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
   }
 
-  async backup(_req: Request, res: Response, next: NextFunction) {
+  async backup(req: Request, res: Response, next: NextFunction) {
     try {
       const dbUrl: string = process.env.DATABASE_URL || '';
       // SQLite URL: "file:/path/to/database.db" or "file:./relative"
@@ -52,9 +57,37 @@ export class SettingsController {
 
       const date = new Date().toISOString().slice(0, 10);
       const filename = `okuldesk-yedek-${date}.db`;
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Type', 'application/octet-stream');
-      fs.createReadStream(resolvedPath).pipe(res);
+      const tempBackupPath = path.resolve(process.cwd(), `temp_${Date.now()}.db`);
+
+      try {
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        await prisma.$executeRawUnsafe(`VACUUM INTO '${tempBackupPath}'`);
+        await prisma.$disconnect();
+
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        
+        const fileStream = fs.createReadStream(tempBackupPath);
+        fileStream.pipe(res);
+        
+        fileStream.on('close', () => {
+          if (fs.existsSync(tempBackupPath)) {
+            fs.unlinkSync(tempBackupPath);
+          }
+        });
+
+        // Audit Log
+        const userId = (req as any).user.id;
+        const { AuditService } = require('../shared/utils/audit.service');
+        await AuditService.log(userId, 'CREATE_BACKUP', 'Database', 'all', { filename });
+        
+      } catch (err) {
+        if (fs.existsSync(tempBackupPath)) {
+          fs.unlinkSync(tempBackupPath);
+        }
+        throw err;
+      }
     } catch (error) {
       next(error);
     }

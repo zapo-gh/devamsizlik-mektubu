@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -232,8 +232,16 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 p-6 md:p-8 h-screen overflow-y-auto bg-slate-200 print:h-auto print:overflow-visible print:bg-white print:p-0">
-        <Outlet />
+      <main className="flex-1 h-screen overflow-y-auto bg-slate-200 print:h-auto print:overflow-visible print:bg-white print:p-0">
+        <Suspense fallback={
+          <div className="flex h-full w-full items-center justify-center min-h-screen bg-slate-200">
+            <div className="h-9 w-9 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent opacity-60" />
+          </div>
+        }>
+          <div className="p-6 md:p-8">
+            <Outlet />
+          </div>
+        </Suspense>
       </main>
     </div>
   );

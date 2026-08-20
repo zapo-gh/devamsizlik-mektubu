@@ -1,64 +1,82 @@
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 
-// Admin pages
-import LoginPage from './pages/admin/LoginPage';
-import DashboardPage from './pages/admin/DashboardPage';
-import StudentListPage from './pages/admin/StudentListPage';
-import AbsenteeismPage from './pages/admin/AbsenteeismPage';
-import WarningsPage from './pages/admin/WarningsPage';
-import ViolationsPage from './pages/admin/ViolationsPage';
-import StaffPage from './pages/admin/StaffPage';
-import WhatsAppPage from './pages/admin/WhatsAppPage';
-import GradeReportPage from './pages/admin/GradeReportPage';
-import ParentMeetingPage from './pages/admin/ParentMeetingPage';
-import ClassTeachersPage from './pages/admin/modules/ClassTeachersPage';
-import ParentNotificationPage from './pages/admin/ParentNotificationPage';
-import TebligPage from './pages/admin/TebligPage';
-import SettingsPage from './pages/admin/SettingsPage';
-import MatbuEvraklarPage from './pages/admin/MatbuEvraklarPage';
-
-// Yeni Modüller
-import DutySchedulePage from './pages/admin/modules/DutySchedulePage';
-import BoardMeetingPage from './pages/admin/modules/BoardMeetingPage';
-import CommissionPage from './pages/admin/modules/CommissionPage';
-import AnnualPlanPage from './pages/admin/modules/AnnualPlanPage';
-import CommemorativeDaysPage from './pages/admin/modules/CommemorativeDaysPage';
-import SocialActivityPage from './pages/admin/modules/SocialActivityPage';
-import ParentAssociationPage from './pages/admin/modules/ParentAssociationPage';
-import FieldTripPage from './pages/admin/modules/FieldTripPage';
-import ExtracurricularPage from './pages/admin/modules/ExtracurricularPage';
-import TravelAllowancePage from './pages/admin/modules/TravelAllowancePage';
-import StaffTransferPage from './pages/admin/modules/StaffTransferPage';
-import StudentClubPage from './pages/admin/modules/StudentClubPage';
-import OrderLetterPage from './pages/admin/modules/OrderLetterPage';
-import HolidayPage from './pages/admin/modules/HolidayPage';
-import AttendanceSheetPage from './pages/admin/modules/AttendanceSheetPage';
-import SupplierPage from './pages/admin/modules/SupplierPage';
-import ProcurementPage from './pages/admin/modules/ProcurementPage';
-
-// Layout
+// Layout & Core
 import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Lazy Loaded Pages
+const LoginPage = React.lazy(() => import('./pages/admin/LoginPage'));
+const DashboardPage = React.lazy(() => import('./pages/admin/DashboardPage'));
+const StudentListPage = React.lazy(() => import('./pages/admin/StudentListPage'));
+const AbsenteeismPage = React.lazy(() => import('./pages/admin/AbsenteeismPage'));
+const WarningsPage = React.lazy(() => import('./pages/admin/WarningsPage'));
+const ViolationsPage = React.lazy(() => import('./pages/admin/ViolationsPage'));
+const StaffPage = React.lazy(() => import('./pages/admin/StaffPage'));
+const WhatsAppPage = React.lazy(() => import('./pages/admin/WhatsAppPage'));
+const GradeReportPage = React.lazy(() => import('./pages/admin/GradeReportPage'));
+const ParentMeetingPage = React.lazy(() => import('./pages/admin/ParentMeetingPage'));
+const ClassTeachersPage = React.lazy(() => import('./pages/admin/modules/ClassTeachersPage'));
+const ParentNotificationPage = React.lazy(() => import('./pages/admin/ParentNotificationPage'));
+const TebligPage = React.lazy(() => import('./pages/admin/TebligPage'));
+const SettingsPage = React.lazy(() => import('./pages/admin/SettingsPage'));
+const MatbuEvraklarPage = React.lazy(() => import('./pages/admin/MatbuEvraklarPage'));
+
+const DutySchedulePage = React.lazy(() => import('./pages/admin/modules/DutySchedulePage'));
+const BoardMeetingPage = React.lazy(() => import('./pages/admin/modules/BoardMeetingPage'));
+const CommissionPage = React.lazy(() => import('./pages/admin/modules/CommissionPage'));
+const AnnualPlanPage = React.lazy(() => import('./pages/admin/modules/AnnualPlanPage'));
+const CommemorativeDaysPage = React.lazy(() => import('./pages/admin/modules/CommemorativeDaysPage'));
+const SocialActivityPage = React.lazy(() => import('./pages/admin/modules/SocialActivityPage'));
+const ParentAssociationPage = React.lazy(() => import('./pages/admin/modules/ParentAssociationPage'));
+const FieldTripPage = React.lazy(() => import('./pages/admin/modules/FieldTripPage'));
+const ExtracurricularPage = React.lazy(() => import('./pages/admin/modules/ExtracurricularPage'));
+const TravelAllowancePage = React.lazy(() => import('./pages/admin/modules/TravelAllowancePage'));
+const StaffTransferPage = React.lazy(() => import('./pages/admin/modules/StaffTransferPage'));
+const StudentClubPage = React.lazy(() => import('./pages/admin/modules/StudentClubPage'));
+const OrderLetterPage = React.lazy(() => import('./pages/admin/modules/OrderLetterPage'));
+const HolidayPage = React.lazy(() => import('./pages/admin/modules/HolidayPage'));
+const AttendanceSheetPage = React.lazy(() => import('./pages/admin/modules/AttendanceSheetPage'));
+const SupplierPage = React.lazy(() => import('./pages/admin/modules/SupplierPage'));
+const ProcurementPage = React.lazy(() => import('./pages/admin/modules/ProcurementPage'));
+
+// Loader: sadece içerik alanı için (sidebar sabit kalır)
+const PageLoader = () => (
+  <div className="flex h-full w-full items-center justify-center min-h-[300px]">
+    <div className="h-9 w-9 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent opacity-70"></div>
+  </div>
+);
 
 function App() {
   return (
     <AuthProvider>
       <SettingsProvider>
         <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
+          {/* Public Routes */}
+          <Route
+            path="/login"
+            element={
+              <Suspense fallback={
+                <div className="flex h-screen w-full items-center justify-center bg-slate-950">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+                </div>
+              }>
+                <LoginPage />
+              </Suspense>
+            }
+          />
 
-            {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
+          {/* Admin Routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
               <Route index element={<DashboardPage />} />
               <Route path="students" element={<StudentListPage />} />
               <Route path="absenteeism" element={<AbsenteeismPage />} />

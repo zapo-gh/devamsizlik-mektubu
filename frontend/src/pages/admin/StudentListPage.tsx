@@ -344,10 +344,14 @@ export default function StudentListPage() {
       }
 
       if (newEditParent && newEditParent.fullName.trim() && newEditParent.phone.trim()) {
-        await api.post(`/students/${editStudent.id}/parents`, {
+        const response = await api.post(`/students/${editStudent.id}/parents`, {
           fullName: newEditParent.fullName.trim(),
           phone: newEditParent.phone.trim(),
         });
+
+        if (response.data?.data?.generatedPassword) {
+          alert(`Yeni veli hesabı oluşturuldu.\n\nGeçici Şifre: ${response.data.data.generatedPassword}\n\nLütfen bu şifreyi veliye iletin. Veli ilk girişinde şifresini değiştirmek zorundadır.`);
+        }
       }
 
       setShowEditModal(false);

@@ -8,3 +8,10 @@ nginx/ssl/
 *.pdf
 .vscode/
 dist-electron/
+
+# Database and Excel files
+*.db
+*.sqlite
+*.sqlite3
+*.xls
+*.xlsx

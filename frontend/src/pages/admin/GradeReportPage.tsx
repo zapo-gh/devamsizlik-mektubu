@@ -146,11 +146,10 @@ export default function GradeReportPage() {
 
       const mergedBytes = await mergedPdf.save();
       const blob = new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `sinif_risk_${(result.className || 'rapor').replace(/\//g, '-')}.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
+      const url = URL.createObjectURL(blob);
+      const newWin = window.open(url, '_blank');
+      if (!newWin) window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch { setError('Toplu PDF birleştirme başarısız.'); }
     finally { setBulkDownloading(false); }
   };

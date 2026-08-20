@@ -101,14 +101,11 @@ export default function ParentNotificationPage() {
         absenceData: { excusedDays, unexcusedDays, totalDays: String(totalDays) },
       }, { responseType: 'blob' });
 
-      const url      = URL.createObjectURL(res.data);
-      const a        = document.createElement('a');
-      a.href         = url;
-      const safeName = selectedStudent.fullName.replace(/\s+/g, '-').toLocaleLowerCase('tr-TR');
-      a.download     = `veli-bildirim-tutanagi-${safeName}-${absenceDay}.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setSuccess(`${selectedStudent.fullName} için ${absenceDay}. gün Veli Bildirim Tutanağı oluşturuldu.`);
+      const url = URL.createObjectURL(res.data);
+      const newWin = window.open(url, '_blank');
+      if (!newWin) window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setSuccess(`${selectedStudent.fullName} için ${absenceDay}. gün Veli Bildirim Tutanağı oluşturuldu ve yeni sekmede açıldı.`);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Bilinmeyen hata');
     } finally {

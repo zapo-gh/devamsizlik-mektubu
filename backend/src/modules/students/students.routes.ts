@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { studentsController } from './students.controller';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
+import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
 
 const router = Router();
 
@@ -26,8 +27,14 @@ const excelUpload = multer({
 // All student routes require admin authentication
 router.use(authMiddleware, adminOnly);
 
-router.post('/import-excel', excelUpload.single('file'), studentsController.importExcel);
-router.post('/import-parents', excelUpload.single('file'), studentsController.importParents);
+const excelMimes = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/CDFV2', // Sometimes old xls returns this
+];
+
+router.post('/import-excel', excelUpload.single('file'), validateMagicBytes(excelMimes), studentsController.importExcel);
+router.post('/import-parents', excelUpload.single('file'), validateMagicBytes(excelMimes), studentsController.importParents);
 router.get('/', studentsController.getAll);
 router.get('/:id', studentsController.getById);
 router.post('/', studentsController.create);

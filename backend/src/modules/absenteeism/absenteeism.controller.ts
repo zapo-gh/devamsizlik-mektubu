@@ -112,7 +112,7 @@ export class AbsenteeismController {
       const contentType = mimeMap[ext || ''] || 'application/octet-stream';
       const fileName = `devamsizlik-mektubu.${ext || 'pdf'}`;
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
       res.sendFile(fullPath);
     } catch (error) {
       next(error);
@@ -130,3 +130,4 @@ export class AbsenteeismController {
 }
 
 export const absenteeismController = new AbsenteeismController();
+

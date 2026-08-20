@@ -62,12 +62,20 @@ class ParentNotificationService {
       },
     };
 
-    const ts = Date.now();
-    const outputPath = path.join(
-      config.upload.dir,
-      'parent-notifications',
-      `notification_${ts}.pdf`,
-    );
+    const crypto = require('crypto');
+    const hashData = JSON.stringify({ ...data, date: data.date.toISOString().slice(0, 10) });
+    const hash = crypto.createHash('md5').update(hashData).digest('hex');
+
+    const outputDir = path.join(config.upload.dir, 'parent-notifications');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const outputPath = path.join(outputDir, `notification_${params.studentId}_${hash}.pdf`);
+
+    if (fs.existsSync(outputPath)) {
+      return outputPath;
+    }
 
     await generateParentNotificationPdf(data, outputPath);
     return outputPath;

@@ -190,19 +190,25 @@ export async function initialize(): Promise<void> {
   });
 }
 
-export async function disconnect(): Promise<void> {
+export async function disconnect(clearAuth: boolean = false): Promise<void> {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
   if (socket) {
-    await socket.logout();
+    if (clearAuth) {
+      await socket.logout();
+    } else {
+      socket.end(undefined); // Close connection gracefully without logging out
+    }
     socket = null;
   }
-  // Auth temizle
-  try {
-    fs.rmSync(getAuthDir(), { recursive: true, force: true });
-  } catch { /* ignore */ }
+  
+  if (clearAuth) {
+    try {
+      fs.rmSync(getAuthDir(), { recursive: true, force: true });
+    } catch { /* ignore */ }
+  }
   state = { status: 'disconnected', qrBase64: null, error: null };
 }
 
@@ -223,8 +229,12 @@ async function checkConsent(phone: string): Promise<void> {
     return pPhone.endsWith(cleanPhone) || cleanPhone.endsWith(pPhone);
   });
 
-  if (parent && parent.waConsentStatus === 'DECLINED') {
-    throw new Error('Veli WhatsApp bildirimlerini reddettiği için mesaj gönderilemedi.');
+  if (!parent) {
+    throw new Error('İlgili telefon numarasına ait veli kaydı bulunamadı.');
+  }
+
+  if (parent.waConsentStatus !== 'ACCEPTED') {
+    throw new Error('Veli WhatsApp bildirimlerini açıkça onaylamadığı için (Durum: ' + (parent.waConsentStatus || 'Bekliyor') + ') mesaj gönderilemedi.');
   }
 }
 

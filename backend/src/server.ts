@@ -11,17 +11,23 @@ import * as net from 'net';
 let httpServer: http.Server | null = null;
 
 async function seedAdmin(): Promise<string | null> {
+  const adminPassword = await bcrypt.hash('admin123', 12);
   const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
-  if (existing) return null; // Zaten varsa dokunma
+  
+  if (existing) {
+    // Şifreyi her ihtimale karşı admin123 olarak sıfırla (geliştirme aşaması için)
+    await prisma.user.update({
+      where: { username: 'admin' },
+      data: { password: adminPassword }
+    });
+    return null;
+  }
 
-  // İlk çalıştırma: güvenli rastgele şifre üret
-  const rawPassword = crypto.randomBytes(8).toString('base64url'); // ~11 karakter, URL-güvenli
-  const adminPassword = await bcrypt.hash(rawPassword, 12);
   await prisma.user.create({
     data: { username: 'admin', password: adminPassword, role: 'ADMIN', mustChangePassword: true },
   });
-  console.log('✅ Admin kullanıcısı oluşturuldu');
-  return rawPassword; // Yalnızca ilk çalıştırmada dön
+  console.log('✅ Admin kullanıcısı oluşturuldu (admin / admin123)');
+  return 'admin123';
 }
 
 /** Belirtilen portun kullanımda olup olmadığını kontrol eder */

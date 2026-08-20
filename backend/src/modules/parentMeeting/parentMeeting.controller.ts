@@ -88,7 +88,7 @@ class ParentMeetingController {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="veli-imza-sirkusu-${fileLabel}.pdf"`,
+        `inline; filename="veli-imza-sirkusu-${fileLabel}.pdf"`,
       );
 
       const stream = fs.createReadStream(pdfPath);
@@ -104,3 +104,4 @@ class ParentMeetingController {
 }
 
 export const parentMeetingController = new ParentMeetingController();
+

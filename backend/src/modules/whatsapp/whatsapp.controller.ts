@@ -122,9 +122,11 @@ export const whatsappController = {
   /** POST /api/whatsapp/disconnect */
   async disconnect(req: Request, res: Response, next: NextFunction) {
     try {
-      await whatsappService.disconnect();
-      res.json({ success: true, message: 'Bağlantı kesildi ve oturum silindi.' });
-    } catch (err) { next(err); }
+      await whatsappService.disconnect(true); // true = clear auth
+      res.json({ message: 'WhatsApp bağlantısı kesildi' });
+    } catch (error) {
+      next(error);
+    }
   },
 
   /** POST /api/whatsapp/send/absenteeism/:id

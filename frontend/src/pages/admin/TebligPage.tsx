@@ -125,15 +125,10 @@ export default function TebligPage() {
       }, { responseType: 'blob' });
 
       const url = URL.createObjectURL(res.data);
-      const a   = document.createElement('a');
-      a.href    = url;
-      const safeName = adiSoyadi.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '-');
-      a.download = `teblig-tebellug-${safeName}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setSuccess('Belge başarıyla oluşturuldu ve indirildi.');
+      const newWin = window.open(url, '_blank');
+      if (!newWin) window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setSuccess('Belge başarıyla oluşturuldu, yeni sekmede açılıyor.');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Bilinmeyen hata oluştu.');
     } finally {

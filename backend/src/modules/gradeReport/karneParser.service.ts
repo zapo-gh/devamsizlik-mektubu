@@ -117,6 +117,11 @@ async function extractAllPagesText(pdfPath: string): Promise<string[]> {
     const page = doc.loadPage(i);
     const text: string = page.toStructuredText('preserve-whitespace').asText();
     pages.push(text);
+    
+    // Yield to event loop to avoid blocking for large PDFs
+    if (i % 10 === 0) {
+      await new Promise(r => setTimeout(r, 0));
+    }
   }
   return pages;
 }

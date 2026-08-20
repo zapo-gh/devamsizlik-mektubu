@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useSettings } from '../../context/SettingsContext';
@@ -50,7 +50,7 @@ export default function ParentMeetingPage() {
   const clearAll  = () => setSelectedClasses([]);
 
   const handlePrintAction = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: 'Veli_Toplantisi_Imza_Sirkusu',
     onAfterPrint: () => {
       setIsPrinting(false);
@@ -329,3 +329,4 @@ export default function ParentMeetingPage() {
     </div>
   );
 }
+

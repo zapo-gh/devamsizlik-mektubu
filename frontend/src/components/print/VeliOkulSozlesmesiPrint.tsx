@@ -19,7 +19,7 @@ export const VeliOkulSozlesmesiPrint: React.FC<VeliOkulSozlesmesiProps> = ({ sch
     <div className="print-document" style={{ 
       fontFamily: '"Times New Roman", Times, serif', 
       fontSize: '8.5px', 
-      lineHeight: '1.15', 
+      lineHeight: '1.1', 
       color: 'black', 
       padding: '0 10px',
       display: 'flex',
@@ -66,7 +66,7 @@ export const VeliOkulSozlesmesiPrint: React.FC<VeliOkulSozlesmesiProps> = ({ sch
             <li>Okulun hedeflerine uygun planlamalara öğrenci ve velilerin katılımını ve desteğini beklemek</li>
           </ul>
 
-          <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginTop: '10px', marginBottom: '4px' }}>Sorumluluklar:</div>
+          <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginTop: '6px', marginBottom: '3px' }}>Sorumluluklar:</div>
           <ul style={{ paddingLeft: '12px', margin: 0, textAlign: 'justify', listStyleType: 'disc' }}>
             <li>Öğrencilerin akademik ve sosyal gelişimlerini destekleyecek materyal, ekipman ve teknolojik donanım sağlamak.</li>
             <li>Okulda olumlu bir kültür yaratmak.</li>
@@ -118,7 +118,7 @@ export const VeliOkulSozlesmesiPrint: React.FC<VeliOkulSozlesmesiProps> = ({ sch
             <li>Ders dışı etkinliklerle ilgili sorumluluklar dâhilinde okulun her türlü olanağından yararlanma</li>
           </ul>
 
-          <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginTop: '10px', marginBottom: '4px' }}>Sorumluluklar:</div>
+          <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginTop: '6px', marginBottom: '3px' }}>Sorumluluklar:</div>
           <ul style={{ paddingLeft: '12px', margin: 0, textAlign: 'justify', listStyleType: 'disc' }}>
             <li>Okulda bulunan kişilerin haklarına ve kişisel farklılıklarına saygı göstereceğim.</li>
             <li>Ders dışı etkinliklere katılıp bu etkinliklerden en iyi şekilde yararlanacağım.</li>
@@ -160,7 +160,7 @@ export const VeliOkulSozlesmesiPrint: React.FC<VeliOkulSozlesmesiProps> = ({ sch
             <li>Okulun sunduğu tüm sosyal ve kültürel etkinliklerden yararlanmak</li>
           </ul>
 
-          <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginTop: '10px', marginBottom: '4px' }}>Sorumluluklar:</div>
+          <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginTop: '6px', marginBottom: '3px' }}>Sorumluluklar:</div>
           <ul style={{ paddingLeft: '12px', margin: 0, textAlign: 'justify', listStyleType: 'disc' }}>
             <li>Çocuğumun her gün okula zamanında, öğrenmeye hazır, okulun kılık-kıyafet kurallarına uygun bir şekilde gitmesine yardımcı olacağım.</li>
             <li>Okulun duyuru ve yayınlarını takip edeceğim.</li>
@@ -185,30 +185,30 @@ export const VeliOkulSozlesmesiPrint: React.FC<VeliOkulSozlesmesiProps> = ({ sch
       </div>
       </div>
 
-      <div style={{ marginTop: '10px' }}>
-        <p style={{ fontStyle: 'italic', textAlign: 'center', marginBottom: '10px' }}>
+      <div style={{ marginTop: '6px' }}>
+        <p style={{ fontStyle: 'italic', textAlign: 'center', marginBottom: '4px' }}>
           Sözleşmenin tarafı olarak yukarıda sunulan hak ve sorumluluklarımı okudum. Haklarıma sahip çıkacağıma ve sorumluluklarımı yerine getireceğime söz veririm.
         </p>
 
-        <table style={{ width: '100%', textAlign: 'center', marginBottom: '10px' }}>
+        <table style={{ width: '100%', textAlign: 'center', marginBottom: '4px' }}>
           <tbody>
             <tr>
               <td style={{ width: '33%' }}>
               <strong>Öğrenci</strong><br />
               {student ? student.fullName : 'Adı Soyadı'}
-              <div style={{ height: '20px' }}></div>
+              <div style={{ height: '12px' }}></div>
               İmza
             </td>
             <td style={{ width: '33%' }}>
               <strong>Öğrenci Velisi</strong><br />
               {student?.parents?.[0] ? student.parents[0].fullName : 'Adı Soyadı'}
-              <div style={{ height: '20px' }}></div>
+              <div style={{ height: '12px' }}></div>
               İmza
             </td>
             <td style={{ width: '33%' }}>
               <strong>Okul Müdürü</strong><br />
               {principalName || 'Adı Soyadı'}
-              <div style={{ height: '20px' }}></div>
+              <div style={{ height: '12px' }}></div>
               İmza
             </td>
           </tr>

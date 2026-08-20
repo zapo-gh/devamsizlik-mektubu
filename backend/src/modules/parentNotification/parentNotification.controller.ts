@@ -33,13 +33,10 @@ class ParentNotificationController {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="veli-bildirim-tutanagi-${absenceDay}.pdf"`,
+        `inline; filename="veli-bildirim-tutanagi-${absenceDay}.pdf"`,
       );
 
       const stream = fs.createReadStream(pdfPath);
-      stream.on('end', () => {
-        fs.unlink(pdfPath, () => {});
-      });
       stream.pipe(res);
     } catch (err) {
       next(err);
@@ -48,3 +45,4 @@ class ParentNotificationController {
 }
 
 export const parentNotificationController = new ParentNotificationController();
+

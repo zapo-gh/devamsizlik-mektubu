@@ -6,6 +6,7 @@ import { ActionModal } from '../../../components/ui/ActionModal';
 import { UsersRound, Plus, Trash2, Search, Printer, FileText } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { GuidanceReportPrintTemplate } from './print/GuidanceReportPrintTemplate';
+import { useSettings } from '../../../context/SettingsContext';
 
 export type StaffRole = 'KURUM_PERSONELI' | 'MUDUR_YARDIMCISI' | 'REHBER_OGRETMEN' | 'SINIF_REHBER_OGRETMEN';
 
@@ -20,6 +21,7 @@ interface StaffMember {
 
 export default function ClassTeachersPage() {
   const { confirm, alert } = useConfirm();
+  const { settings } = useSettings();
   const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export default function ClassTeachersPage() {
       staffName: staff.name,
       month: 'Eylül', 
       activities: '',
-      academicYear: '2025-2026'
+      academicYear: settings?.academicYear || ''
     });
     setPrintModalOpen(true);
   };

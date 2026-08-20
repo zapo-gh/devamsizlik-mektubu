@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { gradeReportController } from './gradeReport.controller';
 import { karneUpload } from './karneUpload.middleware';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
+import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ const router = Router();
 router.use(authMiddleware, adminOnly);
 
 /** Karne yükle + analiz et */
-router.post('/analyze', karneUpload.single('karne'), gradeReportController.analyze);
+router.post('/analyze', karneUpload.single('karne'), validateMagicBytes(['application/pdf']), gradeReportController.analyze);
 
 /** Rapor listesi */
 router.get('/', gradeReportController.list);
@@ -37,7 +38,7 @@ router.patch('/students/:studentRecordId/match', gradeReportController.updateMat
 
 /** Debug: ham metin + parse sonucu — yalnızca geliştirme ortamında */
 if (process.env.NODE_ENV !== 'production') {
-  router.post('/debug-parse', karneUpload.single('karne'), gradeReportController.debugParse);
+  router.post('/debug-parse', karneUpload.single('karne'), validateMagicBytes(['application/pdf']), gradeReportController.debugParse);
 }
 
 export default router;

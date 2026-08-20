@@ -109,7 +109,7 @@ class GradeReportController {
 
       const fileName = path.basename(pdfPath);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
       fs.createReadStream(pdfPath).pipe(res);
     } catch (err) {
       next(err);
@@ -168,3 +168,4 @@ class GradeReportController {
 }
 
 export const gradeReportController = new GradeReportController();
+

@@ -33,8 +33,12 @@ export class StudentsService {
         { className: { contains: sTitle } },
       ];
     }
-    if (status === 'ACTIVE' || status === 'INACTIVE') {
-      where.status = status;
+    if (status === 'ALL') {
+      // get both
+    } else if (status === 'INACTIVE') {
+      where.status = 'INACTIVE';
+    } else {
+      where.status = 'ACTIVE';
     }
 
     const [students, total] = await Promise.all([
@@ -169,26 +173,37 @@ export class StudentsService {
     return prisma.student.update({ where: { id }, data });
   }
 
-  async delete(id: string) {
+  async delete(id: string, userId: string) {
     const student = await prisma.student.findUnique({ where: { id } });
     if (!student) {
       throw new AppError('Öğrenci bulunamadı.', 404);
     }
 
-    await prisma.student.delete({ where: { id } });
-    return { message: 'Öğrenci başarıyla silindi.' };
-  }
-
-  async bulkDelete(ids: string[]) {
-    if (!ids || ids.length === 0) {
-      throw new AppError('Silinecek öğrenci seçilmedi.', 400);
-    }
-
-    const result = await prisma.student.deleteMany({
-      where: { id: { in: ids } },
+    await prisma.student.update({ 
+      where: { id },
+      data: { status: 'INACTIVE' } 
     });
 
-    return { message: `${result.count} öğrenci başarıyla silindi.`, deletedCount: result.count };
+    const { AuditService } = require('../shared/utils/audit.service');
+    await AuditService.log(userId, 'SOFT_DELETE_STUDENT', 'Student', id, { schoolNumber: student.schoolNumber, fullName: student.fullName });
+
+    return { message: 'Öğrenci başarıyla pasife alındı.' };
+  }
+
+  async bulkDelete(ids: string[], userId: string) {
+    if (!ids || ids.length === 0) {
+      throw new AppError('Pasife alınacak öğrenci seçilmedi.', 400);
+    }
+
+    const result = await prisma.student.updateMany({
+      where: { id: { in: ids } },
+      data: { status: 'INACTIVE' }
+    });
+
+    const { AuditService } = require('../shared/utils/audit.service');
+    await AuditService.log(userId, 'BULK_SOFT_DELETE_STUDENT', 'Student', 'Multiple', { ids });
+
+    return { message: `${result.count} öğrenci başarıyla pasife alındı.`, deletedCount: result.count };
   }
 
   async assignParent(studentId: string, parentId: string) {
@@ -222,14 +237,17 @@ export class StudentsService {
 
     const phone = data.phone.trim();
     const username = phone;
-    const passwordRaw = phone.slice(-6);
+    
+    // Rastgele 6 haneli şifre üret ve ilk girişte değiştirilmesini zorunlu kıl
+    const crypto = require('crypto');
+    const passwordRaw = crypto.randomBytes(3).toString('hex');
     const passwordHash = await bcrypt.hash(passwordRaw, 10);
 
     return prisma.$transaction(async (tx) => {
       let user = await tx.user.findUnique({ where: { username } });
       if (!user) {
         user = await tx.user.create({
-          data: { username, password: passwordHash, role: 'PARENT' },
+          data: { username, password: passwordHash, role: 'PARENT', mustChangePassword: true },
         });
       }
 
@@ -250,10 +268,15 @@ export class StudentsService {
         data: { parents: { connect: { id: parent.id } } },
       });
 
-      return tx.student.findUnique({
+      const updatedStudent = await tx.student.findUnique({
         where: { id: studentId },
-        include: { parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } } },
+        include: { parents: true },
       });
+      
+      return {
+        ...updatedStudent,
+        generatedPassword: passwordRaw
+      };
     });
   }
 
