@@ -61,7 +61,7 @@ try {
   }
 
   if (fs.existsSync(prismaScript)) {
-    execSync(`"${process.execPath}" "${prismaScript}" db push --accept-data-loss --skip-generate`, { 
+    execSync(`"${process.execPath}" "${prismaScript}" migrate deploy`, { 
       env: process.env, 
       stdio: 'inherit' 
     });

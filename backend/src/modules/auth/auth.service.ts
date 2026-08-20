@@ -19,7 +19,7 @@ export class AuthService {
 
     const expiresIn = rememberMe ? '30d' : config.jwt.expiresIn;
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { userId: user.id, role: user.role, mustChangePassword: user.mustChangePassword },
       config.jwt.secret,
       { expiresIn } as jwt.SignOptions
     );

@@ -51,6 +51,37 @@ const PageLoader = () => (
 );
 
 function App() {
+  const [backendReady, setBackendReady] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:4000/api/health');
+        if (res.ok && mounted) {
+          setBackendReady(true);
+        } else if (mounted) {
+          setTimeout(checkHealth, 500);
+        }
+      } catch {
+        if (mounted) {
+          setTimeout(checkHealth, 500);
+        }
+      }
+    };
+    checkHealth();
+    return () => { mounted = false; };
+  }, []);
+
+  if (!backendReady) {
+    return (
+      <div className="flex flex-col h-screen w-full items-center justify-center bg-slate-950 text-white">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-4" />
+        <p className="text-slate-400">Sistem başlatılıyor, lütfen bekleyin...</p>
+      </div>
+    );
+  }
+
   return (
     <AuthProvider>
       <SettingsProvider>

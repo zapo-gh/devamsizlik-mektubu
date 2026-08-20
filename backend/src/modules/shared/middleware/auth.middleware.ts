@@ -7,6 +7,7 @@ import { requestContext } from '../utils/asyncLocalStorage';
 export interface JwtPayload {
   userId: string;
   role: 'ADMIN' | 'PARENT';
+  mustChangePassword?: boolean;
 }
 
 declare global {
@@ -26,6 +27,18 @@ export const authMiddleware = (req: Request, _res: Response, next: NextFunction)
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+    
+    if (decoded.mustChangePassword) {
+      const allowedPaths = ['/auth/change-password', '/auth/profile', '/auth/logout'];
+      // Exact match or if the current request URL starts with one of the allowed paths
+      // Typically req.originalUrl is used, but req.path is fine since the router handles prefixes
+      // req.originalUrl could be /api/auth/change-password
+      const isAllowed = allowedPaths.some(p => req.originalUrl.includes(p));
+      if (!isAllowed) {
+        throw new AppError('Lütfen devam etmeden önce varsayılan şifrenizi değiştirin.', 403);
+      }
+    }
+
     req.user = decoded;
     
     // Set global context for Prisma Audit Extension
