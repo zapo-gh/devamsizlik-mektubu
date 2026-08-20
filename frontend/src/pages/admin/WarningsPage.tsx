@@ -5,7 +5,8 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { ActionModal } from '../../components/ui/ActionModal';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { AlertTriangle, Plus, Search, Eye, FileText, Smartphone, Trash2, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Plus, Search, Eye, FileText, Smartphone, Trash2, ShieldAlert, Printer } from 'lucide-react';
+import { printPdfBlob } from '../../utils/printPdf';
 
 interface StaffMember {
   id: string;
@@ -229,10 +230,7 @@ export default function WarningsPage() {
   const handleViewPdf = async (id: string) => {
     try {
       const response = await api.get(`/warnings/${id}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const newWin = window.open(url, '_blank');
-      if (!newWin) window.location.href = url;
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      printPdfBlob(new Blob([response.data], { type: 'application/pdf' }));
     } catch {
       await alert('PDF görüntüleme başarısız.');
     }
@@ -358,7 +356,7 @@ export default function WarningsPage() {
             <Eye size={16}/>
           </button>
           <button onClick={() => handleViewPdf(r.id)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded shadow-sm transition" title="PDF Görüntüle">
-            <FileText size={16}/>
+            <Printer size={16}/>
           </button>
           {waConnected && (
             r.waSentAt ? (
@@ -609,7 +607,7 @@ export default function WarningsPage() {
                 onClick={() => handleViewPdf(selectedRecord.id)}
                 className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 rounded-lg text-sm font-medium transition flex items-center gap-2"
               >
-                <FileText size={16}/> PDF Görüntüle
+                <Printer size={16}/> Yazdır
               </button>
             </div>
           </div>

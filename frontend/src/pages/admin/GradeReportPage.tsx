@@ -3,8 +3,9 @@ import { PDFDocument } from 'pdf-lib';
 import api from '../../services/api';
 import { useConfirm } from '../../hooks/useConfirm';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { printPdfBlob } from '../../utils/printPdf';
 import { ActionModal } from '../../components/ui/ActionModal';
-import { LineChart, UploadCloud, Archive, ClipboardList, Trash2, FileText, Check, AlertTriangle, Eye, Download, Search } from 'lucide-react';
+import { LineChart, UploadCloud, Archive, ClipboardList, Trash2, FileText, Check, AlertTriangle, Eye, Download, Search, Loader2, Printer } from 'lucide-react';
 
 interface FailedSubject { subject: string; grade: number; }
 interface StudentRecord { id: string; fullName: string; className: string; schoolNumber?: string; tcKimlikNo?: string; failedSubjects: FailedSubject[]; dbStudentName?: string; matched: boolean; pdfPath?: string; }
@@ -120,9 +121,7 @@ export default function GradeReportPage() {
     try {
       const res = await api.get(`/grade-reports/students/${studentId}/pdf`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const newWin = window.open(url, '_blank');
-      if (!newWin) { window.location.href = url; }
+      printPdfBlob(blob);
     } catch { setError('PDF görüntüleme başarısız.'); }
   };
 
@@ -146,10 +145,7 @@ export default function GradeReportPage() {
 
       const mergedBytes = await mergedPdf.save();
       const blob = new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const newWin = window.open(url, '_blank');
-      if (!newWin) window.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      printPdfBlob(blob);
     } catch { setError('Toplu PDF birleştirme başarısız.'); }
     finally { setBulkDownloading(false); }
   };
@@ -432,8 +428,13 @@ export default function GradeReportPage() {
             <div className="bg-blue-50 px-6 py-3 border-b border-blue-100 flex items-center gap-4 animate-in fade-in">
               <span className="text-sm font-bold text-blue-800">✓ {selectedIds.size} öğrenci seçildi</span>
               {selectedHavePdfs && (
-                <button onClick={handleBulkDownload} disabled={bulkDownloading} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition shadow-sm disabled:opacity-50 flex items-center gap-2">
-                  {bulkDownloading ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"/> Birleştiriliyor...</> : <><Download size={14}/> Seçilenleri Tek PDF'e İndir</>}
+                <button
+                  onClick={handleBulkDownload}
+                  disabled={bulkDownloading}
+                  className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {bulkDownloading ? <Loader2 size={18} className="animate-spin" /> : <Printer size={18} />}
+                  {bulkDownloading ? 'Birleştiriliyor...' : 'Seçilenleri Yazdır'}
                 </button>
               )}
               <button onClick={() => setSelectedIds(new Set())} className="text-xs font-semibold text-gray-500 hover:text-gray-700 underline underline-offset-2">Seçimi Temizle</button>
@@ -489,8 +490,12 @@ export default function GradeReportPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {hasPdf ? (
-                          <button onClick={() => handleDownload(stu.id, stu.fullName)} className="p-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200" title="PDF Görüntüle">
-                            <FileText size={18} />
+                          <button
+                            onClick={() => handleDownload(stu.id, stu.fullName)}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                            title="Yazdır"
+                          >
+                            <Printer size={18} />
                           </button>
                         ) : genRes?.error ? (
                           <span title={genRes.error} className="text-red-500"><AlertTriangle size={18}/></span>

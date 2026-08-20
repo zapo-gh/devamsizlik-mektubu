@@ -244,8 +244,10 @@ export class StudentsService {
     const passwordHash = await bcrypt.hash(passwordRaw, 10);
 
     return prisma.$transaction(async (tx) => {
+      let isNewUser = false;
       let user = await tx.user.findUnique({ where: { username } });
       if (!user) {
+        isNewUser = true;
         user = await tx.user.create({
           data: { username, password: passwordHash, role: 'PARENT', mustChangePassword: true },
         });
@@ -275,7 +277,10 @@ export class StudentsService {
       
       return {
         ...updatedStudent,
-        generatedPassword: passwordRaw
+        // Yalnızca yeni oluşturulan kullanıcılar için şifre döndür.
+        // Mevcut veli varsa null döner — eski şifre geçerliliğini korur.
+        generatedPassword: isNewUser ? passwordRaw : null,
+        isExistingUser: !isNewUser,
       };
     });
   }

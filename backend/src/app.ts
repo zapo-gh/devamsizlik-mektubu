@@ -36,6 +36,7 @@ import studentClubRoutes from './modules/studentClub/studentClub.routes';
 import procurementRoutes from './modules/procurement/procurement.routes';
 import supplierRoutes from './modules/supplier/supplier.routes';
 import orderLetterRoutes from './modules/orderLetter/orderLetter.routes';
+import auditRoutes from './modules/audit/audit.routes';
 
 const app = express();
 
@@ -113,6 +114,7 @@ app.use('/api/student-club', studentClubRoutes);
 app.use('/api/procurement', procurementRoutes);
 app.use('/api/supplier', supplierRoutes);
 app.use('/api/order-letter', orderLetterRoutes);
+app.use('/api/audit', auditRoutes);
 
 // WhatsApp: önceki oturum varsa otomatik bağlan
 // WhatsApp otomatik bağlantı devre dışı — kullanıcı /admin/whatsapp sayfasından Bağlan butonuna basmalı

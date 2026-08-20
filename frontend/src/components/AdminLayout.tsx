@@ -14,6 +14,7 @@ import {
   FileCheck,
   MessageSquare,
   Settings,
+  Activity,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -149,15 +150,13 @@ export default function AdminLayout() {
         {/* Menü Öğeleri */}
         <nav className={`flex-1 overflow-y-auto flex flex-col ${collapsed ? 'py-3 px-2' : 'py-3 px-2.5'}`}>
           {/* Genel */}
-          {!collapsed && <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2 mt-1 px-3">Genel</span>}
+          {!collapsed && <span className="text-[10px] font-bold text-cyan-300/80 uppercase tracking-wider mb-2 mt-1 px-3">Genel</span>}
           {collapsed && <div className="h-2" />}
           <NavItem to="/admin" icon={LayoutDashboard} label="Gösterge Paneli" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/students" icon={Users} label="Öğrenci Listesi" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/staff" icon={UserCheck} label="Personel Havuzu" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/class-teachers" icon={UsersRound} label="Sınıf Rehber Öğretmenleri" onClick={closeSidebar} collapsed={collapsed} />
 
           {/* Öğrenci İşlemleri */}
-          {!collapsed && <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2 mt-4 px-3">Öğrenci İşlemleri</span>}
+          {!collapsed && <span className="text-[10px] font-bold text-purple-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Öğrenci İşlemleri</span>}
           {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
           <NavItem to="/admin/absenteeism" icon={Mail} label="Devamsızlık Mektubu" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/warnings" icon={AlertTriangle} label="Yazılı Uyarılar" onClick={closeSidebar} collapsed={collapsed} />
@@ -166,37 +165,52 @@ export default function AdminLayout() {
           <NavItem to="/admin/parent-notification" icon={Bell} label="ÖMYK Devamsızlık Bildirimi" onClick={closeSidebar} collapsed={collapsed} />
 
           {/* Evrak İşlemleri */}
-          {!collapsed && <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2 mt-4 px-3">Evrak İşlemleri</span>}
+          {!collapsed && <span className="text-[10px] font-bold text-amber-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Evrak İşlemleri</span>}
           {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
           <NavItem to="/admin/matbu-evraklar" icon={Printer} label="Matbu Evraklar" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/parent-meeting" icon={FileText} label="Veli Toplantısı İmza Sirküsü" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/teblig" icon={FileCheck} label="Tebliğ – Tebellüğ Belgesi" onClick={closeSidebar} collapsed={collapsed} />
 
-          {/* Lise & İdari Modüller */}
-          {!collapsed && <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2 mt-4 px-3">Lise & İdari Modüller</span>}
+          {/* Personel & İnsan Kaynakları */}
+          {!collapsed && <span className="text-[10px] font-bold text-blue-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Personel & İnsan Kayn.</span>}
           {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
-          <NavItem to="/admin/duty-schedule" icon={CalendarRange} label="Nöbet Çizelgesi" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/attendance-sheet" icon={FileSignature} label="Personel İmza Çizelgesi" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/board-meeting" icon={UsersRound} label="Öğretmenler Kurulu" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/commission" icon={Network} label="Kurul ve Komisyonlar" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/annual-plan" icon={CalendarDays} label="Yıllık Çalışma Planı" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/commemorative-days" icon={Flag} label="Belirli Gün ve Haftalar" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/social-activity" icon={PartyPopper} label="Sosyal Etkinlik Planı" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/parent-association" icon={Handshake} label="Okul Aile Birliği" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/field-trip" icon={Bus} label="Gezi Planı" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/extracurricular" icon={Dumbbell} label="Ders Dışı Egzersiz Planı" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/procurement" icon={FileSignature} label="Doğrudan Temin (22/d)" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/supplier" icon={Building2} label="Firma Rehberi" onClick={closeSidebar} collapsed={collapsed} />
-          <NavItem to="/admin/travel-allowance" icon={Calculator} label="Yolluk Hesaplama" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/staff" icon={UserCheck} label="Personel Havuzu" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/staff-transfer" icon={ArrowRightLeft} label="Personel Nakil Bildirimi" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/attendance-sheet" icon={FileSignature} label="Personel İmza Çizelgesi" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/duty-schedule" icon={CalendarRange} label="Nöbet Çizelgesi" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/travel-allowance" icon={Calculator} label="Yolluk Hesaplama" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/class-teachers" icon={UsersRound} label="Sınıf Rehber Öğretmenleri" onClick={closeSidebar} collapsed={collapsed} />
+
+          {/* Eğitim & Öğretim */}
+          {!collapsed && <span className="text-[10px] font-bold text-emerald-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Eğitim & Öğretim</span>}
+          {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
+          <NavItem to="/admin/board-meeting" icon={UsersRound} label="Öğretmenler Kurulu" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/social-activity" icon={PartyPopper} label="Sosyal Etkinlik Planı" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/student-club" icon={Trophy} label="Öğrenci Kulüpleri" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/extracurricular" icon={Dumbbell} label="Ders Dışı Egzersiz Planı" onClick={closeSidebar} collapsed={collapsed} />
+
+          {/* Kurullar & Planlama */}
+          {!collapsed && <span className="text-[10px] font-bold text-orange-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Kurullar & Planlama</span>}
+          {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
+          <NavItem to="/admin/annual-plan" icon={CalendarDays} label="Yıllık Çalışma Planı" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/commission" icon={Network} label="Kurul ve Komisyonlar" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/parent-association" icon={Handshake} label="Okul Aile Birliği" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/field-trip" icon={Bus} label="Okul Gezi Planı" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/commemorative-days" icon={Flag} label="Belirli Gün ve Haftalar" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/holidays" icon={CalendarOff} label="Resmi Tatiller" onClick={closeSidebar} collapsed={collapsed} />
 
+          {/* Satın Alma & Mali İşler */}
+          {!collapsed && <span className="text-[10px] font-bold text-rose-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Satın Alma & Mali İşler</span>}
+          {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
+          <NavItem to="/admin/procurement" icon={FileSignature} label="Doğrudan Temin (22/d)" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/supplier" icon={Building2} label="Firma Rehberi" onClick={closeSidebar} collapsed={collapsed} />
+
           {/* Sistem */}
-          {!collapsed && <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2 mt-4 px-3">Sistem</span>}
+          {!collapsed && <span className="text-[10px] font-bold text-teal-300/80 uppercase tracking-wider mb-2 mt-4 px-3">Sistem</span>}
           {collapsed && <div className="h-3 border-t border-white/10 my-1.5" />}
           <NavItem to="/admin/whatsapp" icon={MessageSquare} label="WhatsApp Bağlantısı" onClick={closeSidebar} collapsed={collapsed} />
           <NavItem to="/admin/settings" icon={Settings} label="Ayarlar" onClick={closeSidebar} collapsed={collapsed} />
+          <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem İzlenebilirliği (Audit)" onClick={closeSidebar} collapsed={collapsed} />
         </nav>
 
         {/* Alt Bilgi & Çıkış */}

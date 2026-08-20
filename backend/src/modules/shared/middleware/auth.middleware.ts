@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { AppError } from './errorHandler.middleware';
+import { requestContext } from '../utils/asyncLocalStorage';
 
 export interface JwtPayload {
   userId: string;
@@ -26,7 +27,11 @@ export const authMiddleware = (req: Request, _res: Response, next: NextFunction)
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
     req.user = decoded;
-    next();
+    
+    // Set global context for Prisma Audit Extension
+    requestContext.run({ userId: decoded.userId, role: decoded.role }, () => {
+      next();
+    });
   } catch (error) {
     if (error instanceof AppError) {
       return next(error);

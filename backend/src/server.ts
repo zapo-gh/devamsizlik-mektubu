@@ -7,22 +7,19 @@ import * as whatsappService from './modules/whatsapp/whatsapp.service';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import * as net from 'net';
+import { BackupService } from './modules/shared/utils/backup.service';
 
 let httpServer: http.Server | null = null;
 
 async function seedAdmin(): Promise<string | null> {
-  const adminPassword = await bcrypt.hash('admin123', 12);
   const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
   
   if (existing) {
-    // Şifreyi her ihtimale karşı admin123 olarak sıfırla (geliştirme aşaması için)
-    await prisma.user.update({
-      where: { username: 'admin' },
-      data: { password: adminPassword }
-    });
+    // Mevcut admin hesabına asla dokunma — kullanıcının değiştirdiği şifre korunur
     return null;
   }
 
+  const adminPassword = await bcrypt.hash('admin123', 12);
   await prisma.user.create({
     data: { username: 'admin', password: adminPassword, role: 'ADMIN', mustChangePassword: true },
   });
@@ -63,6 +60,11 @@ export async function startServer(): Promise<void> {
   // Veritabanı bağlantısını test et
   await prisma.$connect();
   console.log('✅ Database connected successfully');
+
+  // Günlük otomatik yedeklemeyi başlat (günde sadece 1 kez çalışır)
+  await BackupService.runDailyBackup().catch((err: any) => {
+    console.error('⚠️ Otomatik yedekleme başarısız oldu:', err);
+  });
 
   // Sunucuyu başlat — listen callback'i resolve ettikten sonra dön
   await new Promise<void>((resolve, reject) => {

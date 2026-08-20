@@ -48,6 +48,31 @@ process.env.OTP_MAX_ATTEMPTS = '3';
 const { startServer } = require('./server');
 
 console.log('🚀 [Tauri-Sidecar] OkulDesk backend başlatılıyor (Port: 4000)...');
+
+try {
+  console.log('🔄 [Tauri-Sidecar] Veritabanı şeması eşitleniyor (Prisma db push)...');
+  const { execSync } = require('child_process');
+  
+  // Tauri production (bundle) klasöründeki veya dev ortamındaki prisma binary yolunu bul
+  let prismaScript = path.resolve(__dirname, '../node_modules/prisma/build/index.js');
+  if (!fs.existsSync(prismaScript)) {
+    // Klasör yapısına göre alternatif yolu dene (prod/dev farkları)
+    prismaScript = path.resolve(process.cwd(), 'node_modules/prisma/build/index.js');
+  }
+
+  if (fs.existsSync(prismaScript)) {
+    execSync(`"${process.execPath}" "${prismaScript}" db push --accept-data-loss --skip-generate`, { 
+      env: process.env, 
+      stdio: 'inherit' 
+    });
+    console.log('✅ [Tauri-Sidecar] Veritabanı şeması başarıyla güncellendi.');
+  } else {
+    console.warn('⚠️ [Tauri-Sidecar] Prisma CLI bulunamadı, şema eşitlemesi atlanıyor.');
+  }
+} catch (err: any) {
+  console.error('❌ [Tauri-Sidecar] Veritabanı eşitleme hatası:', err.message);
+}
+
 startServer()
   .then(() => {
     console.log('✅ [Tauri-Sidecar] Backend hazır: http://127.0.0.1:4000');

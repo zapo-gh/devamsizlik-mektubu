@@ -4,7 +4,8 @@ import { useConfirm } from '../../hooks/useConfirm';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ActionModal } from '../../components/ui/ActionModal';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { Mail, Plus, Search, ShieldAlert, FileText, Smartphone, Trash2 } from 'lucide-react';
+import { FileText, Search, Plus, Filter, RefreshCw, Send, History, Trash2, Smartphone, ShieldAlert, CheckCircle2, Clock, MapPin, Printer, Mail } from 'lucide-react';
+import { printPdfBlob } from '../../utils/printPdf';
 
 interface Student {
   id: string;
@@ -396,10 +397,7 @@ export default function AbsenteeismPage() {
                             onViewPDF={async () => {
                               try {
                                 const response = await api.get(`/absenteeism/${r.id}/pdf`, { responseType: 'blob' });
-                                const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-                                const newWin = window.open(url, '_blank');
-                                if (!newWin) window.location.href = url;
-                                setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                                printPdfBlob(new Blob([response.data], { type: 'application/pdf' }));
                               } catch (err) { alert('Mektup açılamadı.'); }
                             }}
                           />

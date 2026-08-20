@@ -350,7 +350,9 @@ export default function StudentListPage() {
         });
 
         if (response.data?.data?.generatedPassword) {
-          alert(`Yeni veli hesabı oluşturuldu.\n\nGeçici Şifre: ${response.data.data.generatedPassword}\n\nLütfen bu şifreyi veliye iletin. Veli ilk girişinde şifresini değiştirmek zorundadır.`);
+          alert(`✅ Yeni veli hesabı oluşturuldu.\n\nGeçici Şifre: ${response.data.data.generatedPassword}\n\nLütfen bu şifreyi veliye iletin. Veli ilk girişinde şifresini değiştirmek zorundadır.`);
+        } else if (response.data?.data?.isExistingUser) {
+          alert(`ℹ️ Bu telefon numarası zaten sistemde kayıtlı.\n\nVeli mevcut hesabıyla bağlandı. Şifre değiştirilmedi.`);
         }
       }
 

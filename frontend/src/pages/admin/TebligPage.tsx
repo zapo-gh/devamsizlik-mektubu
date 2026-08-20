@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { FileSignature, User, FileText, Calendar, Clock, PenTool, CheckSquare, Square, Download, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { printPdfBlob } from '../../utils/printPdf';
+import { FileSignature, User, FileText, Calendar, Clock, PenTool, CheckSquare, Square, Download, Loader2, AlertTriangle, CheckCircle2, Printer } from 'lucide-react';
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -92,6 +93,20 @@ export default function TebligPage() {
     }
   };
 
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleGenerate = async () => {
     if (!adiSoyadi.trim()) {
       setError('Adı Soyadı zorunludur.');
@@ -124,11 +139,8 @@ export default function TebligPage() {
         tebellugEdenTarih: formatDate(tebellugEdenTarih),
       }, { responseType: 'blob' });
 
-      const url = URL.createObjectURL(res.data);
-      const newWin = window.open(url, '_blank');
-      if (!newWin) window.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setSuccess('Belge başarıyla oluşturuldu, yeni sekmede açılıyor.');
+      printPdfBlob(res.data);
+      setSuccess('Belge başarıyla oluşturuldu, yazdırılıyor...');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Bilinmeyen hata oluştu.');
     } finally {
@@ -383,9 +395,9 @@ export default function TebligPage() {
           disabled={loading}
         >
           {loading ? (
-            <><Loader2 size={20} className="animate-spin" /> PDF Oluşturuluyor...</>
+            <><Loader2 size={20} className="animate-spin" /> Hazırlanıyor...</>
           ) : (
-            <><Download size={20} /> Belge Oluştur (PDF)</>
+            <><Printer size={20} /> Yazdır</>
           )}
         </button>
       </div>

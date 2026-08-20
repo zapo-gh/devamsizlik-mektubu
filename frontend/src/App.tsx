@@ -22,6 +22,7 @@ const ClassTeachersPage = React.lazy(() => import('./pages/admin/modules/ClassTe
 const ParentNotificationPage = React.lazy(() => import('./pages/admin/ParentNotificationPage'));
 const TebligPage = React.lazy(() => import('./pages/admin/TebligPage'));
 const SettingsPage = React.lazy(() => import('./pages/admin/SettingsPage'));
+const AuditLogPage = React.lazy(() => import('./pages/admin/AuditLogPage'));
 const MatbuEvraklarPage = React.lazy(() => import('./pages/admin/MatbuEvraklarPage'));
 
 const DutySchedulePage = React.lazy(() => import('./pages/admin/modules/DutySchedulePage'));
@@ -109,6 +110,7 @@ function App() {
               <Route path="attendance-sheet" element={<AttendanceSheetPage />} />
               <Route path="supplier" element={<SupplierPage />} />
               <Route path="procurement" element={<ProcurementPage />} />
+              <Route path="audit-logs" element={<AuditLogPage />} />
 
               <Route path="settings" element={<SettingsPage />} />
             </Route>

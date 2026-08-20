@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { printPdfBlob } from '../../utils/printPdf';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { FileText, Users, User, Calendar, CheckSquare, Square, Download, AlertTriangle, UserCheck, Loader2, Info } from 'lucide-react';
+import { FileText, Users, User, Calendar, CheckSquare, Square, Download, AlertTriangle, UserCheck, Loader2, Info, Search } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -19,8 +20,7 @@ interface Parent {
 
 export default function ParentNotificationPage() {
   const [students,        setStudents]        = useState<Student[]>([]);
-  const [classes,         setClasses]         = useState<string[]>([]);
-  const [selectedClass,   setSelectedClass]   = useState('');
+  const [searchQuery,     setSearchQuery]     = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [absenceDay,      setAbsenceDay]      = useState<5 | 15 | 25>(5);
   const [meetingDate,     setMeetingDate]      = useState(new Date().toISOString().slice(0, 10));
@@ -40,11 +40,6 @@ export default function ParentNotificationPage() {
       .then(res => {
         const list = res.data.data?.students || [];
         setStudents(list);
-        const uniqueClasses = Array.from(new Set(list.map(s => s.className))).sort((a, b) =>
-          a.localeCompare(b, 'tr', { numeric: true }),
-        );
-        setClasses(uniqueClasses);
-        if (uniqueClasses.length > 0) setSelectedClass(uniqueClasses[0]);
       })
       .catch(() => setError('Öğrenci listesi alınamadı.'))
       .finally(() => setLoadingStudents(false));
@@ -64,7 +59,26 @@ export default function ParentNotificationPage() {
       .catch(() => {});
   }, [selectedStudent]);
 
-  const filteredStudents = students.filter(s => s.className === selectedClass);
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  const filteredStudents = students.filter(s => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return s.fullName.toLowerCase().includes(q) || s.schoolNumber.includes(q) || s.className.toLowerCase().includes(q);
+  }).slice(0, 100);
+
   const totalDays = (parseInt(excusedDays) || 0) + (parseInt(unexcusedDays) || 0);
 
   const selectStudent = (s: Student) => {
@@ -101,11 +115,8 @@ export default function ParentNotificationPage() {
         absenceData: { excusedDays, unexcusedDays, totalDays: String(totalDays) },
       }, { responseType: 'blob' });
 
-      const url = URL.createObjectURL(res.data);
-      const newWin = window.open(url, '_blank');
-      if (!newWin) window.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setSuccess(`${selectedStudent.fullName} için ${absenceDay}. gün Veli Bildirim Tutanağı oluşturuldu ve yeni sekmede açıldı.`);
+      printPdfBlob(res.data);
+      setSuccess(`${selectedStudent.fullName} için ${absenceDay}. gün Veli Bildirim Tutanağı yazdırılıyor...`);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Bilinmeyen hata');
     } finally {
@@ -122,10 +133,10 @@ export default function ParentNotificationPage() {
   const canGenerate = !!selectedStudent && excusedDays !== '' && unexcusedDays !== '';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <PageHeader
         title="ÖMYK Veli Devamsızlık Bildirimi"
-        description="Öğrenci seçin, devamsızlık bilgilerini girin ve veli bildirim tutanağını PDF olarak oluşturun."
+        description="Öğrenci arayın, devamsızlık bilgilerini girin ve veli bildirim tutanağını PDF olarak oluşturun."
         icon={<FileText size={28} className="text-indigo-600" />}
       />
 
@@ -140,131 +151,92 @@ export default function ParentNotificationPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-visible">
+        
+        {/* Adım 1: Öğrenci Seçimi */}
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Users size={20} /></div>
+            1. Öğrenci Seçimi
+          </h2>
 
-        {/* SOL: Sınıf + Öğrenci Seçimi */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
-          <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Users size={20} /></div>
-              Öğrenci Seçimi
-            </h2>
-          </div>
-
-          <div className="p-6 flex flex-col h-full bg-gray-50/30">
-            {loadingStudents ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                <Loader2 className="animate-spin mb-3 text-indigo-500" size={32} />
-                <p className="text-sm font-medium">Öğrenciler yükleniyor...</p>
-              </div>
-            ) : (
-              <>
-                {/* Sınıf chip'leri */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {classes.map(c => {
-                    const active = selectedClass === c;
-                    return (
-                      <button
-                        key={c}
-                        onClick={() => { setSelectedClass(c); setSelectedStudent(null); }}
-                        className={`
-                          px-4 py-2 rounded-lg text-sm font-bold transition-all border-2
-                          ${active 
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' 
-                            : 'border-transparent bg-white text-gray-600 hover:border-indigo-200 shadow-sm'
-                          }
-                        `}
-                      >
-                        {c}
-                      </button>
-                    );
-                  })}
+          <div className="relative z-50">
+            {!selectedStudent ? (
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  {loadingStudents ? <Loader2 size={18} className="text-indigo-500 animate-spin" /> : <Search size={18} className="text-gray-400" />}
                 </div>
+                <input
+                  type="text"
+                  placeholder="Öğrenci adı, numarası veya sınıfı ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={loadingStudents}
+                  className="w-full pl-11 pr-4 py-4 border-2 border-indigo-100 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-0 shadow-sm transition-colors bg-white text-gray-900 placeholder:text-gray-400"
+                />
 
-                {/* Öğrenci listesi */}
-                <div className="bg-white rounded-xl border border-gray-200 p-2 flex-1 overflow-y-auto max-h-[500px]">
-                  {filteredStudents.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-gray-400 text-sm">
-                      Bu sınıfta aktif öğrenci bulunamadı.
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {filteredStudents.map(s => {
-                        const selected = selectedStudent?.id === s.id;
-                        return (
+                {/* Dropdown Arama Sonuçları */}
+                {searchQuery.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-xl max-h-80 overflow-y-auto z-50">
+                    {filteredStudents.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500">Sonuç bulunamadı.</div>
+                    ) : (
+                      <div className="p-2 space-y-1">
+                        {filteredStudents.map(s => (
                           <button
                             key={s.id}
-                            onClick={() => selectStudent(s)}
-                            className={`
-                              w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all border
-                              ${selected 
-                                ? 'border-indigo-600 bg-indigo-50 shadow-sm' 
-                                : 'border-transparent hover:bg-gray-50 hover:border-gray-200'
-                              }
-                            `}
+                            onClick={() => { selectStudent(s); setSearchQuery(''); }}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all hover:bg-indigo-50 border border-transparent hover:border-indigo-100"
                           >
-                            <div className={`
-                              w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold
-                              ${selected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}
-                            `}>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold bg-indigo-100 text-indigo-600">
                               {s.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className={`text-sm truncate ${selected ? 'font-bold text-indigo-900' : 'font-semibold text-gray-700'}`}>
-                                {s.fullName}
-                              </div>
-                              <div className={`text-xs mt-0.5 ${selected ? 'text-indigo-600 font-medium' : 'text-gray-500'}`}>
-                                No: {s.schoolNumber}
-                              </div>
+                              <div className="text-sm font-bold text-gray-800">{s.fullName}</div>
+                              <div className="text-xs text-gray-500">Sınıf: {s.className} · No: {s.schoolNumber}</div>
                             </div>
                           </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-lg font-bold shrink-0 shadow-sm">
+                    {selectedStudent.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="text-base font-bold text-indigo-900">{selectedStudent.fullName}</div>
+                    <div className="text-sm text-indigo-700 font-medium">Sınıf: {selectedStudent.className} · No: {selectedStudent.schoolNumber}</div>
+                  </div>
                 </div>
-              </>
+                <button 
+                  onClick={() => { setSelectedStudent(null); setSearchQuery(''); }}
+                  className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 text-sm font-bold rounded-lg hover:bg-indigo-100 transition-colors shadow-sm"
+                >
+                  Değiştir
+                </button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* SAĞ: Ayarlar + Oluştur */}
-        <div className="flex flex-col gap-5">
+        {/* Adım 2: Tutanak Bilgileri (Öğrenci seçiliyse aktif) */}
+        <div className={`transition-all duration-300 relative z-10 ${!selectedStudent ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''}`}>
+          <div className="p-6 md:p-8">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
+              <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><Calendar size={20} /></div>
+              2. Tutanak ve Devamsızlık Bilgileri
+            </h2>
 
-          {/* Seçili öğrenci özeti */}
-          {selectedStudent ? (
-            <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center text-lg font-bold shrink-0 shadow-sm">
-                {selectedStudent.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Devamsızlık Günü Seçimi */}
               <div>
-                <div className="text-base font-bold text-indigo-900">{selectedStudent.fullName}</div>
-                <div className="text-sm text-indigo-700 font-medium">{selectedStudent.className} · No: {selectedStudent.schoolNumber}</div>
-              </div>
-            </div>
-          ) : (
-             <div className="bg-gray-50 border border-gray-200 border-dashed p-4 rounded-xl flex items-center gap-4 text-gray-400">
-               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                 <User size={24}/>
-               </div>
-               <div className="text-sm font-medium">Lütfen sol taraftan bir öğrenci seçin</div>
-             </div>
-          )}
-
-          {/* Ayarlar kartı */}
-          <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-opacity ${!selectedStudent ? 'opacity-50 pointer-events-none' : ''}`}>
-            <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Calendar size={20} /></div>
-                Tutanak Bilgileri
-              </h2>
-            </div>
-
-            <div className="p-5 space-y-6">
-              {/* Devamsızlık günü */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Devamsızlık Günü</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Tebligat Kademesi</label>
+                <div className="flex flex-col gap-3">
                   {absenceDayOptions.map(opt => {
                     const active = absenceDay === opt.value;
                     return (
@@ -273,90 +245,106 @@ export default function ParentNotificationPage() {
                         type="button"
                         onClick={() => setAbsenceDay(opt.value)}
                         className={`
-                          py-3 px-1 rounded-lg text-center transition-all border-2 flex flex-col items-center justify-center
+                          py-3.5 px-4 rounded-xl text-left transition-all border-2 flex items-center justify-between
                           ${active 
                             ? 'border-indigo-600 bg-indigo-50 shadow-sm' 
-                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                            : 'border-gray-200 bg-white hover:border-indigo-200'
                           }
                         `}
                       >
-                        <div className={`text-sm ${active ? 'font-bold text-indigo-700' : 'font-semibold text-gray-700'}`}>{opt.label}</div>
-                        <div className={`text-[10px] mt-1 ${active ? 'text-indigo-600 font-medium' : 'text-gray-500'}`}>{opt.desc}</div>
+                        <div>
+                          <div className={`text-base ${active ? 'font-bold text-indigo-800' : 'font-semibold text-gray-700'}`}>{opt.label}</div>
+                          <div className={`text-xs mt-0.5 ${active ? 'text-indigo-600 font-medium' : 'text-gray-500'}`}>{opt.desc}</div>
+                        </div>
+                        {active && <CheckSquare size={20} className="text-indigo-600" />}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Tarih */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Tutanak Tarihi</label>
-                <input 
-                  type="date"  
-                  value={meetingDate} 
-                  onChange={e => setMeetingDate(e.target.value)} 
-                  className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+              <div className="space-y-6">
+                {/* Tarih */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Tutanak Tarihi</label>
+                  <input 
+                    type="date"  
+                    value={meetingDate} 
+                    onChange={e => setMeetingDate(e.target.value)} 
+                    className="w-full p-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-0 transition-colors"
+                  />
+                </div>
 
-              {/* Devamsızlık gün sayıları */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Devamsızlık Bilgileri</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1 text-center font-medium">Özürlü (gün)</label>
-                    <input 
-                      type="number" min="0" placeholder="0" 
-                      value={excusedDays} onChange={e => setExcusedDays(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-center font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1 text-center font-medium">Özürsüz (gün)</label>
-                    <input 
-                      type="number" min="0" placeholder="0" 
-                      value={unexcusedDays} onChange={e => setUnexcusedDays(e.target.value)}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 text-center font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1 text-center font-medium">Toplam</label>
-                    <div className={`
-                      h-11 flex items-center justify-center rounded-lg border text-sm font-bold
-                      ${totalDays > 0 ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-400'}
-                    `}>
-                      {totalDays > 0 ? totalDays : '—'}
+                {/* Gün Sayıları */}
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Devamsızlık Günleri</label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1 text-center font-medium">Özürlü</label>
+                      <input 
+                        type="number" min="0" placeholder="0" 
+                        value={excusedDays} onChange={e => setExcusedDays(e.target.value)}
+                        className="w-full p-2.5 border-2 border-gray-200 rounded-lg text-base focus:border-indigo-500 focus:ring-0 text-center font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1 text-center font-medium">Özürsüz</label>
+                      <input 
+                        type="number" min="0" placeholder="0" 
+                        value={unexcusedDays} onChange={e => setUnexcusedDays(e.target.value)}
+                        className="w-full p-2.5 border-2 border-gray-200 rounded-lg text-base focus:border-indigo-500 focus:ring-0 text-center font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1 text-center font-medium">Toplam</label>
+                      <div className={`
+                        h-[46px] flex items-center justify-center rounded-lg border-2 text-base font-black
+                        ${totalDays > 0 ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'bg-white border-gray-200 text-gray-400'}
+                      `}>
+                        {totalDays > 0 ? totalDays : '—'}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Veli bilgisi */}
-              <div className="pt-2 border-t border-gray-100">
+          {/* Adım 3: Veli & Oluştur */}
+          <div className="p-6 md:p-8 border-t border-gray-100 bg-gray-50/50">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><UserCheck size={20} /></div>
+              3. Veli Bilgisi ve Sonuç
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-end">
+              <div>
                 <div 
                   onClick={() => setIncludeParent(p => !p)}
                   className={`
-                    flex items-center gap-3 p-3.5 rounded-xl cursor-pointer border-2 transition-all
-                    ${includeParent ? 'border-indigo-200 bg-indigo-50 mb-3' : 'border-gray-200 bg-white hover:bg-gray-50'}
+                    flex items-center gap-3 p-3.5 rounded-xl cursor-pointer border-2 transition-all mb-3
+                    ${includeParent ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 bg-white hover:bg-gray-50'}
                   `}
                 >
                   <div className={`
                     w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors
-                    ${includeParent ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-300'}
+                    ${includeParent ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-gray-300'}
                   `}>
                     {includeParent && <CheckSquare size={14} className="text-white fill-current" />}
                   </div>
-                  <div className="text-sm font-bold text-gray-900 flex items-center gap-2"><UserCheck size={16} className="text-gray-500"/> Veli bilgisini PDF'e ekle</div>
+                  <div className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    Veli bilgisini PDF'e ekle (İsteğe Bağlı)
+                  </div>
                 </div>
 
                 {includeParent && (
-                  <div onClick={e => e.stopPropagation()} className="pl-2 pr-1 animate-in fade-in slide-in-from-top-2">
+                  <div onClick={e => e.stopPropagation()} className="animate-in fade-in slide-in-from-top-2 ml-2">
                     {selectedStudent && studentParents.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <select 
                           value={selectedParentId}
                           onChange={e => { setSelectedParentId(e.target.value); setCustomParentName(''); }}
-                          className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                          className="flex-1 p-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:border-emerald-500 focus:ring-0 bg-white"
                         >
                           {studentParents.map(p => (
                             <option key={p.id} value={p.id}>{p.fullName} (Sistemdeki Veli)</option>
@@ -369,7 +357,7 @@ export default function ParentNotificationPage() {
                             placeholder="Veli adı soyadı girin"
                             value={customParentName}
                             onChange={e => setCustomParentName(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                            className="flex-1 p-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:border-emerald-500 focus:ring-0 bg-white"
                             autoFocus
                           />
                         )}
@@ -377,42 +365,34 @@ export default function ParentNotificationPage() {
                     ) : (
                       <input 
                         type="text" 
-                        placeholder={selectedStudent ? 'Kayıtlı veli yok — manuel girin' : 'Öğrenci seçince otomatik dolar'}
+                        placeholder={selectedStudent ? 'Kayıtlı veli yok — veli adını manuel girin' : 'Öğrenci seçince otomatik dolar'}
                         value={customParentName}
                         onChange={e => setCustomParentName(e.target.value)}
                         disabled={!selectedStudent}
-                        className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                        className="w-full p-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:border-emerald-500 focus:ring-0 bg-white"
                       />
                     )}
                   </div>
                 )}
               </div>
+
+              <button 
+                className="w-full md:w-[260px] py-4 px-6 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:hover:shadow-none shadow-md flex justify-center items-center gap-2"
+                onClick={handleGenerate}
+                disabled={loading || loadingStudents || !canGenerate}
+              >
+                {loading ? (
+                  <><Loader2 size={20} className="animate-spin" /> Hazırlanıyor...</>
+                ) : (
+                  <><Download size={20} /> Oluştur ve Yazdır</>
+                )}
+              </button>
             </div>
-          </div>
-
-          {/* Oluştur butonu */}
-          <button 
-            className="w-full py-4 px-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 shadow-sm flex justify-center items-center gap-2"
-            onClick={handleGenerate}
-            disabled={loading || loadingStudents || !canGenerate}
-          >
-            {loading ? (
-              <><Loader2 size={20} className="animate-spin" /> PDF Oluşturuluyor...</>
-            ) : (
-              <><Download size={20} /> PDF Oluştur ve İndir</>
-            )}
-          </button>
-
-          {/* Bilgi notu */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600 flex gap-3">
-            <Info size={20} className="text-gray-400 shrink-0"/>
-            <div>
-              <strong className="text-gray-900 font-bold block mb-1">Otomatik doldurulanlar:</strong>
-              <ul className="list-disc pl-4 space-y-0.5 text-xs text-gray-500 font-medium">
-                <li>Sınıf Rehber Öğretmeni</li>
-                <li>Okul Rehber Öğretmeni</li>
-                <li>Müdür Yardımcısı</li>
-              </ul>
+            
+            {/* Alt Bilgi */}
+            <div className="mt-6 flex items-center justify-between text-xs text-gray-500 font-medium">
+              <div className="flex items-center gap-1.5"><Info size={14}/> Sınıf ve Okul Rehber Öğretmeni bilgileri otomatik dolar.</div>
+              <div>Gizlilik & KVKK Uyumlu</div>
             </div>
           </div>
 

@@ -157,6 +157,8 @@ model Staff {
   isActive      Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  commissionAssignments CommissionAssignment[]
+
   @@index([role])
 }
 
@@ -370,6 +372,8 @@ model BoardMeeting {
   decisions        String?
   status           String @default("PLANLANDI")
   extraData        String?
+
+  agendaItems      BoardAgendaItem[]
 }
 
 model Commission {
@@ -380,6 +384,8 @@ model Commission {
   members          String? 
   status           String @default("AKTIF")
   extraData        String?
+
+  roles            CommissionRole[]
 }
 
 model CommemorativeDay {
@@ -482,5 +488,47 @@ model AuditLog {
   metadata  String?
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model BoardAgendaItem {
+  id          String   @id @default(uuid())
+  meetingId   String
+  orderNumber Int      @default(1)
+  topic       String
+  decision    String?
+  explanation String?
+  createdAt   DateTime @default(now())
+
+  meeting     BoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}
+
+model CommissionRole {
+  id           String   @id @default(uuid())
+  commissionId String
+  roleName     String
+  sortOrder    Int      @default(0)
+
+  commission   Commission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  assignments  CommissionAssignment[]
+
+  @@index([commissionId])
+}
+
+model CommissionAssignment {
+  id      String @id @default(uuid())
+  roleId  String
+  staffId String
+
+  role    CommissionRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  staff   Staff          @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([roleId])
+  @@index([staffId])
 }
