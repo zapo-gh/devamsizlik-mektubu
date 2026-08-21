@@ -1,11 +1,6 @@
-import crypto from 'crypto';
 import prisma from '../shared/utils/prisma';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
-import bcrypt from 'bcrypt';
-
-function generateTemporaryPassword(): string {
-  return crypto.randomBytes(12).toString('base64url');
-}
+import { parentAccountService, normalizeParentPhone } from './parentAccount.service';
 
 export class StudentsService {
   private static turkishTitleCase(s: string): string {
@@ -26,10 +21,7 @@ export class StudentsService {
         { className: { contains: sLower } }, { className: { contains: sUpper } }, { className: { contains: sTitle } },
       ];
     }
-    if (status === 'ALL') {
-      // get both
-    } else if (status === 'INACTIVE') where.status = 'INACTIVE';
-    else where.status = 'ACTIVE';
+    if (status !== 'ALL') where.status = status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
     const [students, total] = await Promise.all([
       prisma.student.findMany({
@@ -46,7 +38,7 @@ export class StudentsService {
   }
 
   async getById(id: string) {
-    const student = await (prisma.student.findUnique as any)({
+    const student = await prisma.student.findUnique({
       where: { id },
       include: {
         parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } },
@@ -64,20 +56,10 @@ export class StudentsService {
 
     return prisma.$transaction(async (tx) => {
       const student = await tx.student.create({ data: studentData });
-      if (parents && parents.length > 0) {
-        for (const p of parents) {
-          if (!p.fullName || !p.phone) continue;
-          const phone = p.phone.trim();
-          const username = phone;
-          const passwordRaw = generateTemporaryPassword();
-          const passwordHash = await bcrypt.hash(passwordRaw, 12);
-          let user = await tx.user.findUnique({ where: { username } });
-          if (!user) user = await tx.user.create({ data: { username, password: passwordHash, role: 'PARENT', mustChangePassword: true } });
-          let parent = await tx.parent.findUnique({ where: { userId: user.id } });
-          if (!parent) parent = await tx.parent.create({ data: { userId: user.id, fullName: p.fullName.trim(), phone } });
-          else parent = await tx.parent.update({ where: { id: parent.id }, data: { fullName: p.fullName.trim(), phone } });
-          await tx.student.update({ where: { id: student.id }, data: { parents: { connect: { id: parent.id } } } });
-        }
+      for (const input of parents ?? []) {
+        if (!input.fullName?.trim() || !input.phone?.trim()) continue;
+        const account = await parentAccountService.ensureParent(tx, input);
+        await tx.student.update({ where: { id: student.id }, data: { parents: { connect: { id: account.parent.id } } } });
       }
       return tx.student.findUnique({ where: { id: student.id }, include: { parents: { select: { id: true, fullName: true, phone: true, waConsentStatus: true } } } });
     });
@@ -117,42 +99,31 @@ export class StudentsService {
   async updateParent(parentId: string, data: { fullName?: string; phone?: string }) {
     const parent = await prisma.parent.findUnique({ where: { id: parentId } });
     if (!parent) throw new AppError('Veli bulunamadı.', 404);
-    return prisma.parent.update({ where: { id: parentId }, data, select: { id: true, fullName: true, phone: true, waConsentStatus: true } });
+    if (data.phone !== undefined) {
+      const updated = await parentAccountService.updatePhone(parentId, data.phone);
+      if (data.fullName !== undefined) return prisma.parent.update({ where: { id: parentId }, data: { fullName: data.fullName.trim() }, select: { id: true, fullName: true, phone: true, waConsentStatus: true } });
+      return updated;
+    }
+    return prisma.parent.update({ where: { id: parentId }, data: { fullName: data.fullName?.trim() }, select: { id: true, fullName: true, phone: true, waConsentStatus: true } });
   }
 
   async resetParentPassword(parentId: string, actorUserId: string) {
-    const parent = await prisma.parent.findUnique({ where: { id: parentId }, include: { user: { select: { id: true, role: true } } } });
-    if (!parent) throw new AppError('Veli bulunamadı.', 404);
-    if (parent.user.role !== 'PARENT') throw new AppError('Bu hesap veli hesabı değil.', 400);
-    const temporaryPassword = generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
-    await prisma.user.update({ where: { id: parent.user.id }, data: { password: passwordHash, mustChangePassword: true } });
-    const { AuditService } = require('../shared/utils/audit.service');
-    await AuditService.log(actorUserId, 'RESET_PARENT_PASSWORD', 'Parent', parentId, { phone: parent.phone });
-    return { parentId, phone: parent.phone, temporaryPassword, mustChangePassword: true };
+    return parentAccountService.resetPassword(parentId, actorUserId);
   }
 
   async addParentToStudent(studentId: string, data: { fullName: string; phone: string }) {
     const student = await prisma.student.findUnique({ where: { id: studentId } });
     if (!student) throw new AppError('Öğrenci bulunamadı.', 404);
-    const phone = data.phone.trim();
-    const username = phone;
-    const passwordRaw = generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(passwordRaw, 12);
 
     return prisma.$transaction(async (tx) => {
-      let isNewUser = false;
-      let user = await tx.user.findUnique({ where: { username } });
-      if (!user) {
-        isNewUser = true;
-        user = await tx.user.create({ data: { username, password: passwordHash, role: 'PARENT', mustChangePassword: true } });
-      }
-      let parent = await tx.parent.findUnique({ where: { userId: user.id } });
-      if (!parent) parent = await tx.parent.create({ data: { userId: user.id, fullName: data.fullName.trim(), phone } });
-      else parent = await tx.parent.update({ where: { id: parent.id }, data: { fullName: data.fullName.trim(), phone } });
-      await tx.student.update({ where: { id: studentId }, data: { parents: { connect: { id: parent.id } } } });
+      const account = await parentAccountService.ensureParent(tx, data);
+      await tx.student.update({ where: { id: studentId }, data: { parents: { connect: { id: account.parent.id } } } });
       const updatedStudent = await tx.student.findUnique({ where: { id: studentId }, include: { parents: true } });
-      return { ...updatedStudent, generatedPassword: isNewUser ? passwordRaw : null, isExistingUser: !isNewUser };
+      return {
+        ...updatedStudent,
+        generatedPassword: account.temporaryPassword,
+        isExistingUser: !account.isNewUser,
+      };
     });
   }
 
