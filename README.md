@@ -118,21 +118,25 @@ cd frontend && npm run dev
 npx tauri dev
 ```
 
-Bu komut sırasıyla şunları yapar:
-1. Backend TypeScript'i derler (`tsc`)
-2. Prisma Client üretir
-3. Frontend'i Vite ile geliştirme modunda başlatır
-4. Tauri penceresi açılır; Node.js sidecar otomatik başlatılır
+Bu komut sırasıyla backend'i, Prisma'yı, frontend'i ve Node.js sidecar'ı başlatır.
 
 ### İlk Yönetici Hesabı
 
-Seed çalıştırırken güvenli parolaları ortam değişkenleri üzerinden verin:
+Tauri ilk çalıştırıldığında **statik `admin/admin123` hesabı oluşturulmaz**. Yeni kurulumda `admin` kullanıcısı için rastgele geçici bir parola oluşturulur ve:
 
-```bash
-SEED_ADMIN_PASSWORD="guclu-bir-admin-parolasi" npm run prisma:seed
+```text
+%APPDATA%\OkulDesk\initial-admin-credentials.txt
 ```
 
-Seed, yönetici hesabını `mustChangePassword` ile oluşturur. Üretim ortamında `SEED_ADMIN_PASSWORD` ve `SEED_PARENT_PASSWORD` açıkça tanımlanmadan seed çalıştırılamaz.
+dosyasına yazılır. Dosyadaki geçici parola ile `admin` hesabına giriş yaptıktan sonra şifrenizi değiştirin ve güvenlik için bu dosyayı silin.
+
+Manuel `prisma:seed` kullanıyorsanız güvenli parolaları açıkça sağlayın:
+
+```bash
+SEED_ADMIN_PASSWORD="guclu-bir-admin-parolasi" \
+SEED_PARENT_PASSWORD="guclu-bir-veli-parolasi" \
+npm run prisma:seed
+```
 
 ## Dağıtılabilir Paket Üretme (Windows)
 
@@ -144,14 +148,15 @@ npx tauri build
 
 ## Yedekleme
 
-OkulDesk SQLite kullandığı için veritabanı yedeklemesi önemlidir. Backend'de yalnızca yönetici erişimine açık tutarlı SQLite snapshot yedekleme endpoint'leri bulunur:
+OkulDesk SQLite veritabanını her başlatılışta günlük otomatik yedeklemeyi kontrol ederek `VACUUM INTO` ile tutarlı bir snapshot olarak yedekler.
 
-- `GET /api/backup` — mevcut yedekleri listeler
-- `POST /api/backup` — yeni snapshot oluşturur ve retention süresini aşan eski yedekleri temizler
+Tauri ortamında yedekler:
 
-Varsayılan yedekleme klasörü `./backups`, retention süresi 30 gündür. `BACKUP_DIR` ve `BACKUP_RETENTION_DAYS` ile değiştirilebilir.
+```text
+%APPDATA%\OkulDesk\backups
+```
 
-> **Önemli:** Yedekleme özelliği veri kaybı riskini azaltır ancak gerçek üretim kullanımından önce restore prosedürü ayrıca test edilmelidir.
+altında tutulur. Varsayılan retention süresi **30 gündür** ve `BACKUP_RETENTION_DAYS` ile değiştirilebilir. Yedekleme veri kaybı riskini azaltır; gerçek üretim kullanımından önce geri yükleme prosedürü ayrıca test edilmelidir.
 
 ## VPS / Sunucu Dağıtımı
 
@@ -161,12 +166,16 @@ OkulDesk bir **masaüstü uygulamasıdır**; doğrudan sunucu üzerine kurulmak 
 
 - **Konum:** `%APPDATA%\OkulDesk\database.db` (Windows)
 - **Motor:** SQLite (Prisma ORM 5)
-- **Şema yönetimi:** `backend/src/modules/shared/utils/initDb.ts` her başlatmada `CREATE TABLE IF NOT EXISTS` ile tabloları oluşturur ve mevcut veritabanlarını günceller.
-- **Yedek:** Yönetici yetkili `/api/backup` endpoint'i tutarlı SQLite snapshot'ı üretir.
+- **Şema yönetimi:** Tauri sidecar başlatılırken migration/bootstrap süreci çalıştırılır.
+- **Yedek:** `%APPDATA%\OkulDesk\backups` altında otomatik SQLite snapshot'ları tutulur.
 
 ## JWT Güvenliği
 
-Tauri sidecar ilk çalıştırmada `%APPDATA%\OkulDesk\.jwt_secret` dosyasına 48 bayt rastgele üretilmiş gizli anahtar kaydeder. Uygulama her başlatılışında bu anahtarı okur; dosya silinirse tüm aktif oturumlar geçersiz olur.
+Tauri sidecar ilk çalıştırmada `%APPDATA%\OkulDesk\.jwt_secret` dosyasına rastgele gizli anahtar kaydeder. Uygulama her başlatılışında bu anahtarı okur; dosya silinirse aktif JWT oturumları geçersiz olur.
+
+## Güvenlik
+
+Detaylı production güvenlik kuralları için [`SECURITY.md`](SECURITY.md) dosyasına bakın.
 
 ## Proje Yapısı
 
@@ -181,7 +190,7 @@ okuldesk/
 │   │   └── schema.prisma    # Veri modelleri (SQLite)
 │   ├── src/
 │   │   ├── app.ts           # Express uygulaması, middleware, route kayıtları
-│   │   ├── server.ts        # HTTP sunucu başlatma, initDb, seedAdmin
+│   │   ├── server.ts        # HTTP sunucu başlatma, DB bootstrap ve ilk admin
 │   │   ├── tauri-sidecar.ts # Tauri sidecar giriş noktası
 │   │   └── modules/
 │   │       ├── auth/        # JWT giriş, şifre değiştirme, rate-limit
@@ -193,10 +202,9 @@ okuldesk/
 │   │       ├── whatsapp/    # Baileys bağlantısı, mesaj gönderimi
 │   │       ├── staff/       # Personel yönetimi
 │   │       ├── settings/    # Okul adı, müdür adı, WA şablonları
-│   │       ├── backup/      # SQLite snapshot yedekleme
 │   │       └── shared/
 │   │           ├── middleware/   # auth, adminOnly, errorHandler, magicByte...
-│   │           └── utils/        # DB bootstrap, audit, Prisma
+│   │           └── utils/        # DB bootstrap, audit, Prisma, backup
 │   └── package.json
 ├── frontend/
 │   └── src/
@@ -204,5 +212,6 @@ okuldesk/
 │       ├── components/      # Paylaşılan UI bileşenleri
 │       ├── services/api.ts  # Axios instance (JWT Bearer token)
 │       └── context/         # Auth context, Settings context
+├── SECURITY.md
 └── README.md
 ```
