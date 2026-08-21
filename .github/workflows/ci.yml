@@ -29,6 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Prisma schema
+        run: npm exec prisma validate
+        env:
+          DATABASE_URL: file:./ci.db
+
       - name: Generate Prisma client
         run: npm run prisma:generate
         env:
