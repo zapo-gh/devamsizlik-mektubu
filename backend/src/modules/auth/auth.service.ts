@@ -5,6 +5,42 @@ import { config } from '../shared/config';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
 
 export class AuthService {
+  async setupStatus() {
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+    return { setupRequired: adminCount === 0 };
+  }
+
+  async initializeAdmin(username: string, password: string) {
+    const existingAdmin = await prisma.user.count({ where: { role: 'ADMIN' } });
+    if (existingAdmin > 0) {
+      throw new AppError('İlk kurulum zaten tamamlanmış.', 409);
+    }
+
+    const existingUsername = await prisma.user.findUnique({ where: { username } });
+    if (existingUsername) {
+      throw new AppError('Bu kullanıcı adı zaten kullanılıyor.', 409);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: {
+        username,
+        password: hashedPassword,
+        role: 'ADMIN',
+        mustChangePassword: false,
+      },
+      select: { id: true, username: true, role: true, mustChangePassword: true },
+    });
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role, mustChangePassword: user.mustChangePassword },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn } as jwt.SignOptions,
+    );
+
+    return { token, user };
+  }
+
   async login(username: string, password: string, rememberMe = false) {
     const user = await prisma.user.findUnique({ where: { username } });
 
@@ -21,7 +57,7 @@ export class AuthService {
     const token = jwt.sign(
       { userId: user.id, role: user.role, mustChangePassword: user.mustChangePassword },
       config.jwt.secret,
-      { expiresIn } as jwt.SignOptions
+      { expiresIn } as jwt.SignOptions,
     );
 
     return {
