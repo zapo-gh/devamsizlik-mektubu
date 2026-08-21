@@ -7,13 +7,12 @@ const isTauri = Boolean(
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || (isTauri ? 'http://127.0.0.1:4000/api' : '/api'),
-  timeout: 120000, // 2 dakika — OCR ve PDF işlemleri uzun sürebilir
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Attach JWT token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   if (token) {
@@ -22,9 +21,12 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Render uyku modundan uyanma: 502/503/504 hatalarında otomatik yeniden dene
+// Only retry idempotent requests automatically. Retrying POST/PUT/PATCH/DELETE
+// after a transient network error can duplicate a write operation (e.g. send a
+// WhatsApp message twice or create the same warning twice).
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
+const RETRYABLE_METHODS = new Set(['get', 'head', 'options']);
 
 api.interceptors.response.use(
   (response) => response,
@@ -32,7 +34,8 @@ api.interceptors.response.use(
     const config = error.config;
     const status: number | undefined = error.response?.status;
 
-    // 401 → token sil ve yönlendir
+    if (!config) return Promise.reject(error);
+
     if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -44,13 +47,14 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 502 / 503 / 504 → servis uyanıyor, yeniden dene
-    const isRetryable = !status || status === 502 || status === 503 || status === 504;
+    const method = String(config.method || 'get').toLowerCase();
+    const isRetryableStatus = !status || status === 502 || status === 503 || status === 504;
+    const canRetry = RETRYABLE_METHODS.has(method);
     const retryCount: number = config._retryCount ?? 0;
 
-    if (isRetryable && retryCount < MAX_RETRIES) {
+    if (canRetry && isRetryableStatus && retryCount < MAX_RETRIES) {
       config._retryCount = retryCount + 1;
-      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * config._retryCount));
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * config._retryCount));
       return api(config);
     }
 
