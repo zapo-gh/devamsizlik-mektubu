@@ -2,19 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import { studentsService } from './students.service';
 import { parseExcelFile, importStudents } from './excelImport.service';
 import { parseParentExcel, importParents } from './parentImport.service';
+import { parentAccountService } from './parentAccount.service';
 import { z } from 'zod';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
 
 const createStudentSchema = z.object({
-  schoolNumber: z.string().min(1, 'Okul numarası gereklidir.'),
-  fullName: z.string().min(1, 'Ad soyad gereklidir.'),
-  className: z.string().min(1, 'Sınıf gereklidir.'),
-  parents: z.array(z.object({ fullName: z.string().min(1), phone: z.string().min(1) })).optional(),
+  schoolNumber: z.string().trim().min(1, 'Okul numarası gereklidir.'),
+  fullName: z.string().trim().min(1, 'Ad soyad gereklidir.'),
+  className: z.string().trim().min(1, 'Sınıf gereklidir.'),
+  parents: z.array(z.object({ fullName: z.string().trim().min(1), phone: z.string().trim().min(1) })).optional(),
 });
 
 const updateStudentSchema = z.object({
-  fullName: z.string().min(1).optional(),
-  className: z.string().min(1).optional(),
+  fullName: z.string().trim().min(1).optional(),
+  className: z.string().trim().min(1).optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 
@@ -31,18 +32,15 @@ export class StudentsController {
   }
 
   async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const result = await studentsService.getById(req.params.id);
-      res.json({ success: true, data: result });
-    } catch (error) { next(error); }
+    try { res.json({ success: true, data: await studentsService.getById(req.params.id) }); }
+    catch (error) { next(error); }
   }
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = createStudentSchema.safeParse(req.body);
       if (!parsed.success) throw new AppError(parsed.error.errors[0].message, 400);
-      const result = await studentsService.create(parsed.data);
-      res.status(201).json({ success: true, data: result });
+      res.status(201).json({ success: true, data: await studentsService.create(parsed.data) });
     } catch (error) { next(error); }
   }
 
@@ -50,16 +48,13 @@ export class StudentsController {
     try {
       const parsed = updateStudentSchema.safeParse(req.body);
       if (!parsed.success) throw new AppError(parsed.error.errors[0].message, 400);
-      const result = await studentsService.update(req.params.id, parsed.data);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await studentsService.update(req.params.id, parsed.data) });
     } catch (error) { next(error); }
   }
 
   async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      const result = await studentsService.delete(req.params.id, req.user!.userId);
-      res.json({ success: true, data: result });
-    } catch (error) { next(error); }
+    try { res.json({ success: true, data: await studentsService.delete(req.params.id, req.user!.userId) }); }
+    catch (error) { next(error); }
   }
 
   async bulkDelete(req: Request, res: Response, next: NextFunction) {
@@ -68,8 +63,7 @@ export class StudentsController {
       if (!Array.isArray(ids) || ids.length === 0) throw new AppError('Silinecek öğrenci ID listesi gereklidir.', 400);
       const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!ids.every((id: unknown) => typeof id === 'string' && uuidRe.test(id))) throw new AppError('Geçersiz öğrenci ID formatı.', 400);
-      const result = await studentsService.bulkDelete(ids, req.user!.userId);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await studentsService.bulkDelete(ids, req.user!.userId) });
     } catch (error) { next(error); }
   }
 
@@ -77,8 +71,7 @@ export class StudentsController {
     try {
       const { fullName, phone } = req.body;
       if (!fullName || !phone) throw new AppError('Veli adı ve telefon numarası gereklidir.', 400);
-      const result = await studentsService.addParentToStudent(req.params.id, { fullName, phone });
-      res.status(201).json({ success: true, data: result });
+      res.status(201).json({ success: true, data: await studentsService.addParentToStudent(req.params.id, { fullName, phone }) });
     } catch (error) { next(error); }
   }
 
@@ -86,31 +79,26 @@ export class StudentsController {
     try {
       const { parentId } = req.body;
       if (!parentId) throw new AppError('Veli ID gereklidir.', 400);
-      const result = await studentsService.assignParent(req.params.id, parentId);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await studentsService.assignParent(req.params.id, parentId) });
     } catch (error) { next(error); }
   }
 
   async updateParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { fullName, phone } = req.body;
-      const result = await studentsService.updateParent(req.params.parentId, { fullName, phone });
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await studentsService.updateParent(req.params.parentId, { fullName, phone }) });
     } catch (error) { next(error); }
   }
 
   async resetParentPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await studentsService.resetParentPassword(req.params.parentId, req.user!.userId);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await parentAccountService.resetPassword(req.params.parentId, req.user!.userId) });
     } catch (error) { next(error); }
   }
 
   async removeParent(req: Request, res: Response, next: NextFunction) {
-    try {
-      const result = await studentsService.removeParentFromStudent(req.params.id, req.params.parentId);
-      res.json({ success: true, data: result });
-    } catch (error) { next(error); }
+    try { res.json({ success: true, data: await studentsService.removeParentFromStudent(req.params.id, req.params.parentId) }); }
+    catch (error) { next(error); }
   }
 
   async importExcel(req: Request, res: Response, next: NextFunction) {
@@ -119,8 +107,7 @@ export class StudentsController {
       const mode = (req.query.mode as string) === 'import' ? 'import' : 'preview';
       const students = parseExcelFile(req.file.buffer);
       if (students.length === 0) throw new AppError('Excel dosyasında öğrenci verisi bulunamadı.', 400);
-      const result = await importStudents(students, mode);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await importStudents(students, mode) });
     } catch (error) { next(error); }
   }
 
@@ -130,8 +117,7 @@ export class StudentsController {
       const mode = (req.query.mode as string) === 'import' ? 'import' : 'preview';
       const rows = parseParentExcel(req.file.buffer);
       if (rows.length === 0) throw new AppError('Excel dosyasında veli verisi bulunamadı.', 400);
-      const result = await importParents(rows, mode);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: await importParents(rows, mode) });
     } catch (error) { next(error); }
   }
 }
