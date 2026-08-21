@@ -10,6 +10,7 @@ import { generalLimiter } from './modules/shared/middleware/rateLimit.middleware
 import prisma from './modules/shared/utils/prisma';
 import authRoutes from './modules/auth/auth.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import student360Routes from './modules/students/student360.routes';
 import studentRoutes from './modules/students/students.routes';
 import absenteeismRoutes from './modules/absenteeism/absenteeism.routes';
 import warningRoutes from './modules/warnings/warnings.routes';
@@ -40,13 +41,11 @@ import orderLetterRoutes from './modules/orderLetter/orderLetter.routes';
 import auditRoutes from './modules/audit/audit.routes';
 
 const app = express();
-
 const uploadsDir = path.resolve(config.upload.dir);
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = ['http://127.0.0.1:4000', 'http://localhost:4000', 'http://localhost:5173', 'http://localhost:1420', 'http://tauri.localhost', 'tauri://localhost'];
@@ -57,14 +56,10 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 app.get('/api/health/ready', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -76,9 +71,9 @@ app.get('/api/health/ready', async (_req, res) => {
 });
 
 app.use('/api', generalLimiter);
-
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/students/360', student360Routes);
 app.use('/api/students', studentRoutes);
 app.use('/api/absenteeism', absenteeismRoutes);
 app.use('/api/warnings', warningRoutes);
