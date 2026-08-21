@@ -37,32 +37,35 @@ import procurementRoutes from './modules/procurement/procurement.routes';
 import supplierRoutes from './modules/supplier/supplier.routes';
 import orderLetterRoutes from './modules/orderLetter/orderLetter.routes';
 import auditRoutes from './modules/audit/audit.routes';
+import backupRoutes from './modules/backup/backup.routes';
 
 const app = express();
 
-// Ensure uploads directory exists
-const uploadsDir = path.resolve(config.upload.dir);
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Ensure runtime directories exist.
+for (const dir of [config.upload.dir, config.backup.dir]) {
+  const resolvedDir = path.resolve(dir);
+  if (!fs.existsSync(resolvedDir)) {
+    fs.mkdirSync(resolvedDir, { recursive: true });
+  }
 }
 
 // Global middleware
+app.disable('x-powered-by');
 app.use(helmet({
   // CSP frontend SPA ile çakışmaması için devre dışı (statik dosya zaten backend üzerinden sunuluyor)
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
-// Electron masaüstü modunda yalnızca localhost origin'ine izin ver
-app.use(cors({ 
+
+app.use(cors({
   origin: (origin, callback) => {
-    // Electron/Tauri içi isteklerde origin yoktur veya tauri:// / http://tauri.localhost olur
     const allowed = [
       'http://127.0.0.1:4000',
       'http://localhost:4000',
       'http://localhost:5173',
       'http://localhost:1420',
       'http://tauri.localhost',
-      'tauri://localhost'
+      'tauri://localhost',
     ];
     if (!origin || allowed.includes(origin) || origin.startsWith('tauri://')) {
       callback(null, true);
@@ -74,8 +77,11 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// JSON/urlencoded gövdeleri sınırlı tut; dosya yüklemeleri multer tarafından
+// ayrıca config.upload.maxSize ile kontrol edilir.
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -115,10 +121,9 @@ app.use('/api/procurement', procurementRoutes);
 app.use('/api/supplier', supplierRoutes);
 app.use('/api/order-letter', orderLetterRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/backup', backupRoutes);
 
-// WhatsApp: önceki oturum varsa otomatik bağlan
-// WhatsApp otomatik bağlantı devre dışı — kullanıcı /admin/whatsapp sayfasından Bağlan butonuna basmalı
-// whatsappService.initialize().catch(() => { /* Oturum yok, QR bekleniyor */ });
+// WhatsApp otomatik bağlantı devre dışı — kullanıcı /admin/whatsapp sayfasından Bağlan butonuna basmalı.
 
 // Frontend statik dosyaları (Electron/production build)
 const frontendDist = path.resolve(__dirname, 'public');
@@ -128,16 +133,14 @@ if (fs.existsSync(frontendDist)) {
       if (filepath.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       }
-    }
+    },
   }));
-  // SPA için catch-all: yalnızca /api dışı GET'lere — React Router'ın çalışması için
   app.get(/^(?!\/api)/, (_req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
 
-// Error handler (must be last)
 app.use(errorHandler);
 
 export default app;
