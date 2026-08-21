@@ -4,7 +4,7 @@ Okul yönetimi için geliştirilmiş masaüstü uygulaması. Devamsızlık takib
 
 ## Genel Bakış
 
-OkulDesk, **Tauri v2** tabanlı, modern bir masaüstü uygulamasıdır. İnternete ihtiyaç duymaz. Tüm veriler yerel SQLite veritabanında saklanır. 
+OkulDesk, **Tauri v2** tabanlı, modern bir masaüstü uygulamasıdır. İnternete ihtiyaç duymaz. Tüm veriler yerel SQLite veritabanında saklanır.
 
 ```
 Tauri v2 (Native Masaüstü Kabuğu — Rust)
@@ -124,10 +124,15 @@ Bu komut sırasıyla şunları yapar:
 3. Frontend'i Vite ile geliştirme modunda başlatır
 4. Tauri penceresi açılır; Node.js sidecar otomatik başlatılır
 
-### Varsayılan Giriş
+### İlk Yönetici Hesabı
 
-- **Kullanıcı adı:** `admin`
-- **Şifre:** `admin123`
+Seed çalıştırırken güvenli parolaları ortam değişkenleri üzerinden verin:
+
+```bash
+SEED_ADMIN_PASSWORD="guclu-bir-admin-parolasi" npm run prisma:seed
+```
+
+Seed, yönetici hesabını `mustChangePassword` ile oluşturur. Üretim ortamında `SEED_ADMIN_PASSWORD` ve `SEED_PARENT_PASSWORD` açıkça tanımlanmadan seed çalıştırılamaz.
 
 ## Dağıtılabilir Paket Üretme (Windows)
 
@@ -137,34 +142,18 @@ npx tauri build
 
 `src-tauri/target/release/bundle/` klasöründe `.msi` ve `.exe` kurulum dosyası oluşturulur.
 
+## Yedekleme
+
+OkulDesk SQLite kullandığı için veritabanı yedeklemesi önemlidir. Backend'de yalnızca yönetici erişimine açık tutarlı SQLite snapshot yedekleme endpoint'leri bulunur:
+
+- `GET /api/backup` — mevcut yedekleri listeler
+- `POST /api/backup` — yeni snapshot oluşturur ve retention süresini aşan eski yedekleri temizler
+
+Varsayılan yedekleme klasörü `./backups`, retention süresi 30 gündür. `BACKUP_DIR` ve `BACKUP_RETENTION_DAYS` ile değiştirilebilir.
+
+> **Önemli:** Yedekleme özelliği veri kaybı riskini azaltır ancak gerçek üretim kullanımından önce restore prosedürü ayrıca test edilmelidir.
+
 ## VPS / Sunucu Dağıtımı
-
-### 1. Sunucu Hazırlığı
-
-```bash
-# Sistem güncellemesi
-sudo apt update && sudo apt upgrade -y
-
-# Docker kurulumu
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-
-# Docker Compose kurulumu
-sudo apt install docker-compose-plugin -y
-
-# Güvenlik duvarı
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-```
-
-### 2. Proje Dosyalarını Yükleme
-
-```bash
-# Git ile
-git clone <repo-url> /opt/devamsizlik
-cd /opt/devamsizlik
 
 OkulDesk bir **masaüstü uygulamasıdır**; doğrudan sunucu üzerine kurulmak üzere tasarlanmamıştır. Sunucu ortamı gerekiyorsa `docker-compose.yml` ve `nginx/` klasöründeki yapılandırmalar referans olarak bulunmaktadır; ancak aktif olarak bakımı yapılmamaktadır.
 
@@ -173,7 +162,7 @@ OkulDesk bir **masaüstü uygulamasıdır**; doğrudan sunucu üzerine kurulmak 
 - **Konum:** `%APPDATA%\OkulDesk\database.db` (Windows)
 - **Motor:** SQLite (Prisma ORM 5)
 - **Şema yönetimi:** `backend/src/modules/shared/utils/initDb.ts` her başlatmada `CREATE TABLE IF NOT EXISTS` ile tabloları oluşturur ve mevcut veritabanlarını günceller.
-- **Yedek almak için:** Dosyayı kopyalamanız veya uygulama içi Yedekle özelliğini kullanmanız yeterlidir.
+- **Yedek:** Yönetici yetkili `/api/backup` endpoint'i tutarlı SQLite snapshot'ı üretir.
 
 ## JWT Güvenliği
 
@@ -184,7 +173,7 @@ Tauri sidecar ilk çalıştırmada `%APPDATA%\OkulDesk\.jwt_secret` dosyasına 4
 ```
 okuldesk/
 ├── src-tauri/               # Tauri Rust kabuğu
-│   ├── binaries/            # Gömülü Node.js binary (node-x86_64-pc-windows-msvc.exe)
+│   ├── binaries/            # Gömülü Node.js binary
 │   ├── src/lib.rs           # Tauri komutları ve sidecar yönetimi
 │   └── tauri.conf.json      # Tauri yapılandırması
 ├── backend/
@@ -193,7 +182,7 @@ okuldesk/
 │   ├── src/
 │   │   ├── app.ts           # Express uygulaması, middleware, route kayıtları
 │   │   ├── server.ts        # HTTP sunucu başlatma, initDb, seedAdmin
-│   │   ├── tauri-sidecar.ts # Tauri sidecar giriş noktası (env + server başlatma)
+│   │   ├── tauri-sidecar.ts # Tauri sidecar giriş noktası
 │   │   └── modules/
 │   │       ├── auth/        # JWT giriş, şifre değiştirme, rate-limit
 │   │       ├── students/    # Öğrenci CRUD, veli yönetimi, Excel aktarım
@@ -204,12 +193,10 @@ okuldesk/
 │   │       ├── whatsapp/    # Baileys bağlantısı, mesaj gönderimi
 │   │       ├── staff/       # Personel yönetimi
 │   │       ├── settings/    # Okul adı, müdür adı, WA şablonları
+│   │       ├── backup/      # SQLite snapshot yedekleme
 │   │       └── shared/
-│   │           ├── middleware/   # auth, adminOnly, errorHandler, magicByte, imageCompressor
-│   │           └── utils/
-│   │               ├── initDb.ts    # SQLite şema bootstrap
-│   │               ├── audit.service.ts  # Sistem izlenebilirlik kaydı
-│   │               └── prisma.ts    # Prisma istemcisi
+│   │           ├── middleware/   # auth, adminOnly, errorHandler, magicByte...
+│   │           └── utils/        # DB bootstrap, audit, Prisma
 │   └── package.json
 ├── frontend/
 │   └── src/
@@ -219,41 +206,3 @@ okuldesk/
 │       └── context/         # Auth context, Settings context
 └── README.md
 ```
-
-## API Uç Noktaları (Özet)
-
-Tüm `/api/*` rotaları `authMiddleware` (JWT Bearer) gerektirir; değiştirici işlemler ek olarak `adminOnly` denetiminden geçer.
-
-| Modül | Prefix |
-|-------|--------|
-| Kimlik doğrulama | `/api/auth` |
-| Öğrenciler | `/api/students` |
-| Devamsızlık | `/api/absenteeism` |
-| Yazılı Uyarı | `/api/warnings` |
-| İhlaller | `/api/violations` |
-| Karne Raporu | `/api/grade-reports` |
-| Veli Bildirimi | `/api/parent-notification` |
-| WhatsApp | `/api/whatsapp` |
-| Personel | `/api/staff` |
-| Ayarlar | `/api/settings` |
-
-## Windows SmartScreen Uyarısı
-
-Uygulama kurulum dosyası (`OkulDesk Setup x.x.x.exe`) ilk kez çalıştırıldığında Windows SmartScreen **"Bilinmeyen yayımcı"** veya **"Bilgisayarınız korundu"** uyarısı gösterebilir.
-
-Bu uyarı, kurulum dosyasının bir sertifika yetkilisinden (Code Signing Certificate) imzalanmamış olmasından kaynaklanmaktadır. Uygulama güvenlidir.
-
-### Uyarıyı Geçme
-
-1. SmartScreen uyarı ekranında **"Daha fazla bilgi"** (More info) bağlantısına tıklayın.
-2. Beliren **"Yine de çalıştır"** (Run anyway) düğmesine tıklayın.
-3. Kurulum devam edecektir.
-
-> **Sistem yöneticileri için:** Kurulum dosyasını Group Policy aracılığıyla dağıtıyorsanız, dosyayı NTFS Alternate Data Stream `Zone.Identifier` bilgisini kaldırarak imzasız çalıştırabilirsiniz:
-> ```powershell
-> Unblock-File -Path ".\OkulDesk Setup 1.0.0.exe"
-> ```
-
-## Lisans
-
-Okul içi kullanım için geliştirilmiştir.
