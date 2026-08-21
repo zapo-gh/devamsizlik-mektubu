@@ -51,32 +51,37 @@ const { startServer } = require('./server');
 console.log('🚀 [Tauri-Sidecar] OkulDesk backend başlatılıyor (Port: 4000)...');
 
 try {
-  console.log('🔄 [Tauri-Sidecar] Veritabanı şeması eşitleniyor (Prisma db push)...');
-  const { execSync } = require('child_process');
+  console.log('🔄 [Tauri-Sidecar] Veritabanı şeması doğrulanıyor (Prisma db push)...');
 
   let prismaScript = path.resolve(__dirname, '../node_modules/prisma/build/index.js');
   if (!fs.existsSync(prismaScript)) {
     prismaScript = path.resolve(process.cwd(), 'node_modules/prisma/build/index.js');
   }
 
-  if (fs.existsSync(prismaScript)) {
-    execSync(`"${process.execPath}" "${prismaScript}" migrate deploy`, {
-      env: process.env,
-      stdio: 'inherit',
-    });
-    console.log('✅ [Tauri-Sidecar] Veritabanı şeması başarıyla güncellendi.');
-  } else {
-    console.warn('⚠️ [Tauri-Sidecar] Prisma CLI bulunamadı, şema eşitlemesi atlanıyor.');
+  if (!fs.existsSync(prismaScript)) {
+    throw new Error('Prisma CLI bulunamadı; veritabanı şeması doğrulanamıyor.');
   }
-} catch (err: any) {
-  console.error('❌ [Tauri-Sidecar] Veritabanı eşitleme hatası:', err.message);
+
+  // Bu sürümde repository'de migration baseline bulunmadığı için deploy
+  // sırasında migrate deploy kullanmak hatalıdır. Prisma schema authoritative
+  // kaynaktır; db push şemayı veri kaybını kabul etmeden eşitler.
+  execSync(`"${process.execPath}" "${prismaScript}" db push --skip-generate`, {
+    env: process.env,
+    stdio: 'inherit',
+  });
+
+  console.log('✅ [Tauri-Sidecar] Veritabanı şeması doğrulandı/eşitlendi.');
+} catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error('❌ [Tauri-Sidecar] Veritabanı şeması hazırlanamadı:', message);
+  process.exit(1);
 }
 
 startServer()
   .then(() => {
     console.log('✅ [Tauri-Sidecar] Backend hazır: http://127.0.0.1:4000');
   })
-  .catch((err: any) => {
-    console.error('❌ [Tauri-Sidecar] Backend başlatma hatası:', err);
+  .catch((error: unknown) => {
+    console.error('❌ [Tauri-Sidecar] Backend başlatma hatası:', error);
     process.exit(1);
   });
