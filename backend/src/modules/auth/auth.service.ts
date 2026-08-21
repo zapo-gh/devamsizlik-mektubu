@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
 import prisma from '../shared/utils/prisma';
 import { config } from '../shared/config';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
@@ -101,6 +103,20 @@ export class AuthService {
       where: { id: userId },
       data: { password: hashedPassword, mustChangePassword: false },
     });
+
+    // İlk kurulumda oluşturulan geçici credential dosyasını otomatik temizle.
+    if (user.mustChangePassword && user.role === 'ADMIN') {
+      const userDataPath = path.resolve(
+        process.env.APPDATA || path.join(process.env.USERPROFILE || '.', 'AppData', 'Roaming'),
+        'OkulDesk',
+      );
+      const credentialsFile = path.join(userDataPath, 'initial-admin-credentials.txt');
+      try {
+        fs.rmSync(credentialsFile, { force: true });
+      } catch {
+        // Şifre değişikliğini credential dosyasının silinmesine bağımlı hale getirme.
+      }
+    }
 
     return { message: 'Şifre başarıyla güncellendi.' };
   }
