@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import prisma from '../shared/utils/prisma';
 
 interface ParsedParentRow {
@@ -24,6 +25,11 @@ export interface ParentImportPreview {
   parent2Phone: string;
 }
 
+export interface ParentInitialCredential {
+  phone: string;
+  password: string;
+}
+
 export interface ParentImportResult {
   totalParsed: number;
   matched: number;
@@ -32,6 +38,9 @@ export interface ParentImportResult {
   parentsUpdated: number;
   errors: string[];
   preview: ParentImportPreview[];
+  // Plaintext temporary passwords are returned only in the authenticated admin response.
+  // They are never persisted; the account is forced to change the password at first login.
+  initialCredentials: ParentInitialCredential[];
 }
 
 /**
@@ -59,7 +68,6 @@ export function parseParentExcel(buffer: Buffer): ParsedParentRow[] {
       blankrows: false,
     });
 
-    // Skip header row (row 0)
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.length < 2) continue;
@@ -93,26 +101,21 @@ export function parseParentExcel(buffer: Buffer): ParsedParentRow[] {
   return results;
 }
 
-/**
- * Normalize Turkish phone numbers: ensure 0XXXXXXXXXX format (11 digits).
- */
-function normalizePhone(phone: string): string {
+/** Normalize Turkish mobile numbers to 05XXXXXXXXX. */
+export function normalizePhone(phone: string): string {
   if (!phone) return '';
-  // Remove spaces, dashes, parens
   let cleaned = phone.replace(/[\s\-()]/g, '');
-  // If starts with +90, replace with 0
   if (cleaned.startsWith('+90')) cleaned = '0' + cleaned.slice(3);
-  // If starts with 90 and is 12 digits, replace with 0
   if (cleaned.startsWith('90') && cleaned.length === 12) cleaned = '0' + cleaned.slice(2);
-  // If 10 digits starting with 5, prepend 0
   if (cleaned.length === 10 && cleaned.startsWith('5')) cleaned = '0' + cleaned;
   return cleaned;
 }
 
-/**
- * Preview or import parents from parsed data.
- * Optimized: bulk DB queries + parallel bcrypt hashing.
- */
+function generateTemporaryPassword(): string {
+  // 12+ chars, generated from OS CSPRNG. Never derive passwords from phone numbers.
+  return crypto.randomBytes(12).toString('base64url');
+}
+
 export async function importParents(
   rows: ParsedParentRow[],
   mode: 'preview' | 'import'
@@ -125,9 +128,9 @@ export async function importParents(
     parentsUpdated: 0,
     errors: [],
     preview: [],
+    initialCredentials: [],
   };
 
-  // Fetch all students for matching (single query)
   const allStudents = await prisma.student.findMany({
     select: { id: true, schoolNumber: true, fullName: true },
   });
@@ -149,19 +152,12 @@ export async function importParents(
       parent2Phone: row.parent2Phone,
     });
 
-    if (matched) {
-      result.matched++;
-    } else {
-      result.unmatched++;
-    }
+    if (matched) result.matched++;
+    else result.unmatched++;
   }
 
-  if (mode === 'preview') {
-    return result;
-  }
+  if (mode === 'preview') return result;
 
-  // --- OPTIMIZED IMPORT MODE ---
-  // 1. Collect all unique phone numbers needed
   const parentEntries: { studentId: string; fullName: string; phone: string; rowNum: string }[] = [];
   for (const row of rows) {
     const student = studentByNumber.get(row.schoolNumber);
@@ -174,7 +170,6 @@ export async function importParents(
     }
   }
 
-  // 2. Bulk fetch all existing parents by phone (single query instead of N queries)
   const uniquePhones = [...new Set(parentEntries.map((e) => e.phone))];
   const existingParents = await prisma.parent.findMany({
     where: { phone: { in: uniquePhones } },
@@ -182,39 +177,39 @@ export async function importParents(
   });
   const parentByPhone = new Map(existingParents.map((p) => [p.phone, p]));
 
-  // 3. Separate new vs existing parents
   const newParentPhones = new Set<string>();
   const newEntries: typeof parentEntries = [];
   const existingEntries: typeof parentEntries = [];
 
   for (const entry of parentEntries) {
-    if (parentByPhone.has(entry.phone)) {
-      existingEntries.push(entry);
-    } else {
+    if (parentByPhone.has(entry.phone)) existingEntries.push(entry);
+    else {
       newEntries.push(entry);
       newParentPhones.add(entry.phone);
     }
   }
 
-  // 4. Pre-hash all passwords in parallel (biggest perf win: ~100ms each → all at once)
-  const phonesNeedingHash = [...newParentPhones];
-  const hashResults = await Promise.all(
-    phonesNeedingHash.map((phone) => bcrypt.hash(phone.slice(-6), 10))
-  );
-  const hashByPhone = new Map(phonesNeedingHash.map((phone, i) => [phone, hashResults[i]]));
-
-  // 5. Pre-fetch existing users by phone (bulk query before transaction to reduce queries inside)
+  // Existing users are fetched before hashing so we only generate credentials for genuinely new accounts.
   const existingUsers = await prisma.user.findMany({
     where: { username: { in: uniquePhones } },
     include: { parent: { include: { students: { select: { id: true } } } } },
   });
   const userByPhone = new Map(existingUsers.map((u) => [u.username, u]));
 
-  // 6. Process in small batches (Render has 30s HTTP timeout, single large tx times out)
+  const newUserPhones = [...newParentPhones].filter((phone) => !userByPhone.has(phone));
+  const generatedPasswordByPhone = new Map<string, string>();
+  const hashByPhone = new Map<string, string>();
+
+  await Promise.all(newUserPhones.map(async (phone) => {
+    const rawPassword = generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(rawPassword, 12);
+    generatedPasswordByPhone.set(phone, rawPassword);
+    hashByPhone.set(phone, passwordHash);
+  }));
+
   const BATCH_SIZE = 50;
   const createdParentByPhone = new Map<string, { id: string; students: { id: string }[] }>();
 
-  // 6a. Update existing parents in batches
   for (let i = 0; i < existingEntries.length; i += BATCH_SIZE) {
     const batch = existingEntries.slice(i, i + BATCH_SIZE);
     await prisma.$transaction(async (tx) => {
@@ -229,9 +224,7 @@ export async function importParents(
               ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
             },
           });
-          if (!alreadyLinked) {
-            existing.students.push({ id: entry.studentId });
-          }
+          if (!alreadyLinked) existing.students.push({ id: entry.studentId });
           result.parentsUpdated++;
         } catch (err: any) {
           result.errors.push(`${entry.rowNum} Veli: ${err.message}`);
@@ -240,7 +233,6 @@ export async function importParents(
     });
   }
 
-  // 6b. Create new parents in batches
   for (let i = 0; i < newEntries.length; i += BATCH_SIZE) {
     const batch = newEntries.slice(i, i + BATCH_SIZE);
     await prisma.$transaction(async (tx) => {
@@ -260,7 +252,6 @@ export async function importParents(
             continue;
           }
 
-          const passwordHash = hashByPhone.get(entry.phone)!;
           const existingUser = userByPhone.get(entry.phone);
           let userId: string;
 
@@ -268,7 +259,7 @@ export async function importParents(
             userId = existingUser.id;
             if (existingUser.parent) {
               const alreadyLinked = existingUser.parent.students.some((s) => s.id === entry.studentId);
-              const newParent = await tx.parent.update({
+              const updatedParent = await tx.parent.update({
                 where: { id: existingUser.parent.id },
                 data: {
                   fullName: entry.fullName,
@@ -276,21 +267,28 @@ export async function importParents(
                 },
               });
               createdParentByPhone.set(entry.phone, {
-                id: newParent.id,
+                id: updatedParent.id,
                 students: [...existingUser.parent.students, ...(!alreadyLinked ? [{ id: entry.studentId }] : [])],
               });
               result.parentsUpdated++;
               continue;
             }
           } else {
+            const rawPassword = generatedPasswordByPhone.get(entry.phone);
+            const passwordHash = hashByPhone.get(entry.phone);
+            if (!rawPassword || !passwordHash) throw new Error('Geçici veli şifresi oluşturulamadı.');
+
             const user = await tx.user.create({
               data: {
                 username: entry.phone,
                 password: passwordHash,
                 role: 'PARENT',
+                mustChangePassword: true,
               },
             });
             userId = user.id;
+
+            result.initialCredentials.push({ phone: entry.phone, password: rawPassword });
           }
 
           const newParent = await tx.parent.create({
