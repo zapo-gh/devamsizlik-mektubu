@@ -1,0 +1,16 @@
+name: Manual Smoke Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check repository
+        run: |
+          test -f backend/package.json
+          test -f frontend/package.json
+          test -f .github/workflows/ci.yml
+          echo "Repository structure OK"
