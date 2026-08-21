@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { violationsController } from './violations.controller';
+import { getViolationSource } from './violation-source.controller';
 import { violationImageUpload } from './imageUpload.middleware';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
 import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
@@ -10,6 +11,7 @@ const router = Router();
 
 router.get('/stats', authMiddleware, adminOnly, violationsController.getStats);
 router.get('/student/:studentId', authMiddleware, adminOnly, violationsController.getStudentHistory.bind(violationsController));
+router.get('/student/record/:violationId/source', authMiddleware, adminOnly, getViolationSource);
 router.get('/uploads', authMiddleware, adminOnly, violationsController.getUploads);
 router.get('/uploads/:uploadId', authMiddleware, adminOnly, violationsController.getUploadDetail);
 
