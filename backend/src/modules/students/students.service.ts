@@ -191,6 +191,35 @@ export class StudentsService {
     });
   }
 
+  async resetParentPassword(parentId: string, actorUserId: string) {
+    const parent = await prisma.parent.findUnique({
+      where: { id: parentId },
+      include: { user: { select: { id: true, role: true } } },
+    });
+    if (!parent) throw new AppError('Veli bulunamadı.', 404);
+    if (parent.user.role !== 'PARENT') throw new AppError('Bu hesap veli hesabı değil.', 400);
+
+    const temporaryPassword = generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+
+    await prisma.user.update({
+      where: { id: parent.user.id },
+      data: { password: passwordHash, mustChangePassword: true },
+    });
+
+    const { AuditService } = require('../shared/utils/audit.service');
+    await AuditService.log(actorUserId, 'RESET_PARENT_PASSWORD', 'Parent', parentId, {
+      phone: parent.phone,
+    });
+
+    return {
+      parentId,
+      phone: parent.phone,
+      temporaryPassword,
+      mustChangePassword: true,
+    };
+  }
+
   async addParentToStudent(studentId: string, data: { fullName: string; phone: string }) {
     const student = await prisma.student.findUnique({ where: { id: studentId } });
     if (!student) throw new AppError('Öğrenci bulunamadı.', 404);
