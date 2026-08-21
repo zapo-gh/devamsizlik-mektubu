@@ -40,16 +40,11 @@ import auditRoutes from './modules/audit/audit.routes';
 
 const app = express();
 
-// Ensure upload directory exists. BackupService owns its platform-specific backup directory.
 const uploadsDir = path.resolve(config.upload.dir);
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// Global middleware
 app.disable('x-powered-by');
 app.use(helmet({
-  // CSP frontend SPA ile çakışmaması için devre dışı (statik dosya zaten backend üzerinden sunuluyor)
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
@@ -64,31 +59,35 @@ app.use(cors({
       'http://tauri.localhost',
       'tauri://localhost',
     ];
-    if (!origin || allowed.includes(origin) || origin.startsWith('tauri://')) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS politikası: bu kaynaktan erişime izin verilmiyor.'));
-    }
+    if (!origin || allowed.includes(origin) || origin.startsWith('tauri://')) callback(null, true);
+    else callback(new Error('CORS politikası: bu kaynaktan erişime izin verilmiyor.'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// JSON/urlencoded gövdeleri sınırlı tut; dosya yüklemeleri multer tarafından
-// ayrıca config.upload.maxSize ile kontrol edilir.
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Health check
+// Liveness: process is reachable.
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Global API rate limiter
+// Readiness: process + Prisma/SQLite are actually usable.
+app.get('/api/health/ready', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ready', database: 'ok', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Health readiness check failed:', error);
+    res.status(503).json({ status: 'not_ready', database: 'error', timestamp: new Date().toISOString() });
+  }
+});
+
 app.use('/api', generalLimiter);
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/absenteeism', absenteeismRoutes);
@@ -119,16 +118,11 @@ app.use('/api/supplier', supplierRoutes);
 app.use('/api/order-letter', orderLetterRoutes);
 app.use('/api/audit', auditRoutes);
 
-// WhatsApp otomatik bağlantı devre dışı — kullanıcı /admin/whatsapp sayfasından Bağlan butonuna basmalı.
-
-// Frontend statik dosyaları (Electron/production build)
 const frontendDist = path.resolve(__dirname, 'public');
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist, {
     setHeaders: (res, filepath) => {
-      if (filepath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      }
+      if (filepath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     },
   }));
   app.get(/^(?!\/api)/, (_req, res) => {
