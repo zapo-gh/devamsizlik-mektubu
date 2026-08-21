@@ -103,6 +103,13 @@ export class StudentsController {
     } catch (error) { next(error); }
   }
 
+  async resetParentPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await studentsService.resetParentPassword(req.params.parentId, req.user!.userId);
+      res.json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
+
   async removeParent(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await studentsService.removeParentFromStudent(req.params.id, req.params.parentId);
