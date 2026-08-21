@@ -3,6 +3,7 @@ import { studentsService } from './students.service';
 import { parseExcelFile, importStudents } from './excelImport.service';
 import { parseParentExcel, importParents } from './parentImport.service';
 import { parentAccountService } from './parentAccount.service';
+import { student360Service } from './student360.service';
 import { z } from 'zod';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
 
@@ -33,6 +34,11 @@ export class StudentsController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try { res.json({ success: true, data: await studentsService.getById(req.params.id) }); }
+    catch (error) { next(error); }
+  }
+
+  async get360(req: Request, res: Response, next: NextFunction) {
+    try { res.json({ success: true, data: await student360Service.getById(req.params.id) }); }
     catch (error) { next(error); }
   }
 
@@ -86,14 +92,13 @@ export class StudentsController {
   async updateParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { fullName, phone } = req.body;
-      res.json({ success: true, data: await studentsService.updateParent(req.params.parentId, { fullName, phone }) });
+      res.json({ success: true, data: await studentsService.updateParent(req.params.parentId, { fullName, phone }));
     } catch (error) { next(error); }
   }
 
   async resetParentPassword(req: Request, res: Response, next: NextFunction) {
-    try {
-      res.json({ success: true, data: await parentAccountService.resetPassword(req.params.parentId, req.user!.userId) });
-    } catch (error) { next(error); }
+    try { res.json({ success: true, data: await parentAccountService.resetPassword(req.params.parentId, req.user!.userId) }); }
+    catch (error) { next(error); }
   }
 
   async removeParent(req: Request, res: Response, next: NextFunction) {
