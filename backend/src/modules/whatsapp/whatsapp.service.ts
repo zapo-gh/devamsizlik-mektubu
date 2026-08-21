@@ -228,3 +228,77 @@ async function checkConsent(phone: string): Promise<void> {
     throw new Error('Veli WhatsApp bildirimlerini açıkça onaylamadığı için (Durum: ' + (parent.waConsentStatus || 'Bekliyor') + ') mesaj gönderilemedi.');
   }
 }
+
+export async function sendConsentRequest(phone: string): Promise<void> {
+  if (!socket || state.status !== 'connected' || shuttingDown) {
+    throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
+  }
+  const jid = toJid(phone);
+  const text = `Sayın Veli, OkulDesk sistemi üzerinden devamsızlık ve okul bilgilendirmelerini WhatsApp üzerinden almak istiyorsanız lütfen bu mesaja EVET veya 1 yazarak cevap veriniz. İstemiyorsanız HAYIR veya 2 yazabilirsiniz.`;
+  await socket.sendMessage(jid, { text });
+}
+
+export async function sendTextMessage(phone: string, text: string): Promise<void> {
+  if (!socket || state.status !== 'connected' || shuttingDown) {
+    throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
+  }
+  await checkConsent(phone);
+  const jid = toJid(phone);
+  await socket.sendMessage(jid, { text });
+}
+
+export async function sendMessageWithPDF(
+  phone: string,
+  text: string,
+  pdfPath: string,
+  fileName = 'belge.pdf'
+): Promise<void> {
+  if (!socket || state.status !== 'connected' || shuttingDown) {
+    throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
+  }
+  if (!fs.existsSync(pdfPath)) throw new Error('PDF dosyası bulunamadı.');
+  await checkConsent(phone);
+  const jid = toJid(phone);
+  const document = fs.readFileSync(pdfPath);
+  await socket.sendMessage(jid, { document, fileName, mimetype: 'application/pdf', caption: text });
+}
+
+export async function sendMessageWithImage(
+  phone: string,
+  text: string,
+  imagePath: string
+): Promise<void> {
+  if (!socket || state.status !== 'connected' || shuttingDown) {
+    throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
+  }
+  if (!fs.existsSync(imagePath)) throw new Error('Görsel dosyası bulunamadı.');
+  await checkConsent(phone);
+  const jid = toJid(phone);
+  const image = fs.readFileSync(imagePath);
+  await socket.sendMessage(jid, { image, caption: text, mimetype: 'image/jpeg' });
+}
+
+export async function sendMessageWithImageBuffer(
+  phone: string,
+  text: string,
+  imageBuffer: Buffer
+): Promise<void> {
+  if (!socket || state.status !== 'connected' || shuttingDown) {
+    throw new Error('WhatsApp bağlı değil. Lütfen önce QR kodu okutun.');
+  }
+  await checkConsent(phone);
+  const jid = toJid(phone);
+  await socket.sendMessage(jid, { image: imageBuffer, caption: text, mimetype: 'image/jpeg' });
+}
+
+export const whatsappService = {
+  initialize,
+  disconnect,
+  getStatus,
+  setAuthDir,
+  sendTextMessage,
+  sendConsentRequest,
+  sendMessageWithPDF,
+  sendMessageWithImage,
+  sendMessageWithImageBuffer,
+};
