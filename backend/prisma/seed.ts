@@ -3,27 +3,18 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-function requireSeedPassword(name: string, fallback: string): string {
+function requireSeedPassword(name: string): string {
   const value = process.env[name];
-  if (value) return value;
-
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(`${name} production ortamında zorunludur.`);
+  if (!value || value.length < 10) {
+    throw new Error(`${name} zorunludur ve en az 10 karakter olmalıdır.`);
   }
-
-  return fallback;
+  return value;
 }
 
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Never rely on a documented production credential. Development defaults are
-  // intentionally overridable and production requires explicit environment values.
-  const adminPassword = await bcrypt.hash(
-    requireSeedPassword('SEED_ADMIN_PASSWORD', 'change-me-admin'),
-    12,
-  );
-
+  const adminPassword = await bcrypt.hash(requireSeedPassword('SEED_ADMIN_PASSWORD'), 12);
   const admin = await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
@@ -56,10 +47,7 @@ async function main() {
 
   console.log(`✅ Sample students ready: ${student1.fullName}, ${student2.fullName}, ${student3.fullName}`);
 
-  const parentPassword = await bcrypt.hash(
-    requireSeedPassword('SEED_PARENT_PASSWORD', 'change-me-parent'),
-    12,
-  );
+  const parentPassword = await bcrypt.hash(requireSeedPassword('SEED_PARENT_PASSWORD'), 12);
   const parentUser = await prisma.user.upsert({
     where: { username: 'veli1' },
     update: {},
@@ -83,7 +71,7 @@ async function main() {
   });
 
   console.log(`✅ Sample parent ready: ${parent.fullName}`);
-  console.log('🎉 Seeding completed. Set SEED_ADMIN_PASSWORD/SEED_PARENT_PASSWORD explicitly for non-development environments.');
+  console.log('🎉 Seeding completed.');
 }
 
 main()
