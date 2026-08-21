@@ -38,35 +38,16 @@ export interface ParentImportResult {
   parentsUpdated: number;
   errors: string[];
   preview: ParentImportPreview[];
-  // Plaintext temporary passwords are returned only in the authenticated admin response.
-  // They are never persisted; the account is forced to change the password at first login.
   initialCredentials: ParentInitialCredential[];
 }
 
-/**
- * Parse parent Excel file.
- *
- * Expected columns (row 1 = header):
- *   A (0): Okul No
- *   B (1): Öğr. Ad Soyad
- *   C (2): Sınıf/Grup
- *   D (3): 1. Veli Telefon
- *   E (4): 1. Veli Ad Soyad
- *   F (5): 1. Veli Yakınlık
- *   G (6): 2. Veli Telefon
- *   H (7): 2. Veli Adı
- */
 export function parseParentExcel(buffer: Buffer): ParsedParentRow[] {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const results: ParsedParentRow[] = [];
 
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    const rows: any[][] = XLSX.utils.sheet_to_json(sheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
+    const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -101,7 +82,6 @@ export function parseParentExcel(buffer: Buffer): ParsedParentRow[] {
   return results;
 }
 
-/** Normalize Turkish mobile numbers to 05XXXXXXXXX. */
 export function normalizePhone(phone: string): string {
   if (!phone) return '';
   let cleaned = phone.replace(/[\s\-()]/g, '');
@@ -111,8 +91,7 @@ export function normalizePhone(phone: string): string {
   return cleaned;
 }
 
-function generateTemporaryPassword(): string {
-  // 12+ chars, generated from OS CSPRNG. Never derive passwords from phone numbers.
+export function generateTemporaryPassword(): string {
   return crypto.randomBytes(12).toString('base64url');
 }
 
@@ -134,13 +113,11 @@ export async function importParents(
   const allStudents = await prisma.student.findMany({
     select: { id: true, schoolNumber: true, fullName: true },
   });
-
   const studentByNumber = new Map(allStudents.map((s) => [s.schoolNumber, s]));
 
   for (const row of rows) {
     const student = studentByNumber.get(row.schoolNumber);
     const matched = !!student;
-
     result.preview.push({
       schoolNumber: row.schoolNumber,
       studentName: row.studentName,
@@ -151,7 +128,6 @@ export async function importParents(
       parent2Name: row.parent2Name,
       parent2Phone: row.parent2Phone,
     });
-
     if (matched) result.matched++;
     else result.unmatched++;
   }
@@ -162,12 +138,8 @@ export async function importParents(
   for (const row of rows) {
     const student = studentByNumber.get(row.schoolNumber);
     if (!student) continue;
-    if (row.parent1Name && row.parent1Phone) {
-      parentEntries.push({ studentId: student.id, fullName: row.parent1Name, phone: row.parent1Phone, rowNum: row.schoolNumber });
-    }
-    if (row.parent2Name && row.parent2Phone) {
-      parentEntries.push({ studentId: student.id, fullName: row.parent2Name, phone: row.parent2Phone, rowNum: row.schoolNumber });
-    }
+    if (row.parent1Name && row.parent1Phone) parentEntries.push({ studentId: student.id, fullName: row.parent1Name, phone: row.parent1Phone, rowNum: row.schoolNumber });
+    if (row.parent2Name && row.parent2Phone) parentEntries.push({ studentId: student.id, fullName: row.parent2Name, phone: row.parent2Phone, rowNum: row.schoolNumber });
   }
 
   const uniquePhones = [...new Set(parentEntries.map((e) => e.phone))];
@@ -180,7 +152,6 @@ export async function importParents(
   const newParentPhones = new Set<string>();
   const newEntries: typeof parentEntries = [];
   const existingEntries: typeof parentEntries = [];
-
   for (const entry of parentEntries) {
     if (parentByPhone.has(entry.phone)) existingEntries.push(entry);
     else {
@@ -189,7 +160,6 @@ export async function importParents(
     }
   }
 
-  // Existing users are fetched before hashing so we only generate credentials for genuinely new accounts.
   const existingUsers = await prisma.user.findMany({
     where: { username: { in: uniquePhones } },
     include: { parent: { include: { students: { select: { id: true } } } } },
@@ -199,7 +169,6 @@ export async function importParents(
   const newUserPhones = [...newParentPhones].filter((phone) => !userByPhone.has(phone));
   const generatedPasswordByPhone = new Map<string, string>();
   const hashByPhone = new Map<string, string>();
-
   await Promise.all(newUserPhones.map(async (phone) => {
     const rawPassword = generateTemporaryPassword();
     const passwordHash = await bcrypt.hash(rawPassword, 12);
@@ -219,10 +188,7 @@ export async function importParents(
           const alreadyLinked = existing.students.some((s) => s.id === entry.studentId);
           await tx.parent.update({
             where: { id: existing.id },
-            data: {
-              fullName: entry.fullName,
-              ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
-            },
+            data: { fullName: entry.fullName, ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}) },
           });
           if (!alreadyLinked) existing.students.push({ id: entry.studentId });
           result.parentsUpdated++;
@@ -242,10 +208,7 @@ export async function importParents(
           if (alreadyCreated) {
             const alreadyLinked = alreadyCreated.students.some((s) => s.id === entry.studentId);
             if (!alreadyLinked) {
-              await tx.parent.update({
-                where: { id: alreadyCreated.id },
-                data: { students: { connect: { id: entry.studentId } } },
-              });
+              await tx.parent.update({ where: { id: alreadyCreated.id }, data: { students: { connect: { id: entry.studentId } } } });
               alreadyCreated.students.push({ id: entry.studentId });
             }
             result.parentsUpdated++;
@@ -254,17 +217,13 @@ export async function importParents(
 
           const existingUser = userByPhone.get(entry.phone);
           let userId: string;
-
           if (existingUser) {
             userId = existingUser.id;
             if (existingUser.parent) {
               const alreadyLinked = existingUser.parent.students.some((s) => s.id === entry.studentId);
               const updatedParent = await tx.parent.update({
                 where: { id: existingUser.parent.id },
-                data: {
-                  fullName: entry.fullName,
-                  ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}),
-                },
+                data: { fullName: entry.fullName, ...(!alreadyLinked ? { students: { connect: { id: entry.studentId } } } : {}) },
               });
               createdParentByPhone.set(entry.phone, {
                 id: updatedParent.id,
@@ -277,27 +236,15 @@ export async function importParents(
             const rawPassword = generatedPasswordByPhone.get(entry.phone);
             const passwordHash = hashByPhone.get(entry.phone);
             if (!rawPassword || !passwordHash) throw new Error('Geçici veli şifresi oluşturulamadı.');
-
             const user = await tx.user.create({
-              data: {
-                username: entry.phone,
-                password: passwordHash,
-                role: 'PARENT',
-                mustChangePassword: true,
-              },
+              data: { username: entry.phone, password: passwordHash, role: 'PARENT', mustChangePassword: true },
             });
             userId = user.id;
-
             result.initialCredentials.push({ phone: entry.phone, password: rawPassword });
           }
 
           const newParent = await tx.parent.create({
-            data: {
-              userId,
-              fullName: entry.fullName,
-              phone: entry.phone,
-              students: { connect: { id: entry.studentId } },
-            },
+            data: { userId, fullName: entry.fullName, phone: entry.phone, students: { connect: { id: entry.studentId } } },
           });
           createdParentByPhone.set(entry.phone, { id: newParent.id, students: [{ id: entry.studentId }] });
           result.parentsCreated++;
