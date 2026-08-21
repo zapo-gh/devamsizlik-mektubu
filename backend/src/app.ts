@@ -9,6 +9,7 @@ import { errorHandler } from './modules/shared/middleware/errorHandler.middlewar
 import { generalLimiter } from './modules/shared/middleware/rateLimit.middleware';
 import prisma from './modules/shared/utils/prisma';
 import authRoutes from './modules/auth/auth.routes';
+import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import studentRoutes from './modules/students/students.routes';
 import absenteeismRoutes from './modules/absenteeism/absenteeism.routes';
 import warningRoutes from './modules/warnings/warnings.routes';
@@ -44,21 +45,11 @@ const uploadsDir = path.resolve(config.upload.dir);
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 app.disable('x-powered-by');
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-}));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 app.use(cors({
   origin: (origin, callback) => {
-    const allowed = [
-      'http://127.0.0.1:4000',
-      'http://localhost:4000',
-      'http://localhost:5173',
-      'http://localhost:1420',
-      'http://tauri.localhost',
-      'tauri://localhost',
-    ];
+    const allowed = ['http://127.0.0.1:4000', 'http://localhost:4000', 'http://localhost:5173', 'http://localhost:1420', 'http://tauri.localhost', 'tauri://localhost'];
     if (!origin || allowed.includes(origin) || origin.startsWith('tauri://')) callback(null, true);
     else callback(new Error('CORS politikası: bu kaynaktan erişime izin verilmiyor.'));
   },
@@ -70,12 +61,10 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Liveness: process is reachable.
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Readiness: process + Prisma/SQLite are actually usable.
 app.get('/api/health/ready', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -89,6 +78,7 @@ app.get('/api/health/ready', async (_req, res) => {
 app.use('/api', generalLimiter);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/absenteeism', absenteeismRoutes);
 app.use('/api/warnings', warningRoutes);
@@ -120,11 +110,7 @@ app.use('/api/audit', auditRoutes);
 
 const frontendDist = path.resolve(__dirname, 'public');
 if (fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist, {
-    setHeaders: (res, filepath) => {
-      if (filepath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    },
-  }));
+  app.use(express.static(frontendDist, { setHeaders: (res, filepath) => { if (filepath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate'); } }));
   app.get(/^(?!\/api)/, (_req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(frontendDist, 'index.html'));
@@ -132,5 +118,4 @@ if (fs.existsSync(frontendDist)) {
 }
 
 app.use(errorHandler);
-
 export default app;
