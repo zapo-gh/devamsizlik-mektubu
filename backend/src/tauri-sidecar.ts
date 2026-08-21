@@ -63,12 +63,12 @@ try {
     throw new Error('Prisma CLI bulunamadı; veritabanı şeması doğrulanamıyor.');
   }
 
-  // Bu sürümde repository'de migration baseline bulunmadığı için migrate deploy
-  // kullanmak hatalıdır. Prisma schema authoritative kaynaktır; db push şemayı
-  // veri kaybını kabul etmeden eşitler.
+  // Repository'de migration baseline bulunmadığı için migrate deploy kullanmak
+  // hatalıdır. Prisma schema authoritative kaynaktır; db push şemayı eşitler.
   execFileSync(process.execPath, [prismaScript, 'db', 'push', '--skip-generate'], {
     env: process.env,
     stdio: 'inherit',
+    windowsHide: true,
   });
 
   console.log('✅ [Tauri-Sidecar] Veritabanı şeması doğrulandı/eşitlendi.');
