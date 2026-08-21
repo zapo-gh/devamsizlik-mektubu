@@ -25,16 +25,14 @@ export default function Student360Page() {
   const [sendingConsent, setSendingConsent] = useState<string | null>(null);
   const [credentialMessage, setCredentialMessage] = useState('');
   const [downloadingAbsence, setDownloadingAbsence] = useState<string | null>(null);
+  const [downloadingWarning, setDownloadingWarning] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
     setLoading(true); setError('');
-    try {
-      const res = await api.get(`/students/360/${id}`);
-      setData(res.data.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.message || 'Öğrenci bilgileri yüklenemedi.');
-    } finally { setLoading(false); }
+    try { const res = await api.get(`/students/360/${id}`); setData(res.data.data); }
+    catch (e: any) { setError(e?.response?.data?.message || 'Öğrenci bilgileri yüklenemedi.'); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [id]);
@@ -47,39 +45,27 @@ export default function Student360Page() {
       const password = res.data?.data?.temporaryPassword;
       setCredentialMessage(password ? `${parentName} için geçici şifre: ${password}` : 'Şifre başarıyla sıfırlandı.');
       await load();
-    } catch (e: any) {
-      setCredentialMessage(e?.response?.data?.message || 'Şifre sıfırlanamadı.');
-    } finally { setResettingParent(null); }
+    } catch (e: any) { setCredentialMessage(e?.response?.data?.message || 'Şifre sıfırlanamadı.'); }
+    finally { setResettingParent(null); }
   };
 
   const sendConsent = async (parentId: string, parentName: string) => {
     if (!window.confirm(`${parentName} için WhatsApp onay isteği gönderilsin mi?`)) return;
     setSendingConsent(parentId); setCredentialMessage('');
-    try {
-      await api.post('/whatsapp/send-consent', { parentId });
-      setCredentialMessage(`${parentName} için WhatsApp onay isteği gönderildi.`);
-      await load();
-    } catch (e: any) {
-      setCredentialMessage(e?.response?.data?.message || 'WhatsApp onay isteği gönderilemedi.');
-    } finally { setSendingConsent(null); }
+    try { await api.post('/whatsapp/send-consent', { parentId }); setCredentialMessage(`${parentName} için WhatsApp onay isteği gönderildi.`); await load(); }
+    catch (e: any) { setCredentialMessage(e?.response?.data?.message || 'WhatsApp onay isteği gönderilemedi.'); }
+    finally { setSendingConsent(null); }
   };
 
-  const downloadAbsencePdf = async (absenceId: string, warningNumber: number) => {
-    setDownloadingAbsence(absenceId);
+  const downloadFile = async (endpoint: string, filename: string, setter: (id: string | null) => void, id: string) => {
+    setter(id);
     try {
-      const response = await api.get(`/absenteeism/${absenceId}/pdf/download`, { responseType: 'blob' });
+      const response = await api.get(endpoint, { responseType: 'blob' });
       const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `devamsizlik-mektubu-${warningNumber}.pdf`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e: any) {
-      setCredentialMessage(e?.response?.data?.message || 'Devamsızlık belgesi indirilemedi.');
-    } finally { setDownloadingAbsence(null); }
+      const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove(); window.URL.revokeObjectURL(url);
+    } catch (e: any) { setCredentialMessage(e?.response?.data?.message || 'Belge indirilemedi.'); }
+    finally { setter(null); }
   };
 
   if (loading) return <div className="flex justify-center items-center p-16"><RefreshCw className="animate-spin" /></div>;
@@ -100,8 +86,10 @@ export default function Student360Page() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <Card icon={Users} title="Veli Bilgileri">{data.parents.length === 0 ? <Empty text="Kayıtlı veli yok." /> : data.parents.map(parent => <div key={parent.id} className="border border-slate-200 rounded-xl p-4 mb-3 last:mb-0"><div className="flex justify-between gap-3"><div><div className="font-semibold">{parent.fullName}</div><div className="text-sm text-slate-500 mt-1">{parent.phone}</div></div><span className="text-xs px-2.5 py-1 h-fit rounded-full bg-slate-100 text-slate-600">WhatsApp: {consentLabel[parent.waConsentStatus] || parent.waConsentStatus}</span></div><div className="text-xs text-slate-500 mt-3">Kullanıcı: {parent.user.username} · {parent.user.mustChangePassword ? 'İlk şifre değişikliği bekleniyor' : 'Şifre aktif'}</div><div className="flex flex-wrap gap-2 mt-3"><button disabled={resettingParent === parent.id} onClick={() => resetPassword(parent.id, parent.fullName)} className="inline-flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><KeyRound size={14} />{resettingParent === parent.id ? 'Sıfırlanıyor...' : 'Geçici Şifre Sıfırla'}</button>{parent.waConsentStatus !== 'ACCEPTED' && <button disabled={sendingConsent === parent.id} onClick={() => sendConsent(parent.id, parent.fullName)} className="inline-flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50"><Send size={14} />{sendingConsent === parent.id ? 'Gönderiliyor...' : 'WhatsApp Onay İsteği'}</button>}</div></div>)}</Card>
 
-        <Card icon={FileText} title="Devamsızlık Özeti"><div className="grid grid-cols-3 gap-2 mb-4"><Mini label="Özürlü Gün" value={data.absenteeisms.summary.excusedDays} /><Mini label="Özürsüz Gün" value={data.absenteeisms.summary.unexcusedDays} /><Mini label="Bekleyen" value={data.absenteeisms.summary.pending} /></div><div className="space-y-2">{data.absenteeisms.records.slice(0, 8).map(item => <div key={item.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50"><div className="flex items-center justify-between gap-3"><div className="text-sm font-medium text-slate-800">Mektup #{item.warningNumber}{item.isBep ? ' · BEP' : ''}</div><button disabled={downloadingAbsence === item.id} onClick={() => downloadAbsencePdf(item.id, item.warningNumber)} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50"><Download size={13} />{downloadingAbsence === item.id ? '...' : 'PDF'}</button></div><div className="text-xs text-slate-500 mt-1">{fmtDate(item.createdAt)} · {item.waSentAt ? 'WhatsApp gönderildi' : 'WhatsApp bekliyor'}</div></div>)}{data.absenteeisms.records.length === 0 && <Empty text="Devamsızlık kaydı yok." />}</div></Card>
-        <Card icon={AlertTriangle} title="Yazılı Uyarılar"><div className="space-y-2">{data.warnings.records.slice(0, 8).map(item => <Row key={item.id} title={`${item.behaviorCode} · ${item.behaviorText}`} meta={`${fmtDate(item.issuedAt)} · ${item.issuedBy}`} />)}{data.warnings.records.length === 0 && <Empty text="Yazılı uyarı yok." />}</div></Card>
+        <Card icon={FileText} title="Devamsızlık Özeti"><div className="grid grid-cols-3 gap-2 mb-4"><Mini label="Özürlü Gün" value={data.absenteeisms.summary.excusedDays} /><Mini label="Özürsüz Gün" value={data.absenteeisms.summary.unexcusedDays} /><Mini label="Bekleyen" value={data.absenteeisms.summary.pending} /></div><div className="space-y-2">{data.absenteeisms.records.slice(0, 8).map(item => <div key={item.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50"><div className="flex items-center justify-between gap-3"><div className="text-sm font-medium text-slate-800">Mektup #{item.warningNumber}{item.isBep ? ' · BEP' : ''}</div><button disabled={downloadingAbsence === item.id} onClick={() => downloadFile(`/absenteeism/${item.id}/pdf/download`, `devamsizlik-mektubu-${item.warningNumber}.pdf`, setDownloadingAbsence, item.id)} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50"><Download size={13} />{downloadingAbsence === item.id ? '...' : 'PDF'}</button></div><div className="text-xs text-slate-500 mt-1">{fmtDate(item.createdAt)} · {item.waSentAt ? 'WhatsApp gönderildi' : 'WhatsApp bekliyor'}</div></div>)}{data.absenteeisms.records.length === 0 && <Empty text="Devamsızlık kaydı yok." />}</div></Card>
+
+        <Card icon={AlertTriangle} title="Yazılı Uyarılar"><div className="space-y-2">{data.warnings.records.slice(0, 8).map(item => <div key={item.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50"><div className="flex items-center justify-between gap-3"><div><div className="text-sm font-medium text-slate-800">{item.behaviorCode} · {item.behaviorText}</div><div className="text-xs text-slate-500 mt-1">{fmtDate(item.issuedAt)} · {item.issuedBy}</div></div><button disabled={downloadingWarning === item.id} onClick={() => downloadFile(`/warnings/${item.id}/pdf/download`, `yazili-uyari-${item.warningNumber}.pdf`, setDownloadingWarning, item.id)} className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50"><Download size={13} />{downloadingWarning === item.id ? '...' : 'PDF'}</button></div></div>)}{data.warnings.records.length === 0 && <Empty text="Yazılı uyarı yok." />}</div></Card>
+
         <Card icon={ShieldAlert} title="İhlal Takibi"><div className="flex gap-2 mb-4"><Mini label="Toplam" value={data.violations.total} /><Mini label="Onaylı" value={data.violations.confirmed} /></div><div className="space-y-2">{data.violations.records.slice(0, 8).map(item => <Row key={item.id} title={item.type} meta={`${fmtDate(item.violationDate)} · ${item.isConfirmed ? 'Onaylı' : 'Bekliyor'} · ${item.matchedBy}`} />)}{data.violations.records.length === 0 && <Empty text="İhlal kaydı yok." />}</div></Card>
         <Card icon={History} title="Audit Geçmişi"><div className="space-y-2">{data.auditLogs.slice(0, 10).map(item => <Row key={item.id} title={item.action} meta={`${fmtDate(item.createdAt)} · ${item.user.username}`} />)}{data.auditLogs.length === 0 && <Empty text="Audit kaydı yok." />}</div></Card>
         <Card icon={MessageSquare} title="İletişim Durumu"><div className="space-y-3">{data.parents.map(parent => <div key={parent.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50"><span className="font-medium text-sm">{parent.fullName}</span><span className={`text-xs font-semibold ${parent.waConsentStatus === 'ACCEPTED' ? 'text-green-600' : parent.waConsentStatus === 'DECLINED' ? 'text-red-600' : 'text-amber-600'}`}>{consentLabel[parent.waConsentStatus] || parent.waConsentStatus}</span></div>)}{data.parents.length === 0 && <Empty text="İletişim bilgisi yok." />}</div></Card>
