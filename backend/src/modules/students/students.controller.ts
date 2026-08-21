@@ -9,10 +9,7 @@ const createStudentSchema = z.object({
   schoolNumber: z.string().min(1, 'Okul numarası gereklidir.'),
   fullName: z.string().min(1, 'Ad soyad gereklidir.'),
   className: z.string().min(1, 'Sınıf gereklidir.'),
-  parents: z.array(z.object({
-    fullName: z.string().min(1),
-    phone: z.string().min(1),
-  })).optional(),
+  parents: z.array(z.object({ fullName: z.string().min(1), phone: z.string().min(1) })).optional(),
 });
 
 const updateStudentSchema = z.object({
@@ -28,104 +25,70 @@ export class StudentsController {
       const limit = Math.max(1, Math.min(1000, parseInt(req.query.limit as string) || 20));
       const search = req.query.search as string | undefined;
       const status = req.query.status as string | undefined;
-
       const result = await studentsService.getAll(page, limit, search, status);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await studentsService.getById(req.params.id);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = createStudentSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw new AppError(parsed.error.errors[0].message, 400);
-      }
-
+      if (!parsed.success) throw new AppError(parsed.error.errors[0].message, 400);
       const result = await studentsService.create(parsed.data);
       res.status(201).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = updateStudentSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw new AppError(parsed.error.errors[0].message, 400);
-      }
-
+      if (!parsed.success) throw new AppError(parsed.error.errors[0].message, 400);
       const result = await studentsService.update(req.params.id, parsed.data);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user.id;
-      const result = await studentsService.delete(req.params.id, userId);
+      const result = await studentsService.delete(req.params.id, req.user!.userId);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async bulkDelete(req: Request, res: Response, next: NextFunction) {
     try {
       const { ids } = req.body;
-      if (!Array.isArray(ids) || ids.length === 0) {
-        throw new AppError('Silinecek öğrenci ID listesi gereklidir.', 400);
-      }
+      if (!Array.isArray(ids) || ids.length === 0) throw new AppError('Silinecek öğrenci ID listesi gereklidir.', 400);
       const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!ids.every((id: unknown) => typeof id === 'string' && uuidRe.test(id))) {
-        throw new AppError('Geçersiz öğrenci ID formatı.', 400);
-      }
-      const userId = (req as any).user.id;
-      const result = await studentsService.bulkDelete(ids, userId);
+      if (!ids.every((id: unknown) => typeof id === 'string' && uuidRe.test(id))) throw new AppError('Geçersiz öğrenci ID formatı.', 400);
+      const result = await studentsService.bulkDelete(ids, req.user!.userId);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async addParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { fullName, phone } = req.body;
-      if (!fullName || !phone) {
-        throw new AppError('Veli adı ve telefon numarası gereklidir.', 400);
-      }
+      if (!fullName || !phone) throw new AppError('Veli adı ve telefon numarası gereklidir.', 400);
       const result = await studentsService.addParentToStudent(req.params.id, { fullName, phone });
       res.status(201).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async assignParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { parentId } = req.body;
-      if (!parentId) {
-        throw new AppError('Veli ID gereklidir.', 400);
-      }
-
+      if (!parentId) throw new AppError('Veli ID gereklidir.', 400);
       const result = await studentsService.assignParent(req.params.id, parentId);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
   async updateParent(req: Request, res: Response, next: NextFunction) {
@@ -133,66 +96,43 @@ export class StudentsController {
       const { fullName, phone } = req.body;
       const result = await studentsService.updateParent(req.params.parentId, { fullName, phone });
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
+  }
+
+  async resetParentPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await studentsService.resetParentPassword(req.params.parentId, req.user!.userId);
+      res.json({ success: true, data: result });
+    } catch (error) { next(error); }
   }
 
   async removeParent(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await studentsService.removeParentFromStudent(req.params.id, req.params.parentId);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
-  /**
-   * POST /students/import-excel?mode=preview|import
-   * Accepts multipart form with 'file' field (Excel .xlsx/.xls)
-   */
   async importExcel(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!req.file) {
-        throw new AppError('Excel dosyası gereklidir.', 400);
-      }
-
+      if (!req.file) throw new AppError('Excel dosyası gereklidir.', 400);
       const mode = (req.query.mode as string) === 'import' ? 'import' : 'preview';
       const students = parseExcelFile(req.file.buffer);
-
-      if (students.length === 0) {
-        throw new AppError('Excel dosyasında öğrenci verisi bulunamadı.', 400);
-      }
-
+      if (students.length === 0) throw new AppError('Excel dosyasında öğrenci verisi bulunamadı.', 400);
       const result = await importStudents(students, mode);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 
-  /**
-   * POST /students/import-parents?mode=preview|import
-   * Accepts multipart form with 'file' field (Excel .xlsx/.xls)
-   */
   async importParents(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!req.file) {
-        throw new AppError('Excel dosyası gereklidir.', 400);
-      }
-
+      if (!req.file) throw new AppError('Excel dosyası gereklidir.', 400);
       const mode = (req.query.mode as string) === 'import' ? 'import' : 'preview';
       const rows = parseParentExcel(req.file.buffer);
-
-      if (rows.length === 0) {
-        throw new AppError('Excel dosyasında veli verisi bulunamadı.', 400);
-      }
-
+      if (rows.length === 0) throw new AppError('Excel dosyasında veli verisi bulunamadı.', 400);
       const result = await importParents(rows, mode);
       res.json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
+    } catch (error) { next(error); }
   }
 }
 
