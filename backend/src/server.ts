@@ -13,11 +13,11 @@ import { BackupService } from './modules/shared/utils/backup.service';
 
 let httpServer: http.Server | null = null;
 
-async function seedAdmin(): Promise<string | null> {
+async function seedAdmin(): Promise<void> {
   const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
 
   if (existing) {
-    return null;
+    return;
   }
 
   // Never ship a static administrator credential. Generate a one-time password
@@ -47,7 +47,6 @@ async function seedAdmin(): Promise<string | null> {
   );
 
   console.log(`✅ İlk yönetici hesabı oluşturuldu. Geçici kimlik bilgileri: ${credentialsFile}`);
-  return initialPassword;
 }
 
 function isPortBusy(port: number): Promise<boolean> {
@@ -70,7 +69,7 @@ export async function startServer(): Promise<void> {
   await initializeDatabase();
   console.log('✅ Veritabanı şeması hazır');
 
-  const initialAdminPassword = await seedAdmin();
+  await seedAdmin();
 
   await prisma.$connect();
   console.log('✅ Database connected successfully');
@@ -87,10 +86,6 @@ export async function startServer(): Promise<void> {
     });
     httpServer.on('error', reject);
   });
-
-  if (initialAdminPassword) {
-    (process as any).emit('adminInitialized', initialAdminPassword);
-  }
 }
 
 async function gracefulShutdown(signal: string) {
