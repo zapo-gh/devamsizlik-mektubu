@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api';
-import { ArrowLeft, User, Users, FileText, AlertTriangle, ShieldAlert, MessageSquare, History, RefreshCw, KeyRound, Edit2, Download, X } from 'lucide-react';
+import { ArrowLeft, User, Users, FileText, AlertTriangle, ShieldAlert, MessageSquare, History, RefreshCw, KeyRound, ExternalLink, Download, Send } from 'lucide-react';
 
 interface Student360Data {
   student: { id: string; schoolNumber: string; fullName: string; className: string; status: string; createdAt: string };
@@ -22,12 +22,9 @@ export default function Student360Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resettingParent, setResettingParent] = useState<string | null>(null);
+  const [sendingConsent, setSendingConsent] = useState<string | null>(null);
   const [credentialMessage, setCredentialMessage] = useState('');
   const [downloadingAbsence, setDownloadingAbsence] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ fullName: '', className: '', status: 'ACTIVE' });
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState('');
 
   const load = async () => {
     if (!id) return;
@@ -42,26 +39,6 @@ export default function Student360Page() {
 
   useEffect(() => { load(); }, [id]);
 
-  const openEdit = () => {
-    if (!data) return;
-    setEditForm({ fullName: data.student.fullName, className: data.student.className, status: data.student.status });
-    setEditError('');
-    setEditing(true);
-  };
-
-  const saveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-    setEditSaving(true); setEditError('');
-    try {
-      await api.put(`/students/${id}`, editForm);
-      setEditing(false);
-      await load();
-    } catch (e: any) {
-      setEditError(e?.response?.data?.message || 'Öğrenci güncellenemedi.');
-    } finally { setEditSaving(false); }
-  };
-
   const resetPassword = async (parentId: string, parentName: string) => {
     if (!window.confirm(`${parentName} için yeni geçici şifre oluşturulsun mu?`)) return;
     setResettingParent(parentId); setCredentialMessage('');
@@ -75,6 +52,18 @@ export default function Student360Page() {
     } finally { setResettingParent(null); }
   };
 
+  const sendConsent = async (parentId: string, parentName: string) => {
+    if (!window.confirm(`${parentName} için WhatsApp onay isteği gönderilsin mi?`)) return;
+    setSendingConsent(parentId); setCredentialMessage('');
+    try {
+      await api.post('/whatsapp/send-consent', { parentId });
+      setCredentialMessage(`${parentName} için WhatsApp onay isteği gönderildi.`);
+      await load();
+    } catch (e: any) {
+      setCredentialMessage(e?.response?.data?.message || 'WhatsApp onay isteği gönderilemedi.');
+    } finally { setSendingConsent(null); }
+  };
+
   const downloadAbsencePdf = async (absenceId: string, warningNumber: number) => {
     setDownloadingAbsence(absenceId);
     try {
@@ -85,7 +74,9 @@ export default function Student360Page() {
       anchor.href = url;
       anchor.download = `devamsizlik-mektubu-${warningNumber}.pdf`;
       document.body.appendChild(anchor);
-      anchor.click(); anchor.remove(); window.URL.revokeObjectURL(url);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
     } catch (e: any) {
       setCredentialMessage(e?.response?.data?.message || 'Devamsızlık belgesi indirilemedi.');
     } finally { setDownloadingAbsence(null); }
@@ -99,7 +90,7 @@ export default function Student360Page() {
     <div className="p-2 md:p-6 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between gap-3 mb-5">
         <button onClick={() => navigate('/admin/students')} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"><ArrowLeft size={16} /> Öğrencilere Dön</button>
-        <div className="flex gap-2"><button onClick={openEdit} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"><Edit2 size={16} /> Düzenle</button><button onClick={load} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"><RefreshCw size={16} /> Yenile</button></div>
+        <div className="flex gap-2"><button onClick={() => navigate(`/admin/students?edit=${student.id}`)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"><ExternalLink size={16} /> Düzenle</button><button onClick={load} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm"><RefreshCw size={16} /> Yenile</button></div>
       </div>
 
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5"><div className="flex flex-col md:flex-row md:items-center justify-between gap-4"><div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center"><User className="text-indigo-600" size={28} /></div><div><h1 className="text-2xl font-bold text-slate-900">{student.fullName}</h1><p className="text-sm text-slate-500 mt-1">{student.schoolNumber} · {student.className}</p></div></div><span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${student.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{student.status === 'ACTIVE' ? 'Aktif Öğrenci' : 'Pasif Öğrenci'}</span></div></section>
@@ -107,15 +98,14 @@ export default function Student360Page() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"><Metric icon={FileText} label="Devamsızlık" value={data.absenteeisms.summary.records} /><Metric icon={AlertTriangle} label="Yazılı Uyarı" value={data.warnings.total} /><Metric icon={ShieldAlert} label="İhlal" value={data.violations.total} /><Metric icon={Users} label="Veli" value={data.parents.length} /></div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <Card icon={Users} title="Veli Bilgileri">{data.parents.length === 0 ? <Empty text="Kayıtlı veli yok." /> : data.parents.map(parent => <div key={parent.id} className="border border-slate-200 rounded-xl p-4 mb-3 last:mb-0"><div className="flex justify-between gap-3"><div><div className="font-semibold">{parent.fullName}</div><div className="text-sm text-slate-500 mt-1">{parent.phone}</div></div><span className="text-xs px-2.5 py-1 h-fit rounded-full bg-slate-100 text-slate-600">WhatsApp: {consentLabel[parent.waConsentStatus] || parent.waConsentStatus}</span></div><div className="text-xs text-slate-500 mt-3">Kullanıcı: {parent.user.username} · {parent.user.mustChangePassword ? 'İlk şifre değişikliği bekleniyor' : 'Şifre aktif'}</div><button disabled={resettingParent === parent.id} onClick={() => resetPassword(parent.id, parent.fullName)} className="mt-3 inline-flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><KeyRound size={14} />{resettingParent === parent.id ? 'Sıfırlanıyor...' : 'Geçici Şifre Sıfırla'}</button></div>)}</Card>
+        <Card icon={Users} title="Veli Bilgileri">{data.parents.length === 0 ? <Empty text="Kayıtlı veli yok." /> : data.parents.map(parent => <div key={parent.id} className="border border-slate-200 rounded-xl p-4 mb-3 last:mb-0"><div className="flex justify-between gap-3"><div><div className="font-semibold">{parent.fullName}</div><div className="text-sm text-slate-500 mt-1">{parent.phone}</div></div><span className="text-xs px-2.5 py-1 h-fit rounded-full bg-slate-100 text-slate-600">WhatsApp: {consentLabel[parent.waConsentStatus] || parent.waConsentStatus}</span></div><div className="text-xs text-slate-500 mt-3">Kullanıcı: {parent.user.username} · {parent.user.mustChangePassword ? 'İlk şifre değişikliği bekleniyor' : 'Şifre aktif'}</div><div className="flex flex-wrap gap-2 mt-3"><button disabled={resettingParent === parent.id} onClick={() => resetPassword(parent.id, parent.fullName)} className="inline-flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50"><KeyRound size={14} />{resettingParent === parent.id ? 'Sıfırlanıyor...' : 'Geçici Şifre Sıfırla'}</button>{parent.waConsentStatus !== 'ACCEPTED' && <button disabled={sendingConsent === parent.id} onClick={() => sendConsent(parent.id, parent.fullName)} className="inline-flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50"><Send size={14} />{sendingConsent === parent.id ? 'Gönderiliyor...' : 'WhatsApp Onay İsteği'}</button>}</div></div>)}</Card>
+
         <Card icon={FileText} title="Devamsızlık Özeti"><div className="grid grid-cols-3 gap-2 mb-4"><Mini label="Özürlü Gün" value={data.absenteeisms.summary.excusedDays} /><Mini label="Özürsüz Gün" value={data.absenteeisms.summary.unexcusedDays} /><Mini label="Bekleyen" value={data.absenteeisms.summary.pending} /></div><div className="space-y-2">{data.absenteeisms.records.slice(0, 8).map(item => <div key={item.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50"><div className="flex items-center justify-between gap-3"><div className="text-sm font-medium text-slate-800">Mektup #{item.warningNumber}{item.isBep ? ' · BEP' : ''}</div><button disabled={downloadingAbsence === item.id} onClick={() => downloadAbsencePdf(item.id, item.warningNumber)} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50"><Download size={13} />{downloadingAbsence === item.id ? '...' : 'PDF'}</button></div><div className="text-xs text-slate-500 mt-1">{fmtDate(item.createdAt)} · {item.waSentAt ? 'WhatsApp gönderildi' : 'WhatsApp bekliyor'}</div></div>)}{data.absenteeisms.records.length === 0 && <Empty text="Devamsızlık kaydı yok." />}</div></Card>
         <Card icon={AlertTriangle} title="Yazılı Uyarılar"><div className="space-y-2">{data.warnings.records.slice(0, 8).map(item => <Row key={item.id} title={`${item.behaviorCode} · ${item.behaviorText}`} meta={`${fmtDate(item.issuedAt)} · ${item.issuedBy}`} />)}{data.warnings.records.length === 0 && <Empty text="Yazılı uyarı yok." />}</div></Card>
         <Card icon={ShieldAlert} title="İhlal Takibi"><div className="flex gap-2 mb-4"><Mini label="Toplam" value={data.violations.total} /><Mini label="Onaylı" value={data.violations.confirmed} /></div><div className="space-y-2">{data.violations.records.slice(0, 8).map(item => <Row key={item.id} title={item.type} meta={`${fmtDate(item.violationDate)} · ${item.isConfirmed ? 'Onaylı' : 'Bekliyor'} · ${item.matchedBy}`} />)}{data.violations.records.length === 0 && <Empty text="İhlal kaydı yok." />}</div></Card>
         <Card icon={History} title="Audit Geçmişi"><div className="space-y-2">{data.auditLogs.slice(0, 10).map(item => <Row key={item.id} title={item.action} meta={`${fmtDate(item.createdAt)} · ${item.user.username}`} />)}{data.auditLogs.length === 0 && <Empty text="Audit kaydı yok." />}</div></Card>
         <Card icon={MessageSquare} title="İletişim Durumu"><div className="space-y-3">{data.parents.map(parent => <div key={parent.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50"><span className="font-medium text-sm">{parent.fullName}</span><span className={`text-xs font-semibold ${parent.waConsentStatus === 'ACCEPTED' ? 'text-green-600' : parent.waConsentStatus === 'DECLINED' ? 'text-red-600' : 'text-amber-600'}`}>{consentLabel[parent.waConsentStatus] || parent.waConsentStatus}</span></div>)}{data.parents.length === 0 && <Empty text="İletişim bilgisi yok." />}</div></Card>
       </div>
-
-      {editing && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4" onClick={() => !editSaving && setEditing(false)}><form onSubmit={saveEdit} onClick={e => e.stopPropagation()} className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6"><div className="flex items-center justify-between mb-5"><h2 className="text-lg font-bold">Öğrenci Bilgilerini Düzenle</h2><button type="button" onClick={() => setEditing(false)} disabled={editSaving} className="p-2 rounded-lg hover:bg-slate-100"><X size={18}/></button></div><div className="space-y-4"><label className="block text-sm font-medium">Ad Soyad<input value={editForm.fullName} onChange={e=>setEditForm({...editForm,fullName:e.target.value})} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2" required/></label><label className="block text-sm font-medium">Sınıf<input value={editForm.className} onChange={e=>setEditForm({...editForm,className:e.target.value})} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2" required/></label><label className="block text-sm font-medium">Durum<select value={editForm.status} onChange={e=>setEditForm({...editForm,status:e.target.value})} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2"><option value="ACTIVE">Aktif</option><option value="INACTIVE">Pasif</option></select></label>{editError&&<p className="text-sm text-red-600">{editError}</p>}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={()=>setEditing(false)} disabled={editSaving} className="px-4 py-2 rounded-lg border">Vazgeç</button><button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:opacity-50">{editSaving?'Kaydediliyor...':'Kaydet'}</button></div></div></form></div>}
     </div>
   );
 }
