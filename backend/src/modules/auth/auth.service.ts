@@ -1,5 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
 import prisma from '../shared/utils/prisma';
 import { config } from '../shared/config';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
@@ -21,7 +23,7 @@ export class AuthService {
     const token = jwt.sign(
       { userId: user.id, role: user.role, mustChangePassword: user.mustChangePassword },
       config.jwt.secret,
-      { expiresIn } as jwt.SignOptions
+      { expiresIn } as jwt.SignOptions,
     );
 
     return {
@@ -38,7 +40,13 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        mustChangePassword: true,
+        createdAt: true,
+      },
     });
 
     if (!user) {
@@ -65,6 +73,19 @@ export class AuthService {
       where: { id: userId },
       data: { password: hashedPassword, mustChangePassword: false },
     });
+
+    if (user.mustChangePassword && user.role === 'ADMIN') {
+      const userDataPath = path.resolve(
+        process.env.APPDATA || path.join(process.env.USERPROFILE || '.', 'AppData', 'Roaming'),
+        'OkulDesk',
+      );
+      const credentialsFile = path.join(userDataPath, 'initial-admin-credentials.txt');
+      try {
+        fs.rmSync(credentialsFile, { force: true });
+      } catch {
+        // Şifre değişikliğini credential dosyasının silinmesine bağımlı hale getirme.
+      }
+    }
 
     return { message: 'Şifre başarıyla güncellendi.' };
   }

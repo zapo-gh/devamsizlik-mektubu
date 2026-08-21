@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import prisma from '../utils/prisma';
 import { config } from '../config';
 import { AppError } from './errorHandler.middleware';
 import { requestContext } from '../utils/asyncLocalStorage';
@@ -18,7 +19,7 @@ declare global {
   }
 }
 
-export const authMiddleware = (req: Request, _res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: Request, _res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -27,22 +28,37 @@ export const authMiddleware = (req: Request, _res: Response, next: NextFunction)
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
-    
-    if (decoded.mustChangePassword) {
+
+    // mustChangePassword is persisted in the database. Do not rely solely on
+    // the JWT claim because the claim is intentionally immutable until token
+    // expiry and would otherwise keep a user locked out after a successful
+    // password change.
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { role: true, mustChangePassword: true },
+    });
+
+    if (!user) {
+      throw new AppError('Kullanıcı bulunamadı.', 401);
+    }
+
+    if (user.mustChangePassword) {
       const allowedPaths = ['/auth/change-password', '/auth/profile', '/auth/logout'];
-      // Exact match or if the current request URL starts with one of the allowed paths
-      // Typically req.originalUrl is used, but req.path is fine since the router handles prefixes
-      // req.originalUrl could be /api/auth/change-password
-      const isAllowed = allowedPaths.some(p => req.originalUrl.includes(p));
+      const isAllowed = allowedPaths.some((p) => req.originalUrl.includes(p));
       if (!isAllowed) {
         throw new AppError('Lütfen devam etmeden önce varsayılan şifrenizi değiştirin.', 403);
       }
     }
 
-    req.user = decoded;
-    
-    // Set global context for Prisma Audit Extension
-    requestContext.run({ userId: decoded.userId, role: decoded.role }, () => {
+    // Use the database role as the authoritative value so a role change takes
+    // effect immediately without waiting for the old JWT to expire.
+    req.user = {
+      userId: decoded.userId,
+      role: user.role as JwtPayload['role'],
+      mustChangePassword: user.mustChangePassword,
+    };
+
+    requestContext.run({ userId: decoded.userId, role: user.role }, () => {
       next();
     });
   } catch (error) {

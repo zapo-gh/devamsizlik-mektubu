@@ -4,10 +4,10 @@ import { violationImageUpload } from './imageUpload.middleware';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
 import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
 import { compressImage } from '../shared/middleware/imageCompressor.middleware';
+import { uploadLimiter, expensiveOperationLimiter } from '../shared/middleware/rateLimit.middleware';
 
 const router = Router();
 
-// All routes require admin auth
 router.get('/stats', authMiddleware, adminOnly, violationsController.getStats);
 router.get('/student/:studentId', authMiddleware, adminOnly, violationsController.getStudentHistory.bind(violationsController));
 router.get('/uploads', authMiddleware, adminOnly, violationsController.getUploads);
@@ -17,13 +17,14 @@ router.post(
   '/upload',
   authMiddleware,
   adminOnly,
+  uploadLimiter,
   violationImageUpload.single('image'),
   validateMagicBytes(['image/jpeg', 'image/png']),
   compressImage,
-  violationsController.upload
+  violationsController.upload,
 );
 
-router.post('/process-text', authMiddleware, adminOnly, violationsController.processText);
+router.post('/process-text', authMiddleware, adminOnly, expensiveOperationLimiter, violationsController.processText);
 
 router.post('/:uploadId/confirm', authMiddleware, adminOnly, violationsController.confirmViolations);
 router.post('/:uploadId/manual', authMiddleware, adminOnly, violationsController.addManual);

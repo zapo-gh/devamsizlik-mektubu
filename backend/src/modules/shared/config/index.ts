@@ -1,9 +1,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+const parsePositiveInt = (value: string | undefined, fallback: number): number => {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '4000', 10),
+  port: parsePositiveInt(process.env.PORT, 4000),
 
   database: {
     url: process.env.DATABASE_URL!,
@@ -20,7 +25,12 @@ export const config = {
 
   upload: {
     dir: process.env.UPLOAD_DIR || './uploads',
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: parsePositiveInt(process.env.UPLOAD_MAX_SIZE, 10 * 1024 * 1024),
+  },
+
+  backup: {
+    dir: process.env.BACKUP_DIR || './backups',
+    retentionDays: parsePositiveInt(process.env.BACKUP_RETENTION_DAYS, 30),
   },
 
   frontendDomain: process.env.FRONTEND_DOMAIN || 'http://localhost:5173',

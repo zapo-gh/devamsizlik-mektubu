@@ -3,13 +3,14 @@ import multer from 'multer';
 import { studentsController } from './students.controller';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
 import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
+import { uploadLimiter } from '../shared/middleware/rateLimit.middleware';
+import { config } from '../shared/config';
 
 const router = Router();
 
-// Multer for Excel upload (memory storage)
 const excelUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: config.upload.maxSize },
   fileFilter: (_req, file, cb) => {
     const allowed = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -24,17 +25,16 @@ const excelUpload = multer({
   },
 });
 
-// All student routes require admin authentication
 router.use(authMiddleware, adminOnly);
 
 const excelMimes = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-excel',
-  'application/CDFV2', // Sometimes old xls returns this
+  'application/CDFV2',
 ];
 
-router.post('/import-excel', excelUpload.single('file'), validateMagicBytes(excelMimes), studentsController.importExcel);
-router.post('/import-parents', excelUpload.single('file'), validateMagicBytes(excelMimes), studentsController.importParents);
+router.post('/import-excel', uploadLimiter, excelUpload.single('file'), validateMagicBytes(excelMimes), studentsController.importExcel);
+router.post('/import-parents', uploadLimiter, excelUpload.single('file'), validateMagicBytes(excelMimes), studentsController.importParents);
 router.get('/', studentsController.getAll);
 router.get('/:id', studentsController.getById);
 router.post('/', studentsController.create);
