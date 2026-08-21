@@ -2,15 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
 import { z } from 'zod';
 import { AppError } from '../shared/middleware/errorHandler.middleware';
+import { passwordSchema } from '../shared/security/passwordPolicy';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Kullanıcı adı gereklidir.'),
+  username: z.string().trim().min(1, 'Kullanıcı adı gereklidir.').max(100),
   password: z.string().min(1, 'Şifre gereklidir.'),
 });
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Mevcut şifre gereklidir.'),
-  newPassword: z.string().min(8, 'Yeni şifre en az 8 karakter olmalıdır.'),
+  newPassword: passwordSchema,
 });
 
 export class AuthController {
@@ -48,7 +49,7 @@ export class AuthController {
       const result = await authService.changePassword(
         req.user!.userId,
         parsed.data.currentPassword,
-        parsed.data.newPassword
+        parsed.data.newPassword,
       );
       res.json({ success: true, data: result });
     } catch (error) {
