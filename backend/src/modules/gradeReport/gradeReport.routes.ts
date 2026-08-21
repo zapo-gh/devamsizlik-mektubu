@@ -3,42 +3,33 @@ import { gradeReportController } from './gradeReport.controller';
 import { karneUpload } from './karneUpload.middleware';
 import { authMiddleware, adminOnly } from '../shared/middleware/auth.middleware';
 import { validateMagicBytes } from '../shared/middleware/magicByteValidator.middleware';
+import { uploadLimiter, expensiveOperationLimiter } from '../shared/middleware/rateLimit.middleware';
 
 const router = Router();
 
-// Tüm route'lar admin yetkisi gerektirir
 router.use(authMiddleware, adminOnly);
 
 /** Karne yükle + analiz et */
-router.post('/analyze', karneUpload.single('karne'), validateMagicBytes(['application/pdf']), gradeReportController.analyze);
+router.post(
+  '/analyze',
+  uploadLimiter,
+  expensiveOperationLimiter,
+  karneUpload.single('karne'),
+  validateMagicBytes(['application/pdf']),
+  gradeReportController.analyze,
+);
 
-/** Rapor listesi */
 router.get('/', gradeReportController.list);
-
-/** Arşivlenmiş raporlar */
 router.get('/archived', gradeReportController.listArchived);
-
-/** Tek rapor */
 router.get('/:id', gradeReportController.getOne);
-
-/** PDF'leri üret */
-router.post('/:id/generate-pdfs', gradeReportController.generatePdfs);
-
-/** Raporu arşivle */
+router.post('/:id/generate-pdfs', expensiveOperationLimiter, gradeReportController.generatePdfs);
 router.patch('/:id/archive', gradeReportController.archiveReport);
-
-/** Raporu sil */
 router.delete('/:id', gradeReportController.deleteReport);
-
-/** Öğrenci PDF indir */
 router.get('/students/:studentRecordId/pdf', gradeReportController.downloadPdf);
-
-/** Öğrenci eşleşmesini güncelle */
 router.patch('/students/:studentRecordId/match', gradeReportController.updateMatch);
 
-/** Debug: ham metin + parse sonucu — yalnızca geliştirme ortamında */
 if (process.env.NODE_ENV !== 'production') {
-  router.post('/debug-parse', karneUpload.single('karne'), validateMagicBytes(['application/pdf']), gradeReportController.debugParse);
+  router.post('/debug-parse', uploadLimiter, karneUpload.single('karne'), validateMagicBytes(['application/pdf']), gradeReportController.debugParse);
 }
 
 export default router;
