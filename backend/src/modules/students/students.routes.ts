@@ -17,11 +17,8 @@ const excelUpload = multer({
       'application/vnd.ms-excel',
       'application/octet-stream',
     ];
-    if (allowed.includes(file.mimetype) || file.originalname.match(/\.xlsx?$/i)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Sadece Excel (.xlsx, .xls) dosyaları yüklenebilir.'));
-    }
+    if (allowed.includes(file.mimetype) || file.originalname.match(/\.xlsx?$/i)) cb(null, true);
+    else cb(new Error('Sadece Excel (.xlsx, .xls) dosyaları yüklenebilir.'));
   },
 });
 
@@ -43,6 +40,7 @@ router.post('/bulk-delete', studentsController.bulkDelete);
 router.delete('/:id', studentsController.delete);
 router.post('/:id/parents', studentsController.addParent);
 router.post('/:id/assign-parent', studentsController.assignParent);
+router.post('/parents/:parentId/reset-password', studentsController.resetParentPassword);
 router.put('/parents/:parentId', studentsController.updateParent);
 router.delete('/:id/parents/:parentId', studentsController.removeParent);
 
