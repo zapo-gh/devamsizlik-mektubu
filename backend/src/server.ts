@@ -7,6 +7,8 @@ import * as whatsappService from './modules/whatsapp/whatsapp.service';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import * as net from 'net';
+import * as fs from 'fs';
+import * as path from 'path';
 import { BackupService } from './modules/shared/utils/backup.service';
 
 let httpServer: http.Server | null = null;
@@ -15,12 +17,11 @@ async function seedAdmin(): Promise<string | null> {
   const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
 
   if (existing) {
-    // Mevcut admin hesabına asla dokunma — kullanıcının değiştirdiği şifre korunur.
     return null;
   }
 
-  // Never ship or print a static administrator credential. The first-run UI can
-  // receive the generated password through the existing adminInitialized event.
+  // Never ship a static administrator credential. Generate a one-time password
+  // on first launch and store it in the user-data directory for local retrieval.
   const initialPassword = process.env.INITIAL_ADMIN_PASSWORD || crypto.randomBytes(18).toString('base64url');
   const adminPassword = await bcrypt.hash(initialPassword, 12);
 
@@ -33,11 +34,22 @@ async function seedAdmin(): Promise<string | null> {
     },
   });
 
-  console.log('✅ İlk yönetici hesabı oluşturuldu; ilk girişte şifre değişikliği zorunlu.');
+  const userDataPath = path.resolve(
+    process.env.APPDATA || path.join(process.env.USERPROFILE || '.', 'AppData', 'Roaming'),
+    'OkulDesk',
+  );
+  fs.mkdirSync(userDataPath, { recursive: true });
+  const credentialsFile = path.join(userDataPath, 'initial-admin-credentials.txt');
+  fs.writeFileSync(
+    credentialsFile,
+    `OkulDesk ilk yönetici hesabı\n\nKullanıcı adı: admin\nGeçici şifre: ${initialPassword}\n\nGüvenlik için ilk girişten sonra bu dosyayı silin.\n`,
+    { encoding: 'utf8', mode: 0o600 },
+  );
+
+  console.log(`✅ İlk yönetici hesabı oluşturuldu. Geçici kimlik bilgileri: ${credentialsFile}`);
   return initialPassword;
 }
 
-/** Belirtilen portun kullanımda olup olmadığını kontrol eder */
 function isPortBusy(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const tester = net.createServer()
@@ -47,14 +59,11 @@ function isPortBusy(port: number): Promise<boolean> {
   });
 }
 
-/**
- * Sunucuyu başlatır ve dinlemeye hazır olduğunda resolve eder.
- */
 export async function startServer(): Promise<void> {
   if (await isPortBusy(config.port)) {
     throw new Error(
       `Port ${config.port} başka bir uygulama tarafından kullanılıyor.\n` +
-      `Lütfen programın önceki bir örneğinin kapalı olduğundan emin olun.`
+      `Lütfen programın önceki bir örneğinin kapalı olduğundan emin olun.`,
     );
   }
 
