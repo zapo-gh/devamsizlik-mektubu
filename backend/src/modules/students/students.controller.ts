@@ -92,7 +92,7 @@ export class StudentsController {
   async updateParent(req: Request, res: Response, next: NextFunction) {
     try {
       const { fullName, phone } = req.body;
-      res.json({ success: true, data: await studentsService.updateParent(req.params.parentId, { fullName, phone }));
+      res.json({ success: true, data: await studentsService.updateParent(req.params.parentId, { fullName, phone }) });
     } catch (error) { next(error); }
   }
 
