@@ -37,16 +37,13 @@ import procurementRoutes from './modules/procurement/procurement.routes';
 import supplierRoutes from './modules/supplier/supplier.routes';
 import orderLetterRoutes from './modules/orderLetter/orderLetter.routes';
 import auditRoutes from './modules/audit/audit.routes';
-import backupRoutes from './modules/backup/backup.routes';
 
 const app = express();
 
-// Ensure runtime directories exist.
-for (const dir of [config.upload.dir, config.backup.dir]) {
-  const resolvedDir = path.resolve(dir);
-  if (!fs.existsSync(resolvedDir)) {
-    fs.mkdirSync(resolvedDir, { recursive: true });
-  }
+// Ensure upload directory exists. BackupService owns its platform-specific backup directory.
+const uploadsDir = path.resolve(config.upload.dir);
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Global middleware
@@ -121,7 +118,6 @@ app.use('/api/procurement', procurementRoutes);
 app.use('/api/supplier', supplierRoutes);
 app.use('/api/order-letter', orderLetterRoutes);
 app.use('/api/audit', auditRoutes);
-app.use('/api/backup', backupRoutes);
 
 // WhatsApp otomatik bağlantı devre dışı — kullanıcı /admin/whatsapp sayfasından Bağlan butonuna basmalı.
 
