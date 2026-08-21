@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { execFileSync } from 'child_process';
 
 // Windows AppData altında OkulDesk dizini
 const userDataPath = path.resolve(
@@ -62,10 +63,10 @@ try {
     throw new Error('Prisma CLI bulunamadı; veritabanı şeması doğrulanamıyor.');
   }
 
-  // Bu sürümde repository'de migration baseline bulunmadığı için deploy
-  // sırasında migrate deploy kullanmak hatalıdır. Prisma schema authoritative
-  // kaynaktır; db push şemayı veri kaybını kabul etmeden eşitler.
-  execSync(`"${process.execPath}" "${prismaScript}" db push --skip-generate`, {
+  // Bu sürümde repository'de migration baseline bulunmadığı için migrate deploy
+  // kullanmak hatalıdır. Prisma schema authoritative kaynaktır; db push şemayı
+  // veri kaybını kabul etmeden eşitler.
+  execFileSync(process.execPath, [prismaScript, 'db', 'push', '--skip-generate'], {
     env: process.env,
     stdio: 'inherit',
   });
