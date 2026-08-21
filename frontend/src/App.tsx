@@ -2,15 +2,13 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
-
-// Layout & Core
 import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Lazy Loaded Pages
 const LoginPage = React.lazy(() => import('./pages/admin/LoginPage'));
 const DashboardPage = React.lazy(() => import('./pages/admin/DashboardPage'));
 const StudentListPage = React.lazy(() => import('./pages/admin/StudentListPage'));
+const Student360Page = React.lazy(() => import('./pages/admin/Student360Page'));
 const AbsenteeismPage = React.lazy(() => import('./pages/admin/AbsenteeismPage'));
 const WarningsPage = React.lazy(() => import('./pages/admin/WarningsPage'));
 const ViolationsPage = React.lazy(() => import('./pages/admin/ViolationsPage'));
@@ -24,7 +22,6 @@ const TebligPage = React.lazy(() => import('./pages/admin/TebligPage'));
 const SettingsPage = React.lazy(() => import('./pages/admin/SettingsPage'));
 const AuditLogPage = React.lazy(() => import('./pages/admin/AuditLogPage'));
 const MatbuEvraklarPage = React.lazy(() => import('./pages/admin/MatbuEvraklarPage'));
-
 const DutySchedulePage = React.lazy(() => import('./pages/admin/modules/DutySchedulePage'));
 const BoardMeetingPage = React.lazy(() => import('./pages/admin/modules/BoardMeetingPage'));
 const CommissionPage = React.lazy(() => import('./pages/admin/modules/CommissionPage'));
@@ -43,116 +40,65 @@ const AttendanceSheetPage = React.lazy(() => import('./pages/admin/modules/Atten
 const SupplierPage = React.lazy(() => import('./pages/admin/modules/SupplierPage'));
 const ProcurementPage = React.lazy(() => import('./pages/admin/modules/ProcurementPage'));
 
-// Loader: sadece içerik alanı için (sidebar sabit kalır)
-const PageLoader = () => (
-  <div className="flex h-full w-full items-center justify-center min-h-[300px]">
-    <div className="h-9 w-9 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent opacity-70"></div>
-  </div>
-);
+const PageLoader = () => <div className="flex h-full w-full items-center justify-center min-h-[300px]"><div className="h-9 w-9 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent opacity-70" /></div>;
 
 function App() {
   const [backendReady, setBackendReady] = React.useState(false);
-
   React.useEffect(() => {
     let mounted = true;
     const checkHealth = async () => {
       try {
         const res = await fetch('http://127.0.0.1:4000/api/health');
-        if (res.ok && mounted) {
-          setBackendReady(true);
-        } else if (mounted) {
-          setTimeout(checkHealth, 500);
-        }
-      } catch {
-        if (mounted) {
-          setTimeout(checkHealth, 500);
-        }
-      }
+        if (res.ok && mounted) setBackendReady(true);
+        else if (mounted) setTimeout(checkHealth, 500);
+      } catch { if (mounted) setTimeout(checkHealth, 500); }
     };
     checkHealth();
     return () => { mounted = false; };
   }, []);
 
-  if (!backendReady) {
-    return (
-      <div className="flex flex-col h-screen w-full items-center justify-center bg-slate-950 text-white">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-4" />
-        <p className="text-slate-400">Sistem başlatılıyor, lütfen bekleyin...</p>
-      </div>
-    );
-  }
+  if (!backendReady) return <div className="flex flex-col h-screen w-full items-center justify-center bg-slate-950 text-white"><div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent mb-4" /><p className="text-slate-400">Sistem başlatılıyor, lütfen bekleyin...</p></div>;
 
-  return (
-    <AuthProvider>
-      <SettingsProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route
-            path="/login"
-            element={
-              <Suspense fallback={
-                <div className="flex h-screen w-full items-center justify-center bg-slate-950">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-                </div>
-              }>
-                <LoginPage />
-              </Suspense>
-            }
-          />
-
-          {/* Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-              <Route index element={<DashboardPage />} />
-              <Route path="students" element={<StudentListPage />} />
-              <Route path="absenteeism" element={<AbsenteeismPage />} />
-              <Route path="warnings" element={<WarningsPage />} />
-              <Route path="violations" element={<ViolationsPage />} />
-              <Route path="staff" element={<StaffPage />} />
-              <Route path="class-teachers" element={<ClassTeachersPage />} />
-              <Route path="whatsapp" element={<WhatsAppPage />} />
-              <Route path="grade-reports" element={<GradeReportPage />} />
-              <Route path="parent-meeting" element={<ParentMeetingPage />} />
-              <Route path="parent-notification" element={<ParentNotificationPage />} />
-              <Route path="teblig" element={<TebligPage />} />
-              <Route path="matbu-evraklar" element={<MatbuEvraklarPage />} />
-              
-              {/* Yeni Modüller */}
-              <Route path="duty-schedule" element={<DutySchedulePage />} />
-              <Route path="board-meeting" element={<BoardMeetingPage />} />
-              <Route path="commission" element={<CommissionPage />} />
-              <Route path="annual-plan" element={<AnnualPlanPage />} />
-              <Route path="commemorative-days" element={<CommemorativeDaysPage />} />
-              <Route path="social-activity" element={<SocialActivityPage />} />
-              <Route path="parent-association" element={<ParentAssociationPage />} />
-              <Route path="field-trip" element={<FieldTripPage />} />
-              <Route path="extracurricular" element={<ExtracurricularPage />} />
-              <Route path="travel-allowance" element={<TravelAllowancePage />} />
-              <Route path="staff-transfer" element={<StaffTransferPage />} />
-              <Route path="student-club" element={<StudentClubPage />} />
-              <Route path="order-letter" element={<OrderLetterPage />} />
-              <Route path="holidays" element={<HolidayPage />} />
-              <Route path="attendance-sheet" element={<AttendanceSheetPage />} />
-              <Route path="supplier" element={<SupplierPage />} />
-              <Route path="procurement" element={<ProcurementPage />} />
-              <Route path="audit-logs" element={<AuditLogPage />} />
-
-              <Route path="settings" element={<SettingsPage />} />
-            </Route>
-
-            {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-      </SettingsProvider>
-    </AuthProvider>
-  );
+  return <AuthProvider><SettingsProvider><Suspense fallback={<PageLoader />}><Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+      <Route index element={<DashboardPage />} />
+      <Route path="students" element={<StudentListPage />} />
+      <Route path="students/:id" element={<Student360Page />} />
+      <Route path="absenteeism" element={<AbsenteeismPage />} />
+      <Route path="warnings" element={<WarningsPage />} />
+      <Route path="violations" element={<ViolationsPage />} />
+      <Route path="staff" element={<StaffPage />} />
+      <Route path="class-teachers" element={<ClassTeachersPage />} />
+      <Route path="whatsapp" element={<WhatsAppPage />} />
+      <Route path="grade-reports" element={<GradeReportPage />} />
+      <Route path="parent-meeting" element={<ParentMeetingPage />} />
+      <Route path="parent-notification" element={<ParentNotificationPage />} />
+      <Route path="teblig" element={<TebligPage />} />
+      <Route path="matbu-evraklar" element={<MatbuEvraklarPage />} />
+      <Route path="duty-schedule" element={<DutySchedulePage />} />
+      <Route path="board-meeting" element={<BoardMeetingPage />} />
+      <Route path="commission" element={<CommissionPage />} />
+      <Route path="annual-plan" element={<AnnualPlanPage />} />
+      <Route path="commemorative-days" element={<CommemorativeDaysPage />} />
+      <Route path="social-activity" element={<SocialActivityPage />} />
+      <Route path="parent-association" element={<ParentAssociationPage />} />
+      <Route path="field-trip" element={<FieldTripPage />} />
+      <Route path="extracurricular" element={<ExtracurricularPage />} />
+      <Route path="travel-allowance" element={<TravelAllowancePage />} />
+      <Route path="staff-transfer" element={<StaffTransferPage />} />
+      <Route path="student-club" element={<StudentClubPage />} />
+      <Route path="order-letter" element={<OrderLetterPage />} />
+      <Route path="holidays" element={<HolidayPage />} />
+      <Route path="attendance-sheet" element={<AttendanceSheetPage />} />
+      <Route path="supplier" element={<SupplierPage />} />
+      <Route path="procurement" element={<ProcurementPage />} />
+      <Route path="audit-logs" element={<AuditLogPage />} />
+      <Route path="settings" element={<SettingsPage />} />
+    </Route>
+    <Route path="/" element={<Navigate to="/login" replace />} />
+    <Route path="*" element={<Navigate to="/login" replace />} />
+  </Routes></Suspense></SettingsProvider></AuthProvider>;
 }
 
 export default App;
