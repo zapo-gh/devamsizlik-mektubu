@@ -1,45 +1,39 @@
 import fs from 'fs';
 import path from 'path';
 import { AppError } from '../middleware/errorHandler.middleware';
+import { config } from '../config';
 import prisma from './prisma';
 
 /**
- * Veritabanının düzenli olarak yedeklenmesini sağlayan servis.
+ * SQLite veritabanının tutarlı snapshot yedeklerini yönetir.
  */
 export class BackupService {
   private static getBackupDir(): string {
-    const userDataPath = path.resolve(
-      process.env.APPDATA || path.join(process.env.USERPROFILE || '.', 'AppData', 'Roaming'),
-      'OkulDesk'
-    );
-    const backupDir = path.join(userDataPath, 'backups');
+    const backupDir = path.resolve(config.backup.dir);
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
     return backupDir;
   }
 
-  /**
-   * Manuel veya otomatik veritabanı yedeği alır.
-   * SQLite WAL modunda çalıştığı için en güvenli yedekleme yöntemi VACUUM INTO'dur.
-   */
   public static async createBackup(prefix: string = 'auto'): Promise<string> {
     const backupDir = this.getBackupDir();
-    
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
     const backupFileName = `${prefix}_backup_${dateStr}.db`;
     const backupFilePath = path.join(backupDir, backupFileName);
+    const escapedPath = backupFilePath.replace(/'/g, "''");
 
     try {
-      // VACUUM INTO ile veritabanının anlık, tutarlı bir kopyasını oluştur (WAL vs dinlemez, güvenlidir)
-      await prisma.$executeRawUnsafe(`VACUUM INTO '${backupFilePath}'`);
-      
-      // Eski otomatik yedekleri temizle (Son 7 yedeği tut)
-      if (prefix === 'auto') {
-        this.cleanOldBackups(backupDir, 'auto', 7);
+      await prisma.$executeRawUnsafe(`VACUUM INTO '${escapedPath}'`);
+
+      const stats = fs.statSync(backupFilePath);
+      if (!stats.isFile() || stats.size === 0) {
+        fs.rmSync(backupFilePath, { force: true });
+        throw new Error('Yedek dosyası boş veya geçersiz.');
       }
 
-      console.log(`✅ Otomatik veritabanı yedeği alındı: ${backupFileName}`);
+      this.cleanOldBackups(backupDir, config.backup.retentionDays);
+      console.log(`✅ Veritabanı yedeği alındı: ${backupFileName}`);
       return backupFilePath;
     } catch (err) {
       console.error('Yedekleme hatası:', err);
@@ -47,16 +41,12 @@ export class BackupService {
     }
   }
 
-  /**
-   * Günde sadece 1 kez otomatik yedek alınmasını sağlar.
-   */
   public static async runDailyBackup(): Promise<void> {
     const backupDir = this.getBackupDir();
-    const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    
-    const files = fs.readdirSync(backupDir).filter(f => f.startsWith('auto_backup_'));
-    const hasBackupToday = files.some(f => f.includes(todayStr));
-    
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const files = fs.readdirSync(backupDir).filter((f) => f.startsWith('auto_backup_') && f.endsWith('.db'));
+    const hasBackupToday = files.some((f) => f.includes(todayStr));
+
     if (!hasBackupToday) {
       console.log('🔄 Bugün için otomatik yedek bulunamadı, oluşturuluyor...');
       await this.createBackup('auto');
@@ -65,44 +55,37 @@ export class BackupService {
     }
   }
 
-  /**
-   * Belirtilen dizindeki eski yedekleri siler (en güncel maxKeep adedi tutar).
-   */
-  private static cleanOldBackups(backupDir: string, prefix: string, maxKeep: number): void {
+  private static cleanOldBackups(backupDir: string, retentionDays: number): void {
+    const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
     const files = fs.readdirSync(backupDir)
-      .filter(f => f.startsWith(`${prefix}_backup_`) && f.endsWith('.db'))
-      .map(f => ({ name: f, path: path.join(backupDir, f), time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
-      .sort((a, b) => b.time - a.time); // Yeni -> Eski sıralaması
+      .filter((f) => f.endsWith('.db'));
 
-    if (files.length > maxKeep) {
-      const filesToDelete = files.slice(maxKeep);
-      for (const file of filesToDelete) {
-        try {
-          fs.unlinkSync(file.path);
-          console.log(`🗑️ Eski yedek silindi: ${file.name}`);
-        } catch (err) {
-          console.error(`Eski yedek silinemedi (${file.name}):`, err);
+    for (const name of files) {
+      const filePath = path.join(backupDir, name);
+      try {
+        const stats = fs.statSync(filePath);
+        if (stats.mtime.getTime() < cutoff) {
+          fs.unlinkSync(filePath);
+          console.log(`🗑️ Eski yedek silindi: ${name}`);
         }
+      } catch (err) {
+        console.error(`Eski yedek işlenemedi (${name}):`, err);
       }
     }
   }
 
-  /**
-   * Mevcut yedeklerin listesini döndürür.
-   */
   public static getBackupsList(): { name: string; date: Date; sizeStr: string }[] {
     const backupDir = this.getBackupDir();
-    const files = fs.readdirSync(backupDir)
-      .filter(f => f.endsWith('.db'))
-      .map(f => {
+    return fs.readdirSync(backupDir)
+      .filter((f) => f.endsWith('.db'))
+      .map((f) => {
         const stats = fs.statSync(path.join(backupDir, f));
         return {
           name: f,
           date: stats.mtime,
-          sizeStr: (stats.size / (1024 * 1024)).toFixed(2) + ' MB'
+          sizeStr: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',
         };
       })
       .sort((a, b) => b.date.getTime() - a.date.getTime());
-    return files;
   }
 }
